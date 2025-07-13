@@ -28,11 +28,15 @@ def create_app(config_name='development'):
     from app.api.context import context_bp
     from app.api.pose import pose_bp
     from app.api.models import models_bp
+    from app.api.scene_flow import scene_flow_bp
+    from app.api.mush_parser import mush_parser_bp
     
     app.register_blueprint(characters_bp, url_prefix='/api/characters')
     app.register_blueprint(context_bp, url_prefix='/api/context')
     app.register_blueprint(pose_bp, url_prefix='/api/pose')
     app.register_blueprint(models_bp, url_prefix='/api/models')
+    app.register_blueprint(scene_flow_bp)
+    app.register_blueprint(mush_parser_bp)
     
     @app.route('/health')
     def health_check():

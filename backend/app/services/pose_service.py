@@ -10,6 +10,7 @@ from app.services.venice_client import VeniceClient, VeniceAPIError
 from app.services.model_config import ModelConfig
 from app.services.character_service import CharacterProfile
 from app.services.context_service import PoseContext
+from app.services.mush_parser_service import MushParserService, ParsedScene
 
 
 @dataclass
@@ -37,6 +38,7 @@ class PoseService:
             venice_client: Venice.ai client for AI processing
         """
         self.venice_client = venice_client
+        self.mush_parser = MushParserService()
     
     def enhance_pose(
         self,
@@ -64,6 +66,46 @@ class PoseService:
             # Generate enhanced pose using AI
             enhancement_data = self._generate_pose_enhancement(
                 original_pose, character, context, enhancement_style
+            )
+            
+            # Validate the enhancement data
+            self._validate_enhancement_data(enhancement_data)
+            
+            # Create and return pose enhancement
+            return PoseEnhancement(**enhancement_data)
+            
+        except VeniceAPIError:
+            # Re-raise Venice API errors
+            raise
+        except Exception as e:
+            raise ValueError(f"Invalid enhancement data: {str(e)}")
+    
+    def enhance_pose_with_scene_flow(
+        self,
+        original_pose: str,
+        scene_context: str,
+        character: Optional[CharacterProfile] = None,
+        enhancement_style: str = "balanced"
+    ) -> PoseEnhancement:
+        """Enhance a pose using scene flow context.
+        
+        Args:
+            original_pose: The original pose text to enhance
+            scene_context: Formatted scene context from scene flow
+            character: Optional character profile for voice consistency
+            enhancement_style: Style of enhancement (minimal, balanced, elaborate)
+            
+        Returns:
+            PoseEnhancement: Enhanced pose with metadata
+            
+        Raises:
+            VeniceAPIError: If AI processing fails
+            ValueError: If the AI response is invalid
+        """
+        try:
+            # Generate enhanced pose using scene flow context
+            enhancement_data = self._generate_pose_enhancement_with_scene_context(
+                original_pose, scene_context, character, enhancement_style
             )
             
             # Validate the enhancement data
@@ -160,7 +202,7 @@ class PoseService:
         ENHANCEMENT STYLE: {enhancement_style}
         {style_guidance}
 
-        CRITICAL ROLEPLAY RULES:
+        🚨 CRITICAL ROLEPLAY RULES - MAIN CHARACTER ONLY 🚨:
         - ONLY enhance actions, thoughts, and reactions of the MAIN CHARACTER
         - NEVER pose for other characters, NPCs, or control their actions/dialogue
         - NEVER make other characters react, speak, or move
@@ -179,6 +221,28 @@ class PoseService:
           doing anything
         - Focus SOLELY on what the main character individually does, thinks, 
           and feels
+
+        ❌ FORBIDDEN EXAMPLES (These will result in immediate rejection):
+        - "She squeaks out a response" (controlling other character's vocal reaction)
+        - "Her squeak of response is music to his ears" (controlling other character's reaction)
+        - "He can feel her tremble" (describing other character's physical response)
+        - "He can feel the slight tremor in her muscles" (describing other character's body)
+        - "The way her breath hitches" (controlling other character's involuntary reaction)
+        - "Her body leans into his" (controlling other character's movement)
+        - "In the soft moan that escapes her" (controlling other character's sounds)
+        - "She responds with..." (making other character react)
+        - "Both of them feel..." (mutual experiences)
+        - "Making her..." (causing other character to do something)
+        - "That escapes her" (controlling other character's involuntary actions)
+        - "From her lips" (describing other character's body parts doing things)
+
+        ✅ ACCEPTABLE EXAMPLES (Focus only on main character):
+        - "He listens for any sound from her" (main character's action)
+        - "He feels the warmth radiating from her skin" (main character's sensation)
+        - "He wonders if she's enjoying this" (main character's thoughts)
+        - "His heart pounds as he moves closer" (main character's reaction)
+        - "He notices her stillness" (main character's observation)
+        - "He hopes she feels comfortable" (main character's internal desire)
 
         CRITICAL: ONLY ENHANCE THE MAIN CHARACTER:
         - You may write about the main character in any perspective (first or third person)
@@ -328,8 +392,220 @@ class PoseService:
         # Validate the enhanced pose for logical consistency
         validated_pose = self._validate_pose_consistency(original_pose, enhanced_pose)
         
+        # Check for character control violations and fix them
+        character_validated_pose = self._validate_character_control(validated_pose)
+        
         # Ensure proper paragraph formatting (use original as reference)
-        formatted_pose = self._ensure_paragraph_formatting(validated_pose, original_pose)
+        formatted_pose = self._ensure_paragraph_formatting(character_validated_pose, original_pose)
+        
+        # Create simple response structure
+        enhancement_data = {
+            'original_pose': original_pose,
+            'enhanced_pose': formatted_pose,
+            'enhancement_notes': [],
+            'sensory_details': [],
+            'character_voice_elements': [],
+            'narrative_techniques': []
+        }
+        
+        return enhancement_data
+    
+    def _generate_pose_enhancement_with_scene_context(
+        self,
+        original_pose: str,
+        scene_context: str,
+        character: Optional[CharacterProfile] = None,
+        enhancement_style: str = "balanced"
+    ) -> Dict[str, Any]:
+        """Generate enhanced pose using scene flow context.
+        
+        Args:
+            original_pose: The original pose to enhance
+            scene_context: Formatted scene context from scene flow
+            character: Optional character profile
+            enhancement_style: Enhancement style preference
+            
+        Returns:
+            Dict containing enhancement data
+        """
+        # Prepare system message for pose enhancement
+        system_message = ModelConfig.get_system_message_for_use_case(
+            "roleplay_enhancement"
+        )
+        
+        # Build character context
+        character_context = ""
+        if character:
+            character_context = f"""
+            Character Information:
+            - Name: {character.name}
+            - Background: {character.background}
+            - Personality: {', '.join(character.personality)}
+            - Voice Notes: {character.voice_notes}
+            """
+        
+        # Build enhancement style guidance
+        style_guidance = self._get_style_guidance(enhancement_style)
+        
+        # Analyze original pose paragraph structure
+        original_paragraph_count = original_pose.count('\n\n') + 1
+        original_paragraphs = original_pose.split('\n\n')
+        
+        # Create paragraph template showing the exact structure to follow
+        paragraph_template = ""
+        for i, paragraph in enumerate(original_paragraphs, 1):
+            # Show first 50 chars of each paragraph as template
+            preview = paragraph[:50].replace('\n', ' ').strip()
+            if len(paragraph) > 50:
+                preview += "..."
+            paragraph_template += f"Paragraph {i}: [{preview}] → [ENHANCE THIS]\n"
+        
+        # Create explicit output format example
+        output_format_example = ""
+        for i in range(original_paragraph_count):
+            if i > 0:
+                output_format_example += "\n\n"
+            output_format_example += f"[Enhanced paragraph {i+1} text goes here]"
+        
+        # Prepare user message with scene context
+        user_message = f"""
+        SCENE FLOW CONTEXT:
+        {scene_context}
+        
+        Transform the following roleplay pose into vivid, immersive prose:
+
+        ORIGINAL POSE:
+        {original_pose}
+
+        {character_context}
+        
+        ENHANCEMENT STYLE: {enhancement_style}
+        {style_guidance}
+
+        CRITICAL SCENE CONSISTENCY RULES:
+        - MAINTAIN PERFECT CONSISTENCY with the scene context above
+        - Reference recent events and character interactions naturally
+        - Keep established character voice and behavior patterns
+        - Respect the scene's mood, setting, and emotional tone
+        - DO NOT contradict any established facts from scene history
+        - Build naturally on previous poses and character development
+        
+        🚨 CRITICAL ROLEPLAY RULES - MAIN CHARACTER ONLY 🚨:
+        - ONLY enhance actions, thoughts, and reactions of the MAIN CHARACTER
+        - NEVER pose for other characters, NPCs, or control their actions/dialogue
+        - NEVER make other characters react, speak, or move
+        - NEVER describe other characters' physical reactions, trembles, shifts, 
+          or responses
+        - NEVER say what the main character's actions "elicit", "cause", or 
+          "make" others do
+        - NEVER describe how others respond to the main character's actions
+        - Other characters can be mentioned in observations but NEVER controlled 
+          or described reacting
+        - Focus on the main character's perspective, internal thoughts, and 
+          sensory experiences
+        - The main character can feel, see, or sense things, but cannot control 
+          how others react
+        - NEVER describe mutual experiences, shared moments, or "both characters" 
+          doing anything
+        - Focus SOLELY on what the main character individually does, thinks, 
+          and feels
+
+        ❌ FORBIDDEN EXAMPLES (These will result in immediate rejection):
+        - "She squeaks out a response" (controlling other character's vocal reaction)
+        - "Her squeak of response is music to his ears" (controlling other character's reaction)
+        - "He can feel her tremble" (describing other character's physical response)
+        - "He can feel the slight tremor in her muscles" (describing other character's body)
+        - "The way her breath hitches" (controlling other character's involuntary reaction)
+        - "Her body leans into his" (controlling other character's movement)
+        - "In the soft moan that escapes her" (controlling other character's sounds)
+        - "She responds with..." (making other character react)
+        - "Both of them feel..." (mutual experiences)
+        - "Making her..." (causing other character to do something)
+        - "That escapes her" (controlling other character's involuntary actions)
+        - "From her lips" (describing other character's body parts doing things)
+
+        ✅ ACCEPTABLE EXAMPLES (Focus only on main character):
+        - "He listens for any sound from her" (main character's action)
+        - "He feels the warmth radiating from her skin" (main character's sensation)
+        - "He wonders if she's enjoying this" (main character's thoughts)
+        - "His heart pounds as he moves closer" (main character's reaction)
+        - "He notices her stillness" (main character's observation)
+        - "He hopes she feels comfortable" (main character's internal desire)
+
+        CRITICAL: ONLY ENHANCE THE MAIN CHARACTER:
+        - You may write about the main character in any perspective (first or third person)
+        - "Eli moves closer" or "I move closer" are both acceptable for the main character
+        - Focus exclusively on the main character's actions, thoughts, and experiences
+        - Describe what the main character does, feels, thinks, sees, hears, touches
+        - Include the main character's internal monologue and physical reactions
+        - Show the main character's perspective and sensory experiences
+
+        CRITICAL: FAITHFUL ENHANCEMENT ONLY
+        - STAY TRUE to the original pose - do not invent new actions or details
+        - ENHANCE what is already there, don't add completely new elements
+        - If the original says "moves closer", enhance the movement, don't add new actions
+        - If the original mentions "heart racing", enhance that feeling, don't add new emotions
+        - Focus on expanding and deepening existing elements, not creating new ones
+        - NO excessive alliteration, flowery language, or overly poetic descriptions
+        - Keep the tone and style consistent with the original pose
+        - Enhancement should feel like a natural expansion, not a complete rewrite
+
+        🚨 CRITICAL PARAGRAPH STRUCTURE - SYSTEM WILL REJECT WALL OF TEXT 🚨
+        
+        IMMEDIATE ANALYSIS REQUIRED:
+        The original pose above has {original_paragraph_count} paragraphs.
+        You MUST produce EXACTLY {original_paragraph_count} paragraphs in your response.
+        
+        PARAGRAPH TEMPLATE TO FOLLOW:
+        {paragraph_template}
+        
+        EXACT OUTPUT FORMAT REQUIRED:
+        {output_format_example}
+        
+        MANDATORY FORMATTING RULES:
+        1. Count paragraphs in original: {original_paragraph_count}
+        2. Your response MUST have {original_paragraph_count} paragraphs
+        3. Use \\n\\n between EVERY paragraph
+        4. NEVER write wall of text - system will auto-reject
+        5. Each original paragraph = one enhanced paragraph
+        
+        🚨 FINAL REMINDER: YOUR RESPONSE MUST HAVE EXACTLY {original_paragraph_count} PARAGRAPHS 🚨
+        
+        COPY THIS EXACT FORMAT:
+        {output_format_example}
+        
+        Replace the bracketed placeholders with your enhanced content, keeping the same paragraph structure.
+        
+        Respond with ONLY the enhanced pose text preserving original paragraph structure. 
+        No explanations, metadata, or JSON formatting. Multiple paragraphs are mandatory.
+        """
+        
+        # Generate completion using Venice.ai
+        response = self.venice_client.generate_completion(
+            model="venice-uncensored",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": user_message}
+            ],
+            temperature=0.8,  # Higher temperature for more creativity and human-like variation
+            max_tokens=1500   # Increased tokens for more detailed prose
+        )
+        
+        # Handle response - if it's a string, use it directly as enhanced pose
+        if isinstance(response, str):
+            enhanced_pose = response.strip()
+        else:
+            # Response is a dict (from mocked tests)
+            enhanced_pose = response.get('enhanced_pose', str(response))
+        
+        # Validate the enhanced pose for logical consistency
+        validated_pose = self._validate_pose_consistency(original_pose, enhanced_pose)
+        
+        # Check for character control violations and fix them
+        character_validated_pose = self._validate_character_control(validated_pose)
+        
+        # Ensure proper paragraph formatting (use original as reference)
+        formatted_pose = self._ensure_paragraph_formatting(character_validated_pose, original_pose)
         
         # Create simple response structure
         enhancement_data = {
@@ -472,6 +748,104 @@ class PoseService:
         except Exception:
             # If validation fails, return the original enhanced pose
             return enhanced_pose
+    
+    def _validate_character_control(self, enhanced_pose: str) -> str:
+        """Validate enhanced pose to ensure it doesn't control other characters.
+        
+        Args:
+            enhanced_pose: The enhanced pose to validate
+            
+        Returns:
+            Validated pose with character control issues fixed
+        """
+        # List of problematic patterns that indicate controlling other characters
+        problematic_patterns = [
+            # Other character reactions and sounds
+            r"[Ss]he (squeaks|gasps|moans|responds|reacts|trembles|shivers|breathes)",
+            r"[Hh]er (squeak|gasp|moan|breath|response|reaction)",
+            r"[Aa] (squeak|gasp|moan|response|reaction) (from|of) her",
+            r"(squeaks|gasps|moans|responds) out",
+            r"that escapes her",
+            r"from her (lips|mouth|throat)",
+            
+            # Physical responses and body reactions
+            r"[Hh]er (muscles|body|form|skin) (tense|tremble|respond|react|lean)",
+            r"[Hh]er breath (hitches|catches|quickens|comes)",
+            r"the way her (body|breath|muscles|form)",
+            r"[Hh]e can feel (her|the) (tremble|shake|respond|react|tremor|response)",
+            r"[Hh]e can feel the (slight|soft|gentle) (tremor|response|reaction)",
+            r"feel her (response|reaction|tremor|body|breath)",
+            r"in her (muscles|body|breath|response)",
+            
+            # Controlling actions
+            r"making her",
+            r"causing her to",
+            r"[Hh]er body (leans|moves|responds|reacts)",
+            r"(leans|moves) into (him|his)",
+            
+            # Mutual experiences
+            r"[Bb]oth (of them|characters)",
+            r"[Tt]hey both",
+            r"between them",
+            r"shared (moment|experience|feeling)",
+            r"together they",
+            
+            # Other character internal states
+            r"[Ss]he feels",
+            r"[Hh]er heart",
+            r"[Hh]er pulse",
+            r"[Hh]er arousal",
+            r"[Hh]er desire",
+        ]
+        
+        validated_pose = enhanced_pose
+        
+        # Check for and remove problematic patterns
+        import re
+        for pattern in problematic_patterns:
+            if re.search(pattern, validated_pose, re.IGNORECASE):
+                # If we find character control issues, use AI to fix them
+                fix_prompt = f"""
+                The following enhanced pose contains violations of roleplay rules by controlling other characters. Fix ONLY the specific violations while preserving all other content:
+
+                ENHANCED POSE WITH VIOLATIONS:
+                {validated_pose}
+
+                VIOLATIONS TO FIX:
+                - Remove any descriptions of other characters' reactions, responses, or physical states
+                - Remove phrases like "her squeak", "she responds", "her breath hitches", "making her", etc.
+                - Focus only on what the main character does, thinks, feels, or observes
+                - Keep all other enhancement content intact
+                - Maintain the same paragraph structure and formatting
+
+                RULES FOR FIXING:
+                - Replace character control with main character's perspective/observation
+                - "Her squeak of response" → "He listens for any sound" or remove entirely
+                - "He can feel her tremble" → "He wonders about her reaction" or "He focuses on his own sensations"
+                - "Making her..." → Remove or rephrase as main character's action only
+                - Keep all good descriptive content about the main character
+
+                Return ONLY the corrected pose text with no explanations or formatting.
+                """
+                
+                try:
+                    corrected_response = self.venice_client.generate_completion(
+                        model="venice-uncensored",
+                        messages=[
+                            {"role": "user", "content": fix_prompt}
+                        ],
+                        temperature=0.3,  # Lower temperature for precise corrections
+                        max_tokens=1000
+                    )
+                    
+                    if isinstance(corrected_response, str):
+                        validated_pose = corrected_response.strip()
+                    break  # Exit after first fix attempt
+                except Exception:
+                    # If AI correction fails, fall back to simple pattern removal
+                    validated_pose = re.sub(pattern, "", validated_pose, flags=re.IGNORECASE)
+        
+        return validated_pose
     
     def _ensure_paragraph_formatting(self, pose_text: str, original_pose: str = None) -> str:
         """Ensure proper paragraph formatting for enhanced poses.
@@ -659,4 +1033,105 @@ class PoseService:
             )
             analysis["character_consistency"] = voice_consistency
         
-        return analysis 
+        return analysis
+    
+    def parse_mush_output(self, mush_output: str, your_character_hint: Optional[str] = None) -> ParsedScene:
+        """
+        Parse MUSH game output into structured scene data.
+        
+        Args:
+            mush_output: Raw MUSH output text
+            your_character_hint: Optional hint about which character is yours
+            
+        Returns:
+            ParsedScene with extracted poses and metadata
+        """
+        return self.mush_parser.parse_mush_output(mush_output, your_character_hint)
+    
+    def enhance_from_mush_output(
+        self,
+        mush_output: str,
+        your_character_name: str,
+        character: Optional[CharacterProfile] = None,
+        enhancement_style: str = "balanced"
+    ) -> Dict[str, Any]:
+        """
+        Parse MUSH output, extract your character's poses, and enhance them with scene context.
+        
+        Args:
+            mush_output: Raw MUSH output text
+            your_character_name: Name of your character in the output
+            character: Character profile for enhancement
+            enhancement_style: Style of enhancement to apply
+            
+        Returns:
+            Dictionary containing parsed scene, your poses, and enhanced poses
+        """
+        # Parse the MUSH output
+        parsed_scene = self.parse_mush_output(mush_output, your_character_name)
+        
+        # Extract your character's poses
+        your_poses = self.mush_parser.extract_your_character_poses(parsed_scene, your_character_name)
+        
+        if not your_poses:
+            return {
+                "parsed_scene": parsed_scene,
+                "your_poses": [],
+                "enhanced_poses": [],
+                "scene_context": self.mush_parser.build_scene_context_from_parsed(parsed_scene),
+                "error": "No poses found for your character in the provided output"
+            }
+        
+        # Build scene context
+        scene_context = self.mush_parser.build_scene_context_from_parsed(parsed_scene)
+        
+        # Enhance each of your poses with scene context
+        enhanced_poses = []
+        for pose in your_poses:
+            # Convert ParsedPose to regular pose string for enhancement
+            pose_text = f"{pose.character_name} {pose.content}"
+            
+            try:
+                enhancement = self.enhance_pose_with_scene_flow(
+                    original_pose=pose_text,
+                    scene_context=scene_context,
+                    character=character,
+                    enhancement_style=enhancement_style
+                )
+                enhanced_poses.append({
+                    "original": pose_text,
+                    "enhanced": enhancement.enhanced_pose,
+                    "pose_type": pose.pose_type.value,
+                    "timestamp": pose.timestamp,
+                    "is_ooc": pose.is_ooc
+                })
+            except Exception as e:
+                enhanced_poses.append({
+                    "original": pose_text,
+                    "enhanced": None,
+                    "error": str(e),
+                    "pose_type": pose.pose_type.value,
+                    "timestamp": pose.timestamp,
+                    "is_ooc": pose.is_ooc
+                })
+        
+        return {
+            "parsed_scene": {
+                "room_description": parsed_scene.room_description,
+                "characters_present": parsed_scene.characters_present,
+                "your_character": parsed_scene.your_character,
+                "total_poses": len(parsed_scene.poses)
+            },
+            "your_poses": [
+                {
+                    "character_name": p.character_name,
+                    "content": p.content,
+                    "pose_type": p.pose_type.value,
+                    "timestamp": p.timestamp,
+                    "is_ooc": p.is_ooc
+                }
+                for p in your_poses
+            ],
+            "enhanced_poses": enhanced_poses,
+            "scene_context": scene_context
+        } 

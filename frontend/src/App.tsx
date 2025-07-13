@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { User, Search, Wand2 } from 'lucide-react';
+import { User, Search, Wand2, MessageCircle, Upload } from 'lucide-react';
 import { CharacterBrainDump } from './components/CharacterBrainDump';
 import { PoseContextAnalysis } from './components/PoseContextAnalysis';
 import { PoseEditor } from './components/PoseEditor';
+import { SceneFlow } from './components/SceneFlow';
+import MushParser from './components/MushParser';
 
-type Tab = 'character' | 'context' | 'editor';
+type Tab = 'character' | 'context' | 'editor' | 'scene-flow' | 'mush-parser';
 
 interface CharacterProfile {
   name: string;
@@ -36,6 +38,8 @@ function App() {
     { id: 'character' as Tab, name: 'Character Brain Dump', icon: User },
     { id: 'context' as Tab, name: 'Pose Context Analysis', icon: Search },
     { id: 'editor' as Tab, name: 'Pose Editor', icon: Wand2 },
+    { id: 'scene-flow' as Tab, name: 'Scene Flow', icon: MessageCircle },
+    { id: 'mush-parser' as Tab, name: 'MUSH Parser', icon: Upload },
   ];
 
   return (
@@ -125,6 +129,18 @@ function App() {
                 console.log('Pose enhanced:', enhancement);
               }}
             />
+          )}
+
+          {activeTab === 'scene-flow' && (
+            <SceneFlow
+              onPoseEnhanced={(enhancement) => {
+                console.log('Scene pose enhanced:', enhancement);
+              }}
+            />
+          )}
+
+          {activeTab === 'mush-parser' && (
+            <MushParser />
           )}
         </div>
       </main>
