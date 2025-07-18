@@ -11,6 +11,8 @@ from app.services.model_config import ModelConfig
 from app.services.character_service import CharacterProfile
 from app.services.context_service import PoseContext
 from app.services.mush_parser_service import MushParserService, ParsedScene
+from app.services.scene_service import SceneService
+from app.services.data_extraction_service import DataExtractionService
 
 
 @dataclass
@@ -29,16 +31,13 @@ class PoseEnhancement:
 
 
 class PoseService:
-    """Service for enhancing poses with AI-powered narrative improvement."""
+    """Service for generating and enhancing character poses"""
     
     def __init__(self, venice_client: VeniceClient):
-        """Initialize the pose service.
-        
-        Args:
-            venice_client: Venice.ai client for AI processing
-        """
+        """Initialize the pose service with a Venice client."""
         self.venice_client = venice_client
-        self.mush_parser = MushParserService()
+        self.data_extraction_service = DataExtractionService(venice_client)
+        self.mush_parser = MushParserService(self.data_extraction_service)
     
     def enhance_pose(
         self,
@@ -191,7 +190,7 @@ class PoseService:
         
         # Prepare user message for plain text response
         user_message = f"""
-        Transform the following roleplay pose into vivid, immersive prose focused purely on action and experience:
+        Transform the following roleplay pose using minimal scene dressing, focusing on direct action and essential elements only:
 
         ORIGINAL POSE:
         {original_pose}
@@ -258,48 +257,50 @@ class PoseService:
         - If the original says "moves closer", enhance the movement, don't add new actions
         - If the original mentions "heart racing", enhance that feeling, don't add new emotions
         - Focus on expanding and deepening existing elements, not creating new ones
-        - NO excessive alliteration, flowery language, or overly poetic descriptions
+        - NO alliteration, flowery language, poetic descriptions, or scene painting
         - Keep the tone and style consistent with the original pose
         - Enhancement should feel like a natural expansion, not a complete rewrite
 
         ADVANCED WRITING TECHNIQUES TO APPLY:
 
-        1. DIRECT PHYSICAL EXPERIENCE:
-        - Focus on immediate sensations and physical reactions
-        - Describe what the character's body feels and experiences
-        - Include involuntary physical responses and instincts
-        - Show direct cause-and-effect of physical actions
+        1. MINIMAL SCENE DRESSING:
+        - Focus on actions and dialogue rather than detailed descriptions
+        - Use concise, direct language instead of elaborate prose
+        - Minimize descriptive adjectives and adverbs
+        - Present only essential information needed for narrative clarity
+        - Skip detailed atmospheric elements and mood-setting descriptions
+        - Avoid unnecessary embellishment and excessive sensory details
+        
+        2. DIRECT PHYSICAL EXPERIENCE:
+        - Focus on immediate, simple physical actions
+        - Describe core actions without embellishment
+        - Be selective about which physical reactions to include
+        - Show direct cause-and-effect with minimal elaboration
 
-        2. SENSORY IMMERSION:
-        - Engage ALL five senses with specific, concrete details
-        - Use textures, temperatures, sounds, scents, tastes
-        - Include physical sensations and bodily reactions
-        - Show how emotions manifest physically in the body
+        3. SELECTIVE SENSORY DETAILS:
+        - Use only the most essential sensory information
+        - Limit descriptive language to what's necessary
+        - Focus on clarity over immersion
+        - Choose one or two key sensory details rather than many
 
-        3. NATURAL VOICE ENHANCEMENT:
-        - Vary sentence structure naturally (avoid forced dramatic changes)
-        - Use fitting word choices that match the original tone
-        - Enhance existing language patterns, don't completely change them
+        4. NATURAL VOICE ENHANCEMENT:
+        - Use straightforward sentence structure
+        - Choose direct, simple word choices that match the original tone
+        - Enhance existing language patterns minimally
         - Maintain the original character's voice and style
-        - Avoid overly elaborate or flowery language
+        - Avoid any flowery or elaborate language
 
-        4. IMMEDIATE EMOTIONAL REALITY:
-        - Show emotions through physical manifestations
-        - Include visceral descriptions of feeling states
-        - Focus on involuntary reactions and instinctive responses
-        - Demonstrate immediate emotional responses to events
+        5. CONCISE EMOTIONAL EXPRESSION:
+        - State emotions directly rather than through elaborate description
+        - Limit physical manifestations of feelings
+        - Focus on core emotional states without extensive elaboration
+        - Demonstrate emotional responses efficiently
 
-        5. ENVIRONMENTAL INTERACTION:
-        - Show how the character directly interacts with surroundings
-        - Use environmental details the character actually perceives
-        - Include weather, lighting, sounds the character experiences
-        - Focus on setting elements that affect the character
-
-        6. STREAM OF CONSCIOUSNESS:
-        - Include internal monologue and immediate thoughts
-        - Show the character's mental reactions to events
-        - Use natural thought patterns and mental responses
-        - Focus on what the character is thinking, not what it means
+        6. MINIMAL ENVIRONMENTAL REFERENCES:
+        - Include only the most critical environmental details
+        - Mention surroundings only when directly relevant to action
+        - Minimize descriptions of setting, weather, or atmosphere
+        - Focus only on environmental elements essential to the scene
 
         FORMATTING REQUIREMENTS:
         - MANDATORY: Break the enhanced pose into multiple paragraphs (minimum 3-5)
@@ -316,6 +317,35 @@ class PoseService:
         - No sentence should add completely new actions or details not implied
         - The enhanced prose should feel like a natural expansion of the original
         - Focus on deepening what's already there, not creating new content
+        
+        NATURAL HUMAN-LIKE WRITING TECHNIQUES:
+        
+        1. BURSTINESS:
+        - Vary sentence lengths dramatically - mix very short sentences with longer ones
+        - Include occasional abrupt transitions between thoughts
+        - Use sentence fragments sometimes. Like this.
+        - Don't make every sentence perfectly structured
+        - Occasionally use emphasis through repetition, repetition, repetition
+        - Include natural breaks in flow and thinking patterns
+        - Balance complex ideas with simple, direct statements
+        - Use parenthetical asides (like this one) to add personal touches
+        
+        2. PERPLEXITY:
+        - Avoid perfectly predictable language patterns
+        - Include occasional unexpected word choices or phrasings
+        - Mix formal and informal language naturally
+        - Add moments of self-reflection or uncertainty when appropriate
+        - Allow for some natural redundancy in expression
+        - Include occasional thought shifts or mild tangents
+        - Express conflicting emotions or thoughts when reasonable
+        - Use natural hesitations in thought processes
+        
+        3. AUTHENTICITY CHECKS:
+        - Read your output aloud - does it sound like something a human would say?
+        - Avoid robotic perfectionism in structure and flow
+        - Ensure the text has natural rhythm variations
+        - Break grammar rules occasionally for emphasis or effect
+        - Use contractions, casual phrasings, and natural speech patterns
         - Readers should recognize the original pose within the enhancement
         - Avoid excessive creativity that changes the fundamental nature of the pose
 
@@ -472,7 +502,7 @@ class PoseService:
         SCENE FLOW CONTEXT:
         {scene_context}
         
-        Transform the following roleplay pose into vivid, immersive prose:
+        Transform the following roleplay pose using minimal scene dressing, focusing on direct action and essential elements only:
 
         ORIGINAL POSE:
         {original_pose}
@@ -546,7 +576,7 @@ class PoseService:
         - If the original says "moves closer", enhance the movement, don't add new actions
         - If the original mentions "heart racing", enhance that feeling, don't add new emotions
         - Focus on expanding and deepening existing elements, not creating new ones
-        - NO excessive alliteration, flowery language, or overly poetic descriptions
+        - NO alliteration, flowery language, poetic descriptions, or scene painting
         - Keep the tone and style consistent with the original pose
         - Enhancement should feel like a natural expansion, not a complete rewrite
 
@@ -1053,7 +1083,10 @@ class PoseService:
         mush_output: str,
         your_character_name: str,
         character: Optional[CharacterProfile] = None,
-        enhancement_style: str = "balanced"
+        enhancement_style: str = "balanced",
+        skip_enhancement: bool = False,
+        scene_id: Optional[str] = None,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Parse MUSH output, extract your character's poses, and enhance them with scene context.
@@ -1063,6 +1096,9 @@ class PoseService:
             your_character_name: Name of your character in the output
             character: Character profile for enhancement
             enhancement_style: Style of enhancement to apply
+            skip_enhancement: Whether to skip pose enhancement
+            scene_id: Optional ID of the scene to save context to
+            user_id: Optional ID of the user who owns the scene
             
         Returns:
             Dictionary containing parsed scene, your poses, and enhanced poses
@@ -1073,47 +1109,100 @@ class PoseService:
         # Extract your character's poses
         your_poses = self.mush_parser.extract_your_character_poses(parsed_scene, your_character_name)
         
+        # Build scene context using LLM for enhanced extraction when scene_id is provided
+        use_llm = bool(scene_id and user_id)  # Use LLM when we're saving to a scene
+        scene_context_result = self.mush_parser.build_scene_context_from_parsed(
+            parsed_scene, 
+            use_llm=use_llm,
+            data_extraction_service=self.data_extraction_service
+        )
+        
+        # Handle the result based on its type (string or dict)
+        if isinstance(scene_context_result, dict):
+            # We have structured context data from LLM
+            structured_context = scene_context_result
+            # Create a plain text version for returning in the response
+            scene_context = f"Location: {structured_context.get('setting', '')}\n"
+            scene_context += f"Characters present: {', '.join(structured_context.get('active_characters', []))}\n"
+            scene_context += f"Time: {structured_context.get('time_of_day', '')}\n"
+            scene_context += f"Mood: {structured_context.get('mood', '')}\n"
+            scene_context += f"Emotional tone: {structured_context.get('emotional_tone', '')}\n"
+            scene_context += "\nRecent events:\n"
+            for event in structured_context.get('recent_events', []):
+                scene_context += f"- {event}\n"
+        else:
+            # We have a string representation
+            scene_context = scene_context_result
+            # Create a basic structured context for saving
+            structured_context = {
+                "setting": parsed_scene.room_description or "",
+                "active_characters": parsed_scene.characters_present or [],
+                "recent_events": [
+                    f"{pose.character_name}: {pose.content}" 
+                    for pose in parsed_scene.poses[-5:] if pose  # Include last 5 poses as recent events
+                ],
+                "mood": "",
+                "emotional_tone": "",
+                "time_of_day": ""
+            }
+        
+        # Save scene context if scene_id and user_id are provided
+        if scene_id and user_id:
+            try:                
+                # Save the scene context
+                SceneService.save_scene_with_context(
+                    scene_id=scene_id,
+                    user_id=user_id,
+                    scene_context=structured_context
+                )
+            except Exception as e:
+                # Log the error but continue with processing
+                print(f"Error saving scene context: {str(e)}")
+        
         if not your_poses:
             return {
-                "parsed_scene": parsed_scene,
+                "parsed_scene": {
+                    "room_description": parsed_scene.room_description,
+                    "characters_present": parsed_scene.characters_present,
+                    "your_character": parsed_scene.your_character,
+                    "total_poses": len(parsed_scene.poses)
+                },
                 "your_poses": [],
                 "enhanced_poses": [],
-                "scene_context": self.mush_parser.build_scene_context_from_parsed(parsed_scene),
+                "scene_context": scene_context,
                 "error": "No poses found for your character in the provided output"
             }
         
-        # Build scene context
-        scene_context = self.mush_parser.build_scene_context_from_parsed(parsed_scene)
-        
-        # Enhance each of your poses with scene context
+        # Enhance each of your poses with scene context (if not skipped)
         enhanced_poses = []
-        for pose in your_poses:
-            # Convert ParsedPose to regular pose string for enhancement
-            pose_text = f"{pose.character_name} {pose.content}"
-            
-            try:
-                enhancement = self.enhance_pose_with_scene_flow(
-                    original_pose=pose_text,
-                    scene_context=scene_context,
-                    character=character,
-                    enhancement_style=enhancement_style
-                )
-                enhanced_poses.append({
-                    "original": pose_text,
-                    "enhanced": enhancement.enhanced_pose,
-                    "pose_type": pose.pose_type.value,
-                    "timestamp": pose.timestamp,
-                    "is_ooc": pose.is_ooc
-                })
-            except Exception as e:
-                enhanced_poses.append({
-                    "original": pose_text,
-                    "enhanced": None,
-                    "error": str(e),
-                    "pose_type": pose.pose_type.value,
-                    "timestamp": pose.timestamp,
-                    "is_ooc": pose.is_ooc
-                })
+        if not skip_enhancement:
+            for pose in your_poses:
+                # Convert ParsedPose to regular pose string for enhancement
+                pose_text = f"{pose.character_name} {pose.content}"
+                
+                try:
+                    enhancement = self.enhance_pose_with_scene_flow(
+                        original_pose=pose_text,
+                        scene_context=scene_context,
+                        character=character,
+                        enhancement_style=enhancement_style
+                    )
+                    enhanced_poses.append({
+                        "original": pose_text,
+                        "enhanced": enhancement.enhanced_pose,
+                        "pose_type": pose.pose_type.value,
+                        "timestamp": pose.timestamp,
+                        "is_ooc": pose.is_ooc
+                    })
+                except Exception as e:
+                    enhanced_poses.append({
+                        "original": pose_text,
+                        "enhanced": None,
+                        "error": str(e),
+                        "pose_type": pose.pose_type.value,
+                        "timestamp": pose.timestamp,
+                        "is_ooc": pose.is_ooc
+                    })
         
         return {
             "parsed_scene": {
@@ -1133,5 +1222,7 @@ class PoseService:
                 for p in your_poses
             ],
             "enhanced_poses": enhanced_poses,
-            "scene_context": scene_context
+            "scene_context": scene_context,
+            "scene_context_saved": bool(scene_id and user_id),
+            "structured_context": structured_context if isinstance(structured_context, dict) else None
         } 

@@ -1,6 +1,21 @@
 version: '3.8'
 
 services:
+  mongodb:
+    image: mongo:7.0
+    container_name: mush-pose-editor-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: mush_pose_editor
+    volumes:
+      - ./backend/data:/data/db
+    networks:
+      - mush-pose-editor-network
+
   backend:
     build:
       context: ./backend
@@ -16,22 +31,11 @@ services:
       - ./backend:/app
       - /app/__pycache__
     command: python app.py
-    
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - VITE_API_URL=http://localhost:5001
-    command: npm run dev
     depends_on:
-      - backend
+      - mongodb
+    networks:
+      - mush-pose-editor-network
 
 networks:
-  default:
-    name: mush-pose-editor-network 
+  mush-pose-editor-network:
+    driver: bridge 

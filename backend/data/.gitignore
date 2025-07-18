@@ -1,0 +1,4 @@
+# Ignore all MongoDB data files
+*
+# But keep this directory
+!.gitignore 

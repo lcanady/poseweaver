@@ -7,12 +7,14 @@ from flask import Blueprint, request, jsonify
 from app.services.pose_service import PoseService
 from app.services.character_service import CharacterProfile
 from app.services.context_service import PoseContext
+from app.services.scene_flow_service import SceneFlowService
 from app.services.venice_client import VeniceClient, VeniceAPIError
 
 pose_bp = Blueprint('pose', __name__)
 
-# Global service instance for testing compatibility
+# Global service instances for testing compatibility
 pose_service = None
+scene_flow_service = None
 
 
 def get_pose_service():
@@ -26,6 +28,19 @@ def get_pose_service():
         venice_client = VeniceClient(api_key=api_key)
         pose_service = PoseService(venice_client)
     return pose_service
+
+
+def get_scene_flow_service():
+    """Get scene flow service instance."""
+    global scene_flow_service
+    if scene_flow_service is None:
+        import os
+        api_key = os.getenv('VENICE_API_KEY')
+        if not api_key:
+            raise ValueError("VENICE_API_KEY environment variable is required")
+        venice_client = VeniceClient(api_key=api_key)
+        scene_flow_service = SceneFlowService(venice_client)
+    return scene_flow_service
 
 
 @pose_bp.route('/enhance', methods=['POST'])
@@ -89,7 +104,7 @@ def enhance_pose():
         if 'context' in data and data['context']:
             try:
                 context_data = data['context']
-                context = PoseContext(**context_data)
+                context = PoseContext.from_dict(context_data)
             except (TypeError, ValueError) as e:
                 return jsonify({
                     'success': False,
@@ -115,6 +130,124 @@ def enhance_pose():
         return jsonify({
             'success': True,
             'enhanced_pose': enhancement.enhanced_pose
+        })
+        
+    except VeniceAPIError as e:
+        return jsonify({
+            'success': False,
+            'error': f'AI processing failed: {str(e)}'
+        }), 503
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': f'Invalid data: {str(e)}'
+        }), 400
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}'
+        }), 500
+
+
+@pose_bp.route('/enhance-with-scene', methods=['POST'])
+def enhance_pose_with_scene():
+    """Enhance a pose using scene context from scene flow.
+    
+    Request body:
+    {
+        "original_pose": "Basic pose text...",
+        "scene_id": "scene-uuid-here",  // Optional - uses scene context
+        "character": {  // Optional
+            "name": "Character Name",
+            "background": "...",
+            // ... other character fields
+        },
+        "enhancement_style": "balanced"  // minimal, balanced, elaborate
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "enhanced_pose": "Enhanced pose text...",
+        "scene_context_used": true  // indicates if scene context was available
+    }
+    """
+    try:
+        # Get request data
+        data = request.get_json(force=True, silent=True)
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No JSON data provided'
+            }), 400
+        
+        # Validate required fields
+        original_pose = data.get('original_pose')
+        if not original_pose or not original_pose.strip():
+            return jsonify({
+                'success': False,
+                'error': 'original_pose is required and cannot be empty'
+            }), 400
+        
+        # Handle optional character data
+        character = None
+        if 'character' in data and data['character']:
+            try:
+                character_data = data['character']
+                character = CharacterProfile(**character_data)
+            except (TypeError, ValueError) as e:
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid character data: {str(e)}'
+                }), 400
+        
+        # Get enhancement style
+        enhancement_style = data.get('enhancement_style', 'balanced')
+        if enhancement_style not in ['minimal', 'balanced', 'elaborate']:
+            return jsonify({
+                'success': False,
+                'error': 'enhancement_style must be minimal, balanced, or '
+                         'elaborate'
+            }), 400
+        
+        # Get scene context if scene_id provided
+        scene_context = None
+        scene_context_used = False
+        scene_id = data.get('scene_id')
+        
+        if scene_id:
+            try:
+                scene_service = get_scene_flow_service()
+                scene_context = scene_service.get_scene_context_for_enhancement(
+                    scene_id
+                )
+                scene_context_used = True
+            except ValueError:
+                # Scene not found, continue without scene context
+                pass
+        
+        # Enhance the pose
+        service = get_pose_service()
+        
+        if scene_context:
+            # Use scene flow enhancement if we have scene context
+            enhancement = service.enhance_pose_with_scene_flow(
+                original_pose, scene_context, character, enhancement_style
+            )
+        else:
+            # Fall back to regular enhancement
+            enhancement = service.enhance_pose(
+                original_pose, character, None, enhancement_style
+            )
+        
+        # Return the enhanced pose
+        return jsonify({
+            'success': True,
+            'enhanced_pose': enhancement.enhanced_pose,
+            'scene_context_used': scene_context_used
         })
         
     except VeniceAPIError as e:
@@ -294,6 +427,104 @@ def analyze_pose_quality():
             'success': True,
             'analysis': analysis
         })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}'
+        }), 500
+
+
+@pose_bp.route('/parse-mush-output', methods=['POST'])
+def parse_mush_output():
+    """Parse MUSH game output and extract character poses.
+    
+    Request body:
+    {
+        "mush_output": "Raw MUSH output text",
+        "your_character_name": "Your character's name",
+        "character": {...},  // Optional character profile
+        "enhancement_style": "balanced"  // Optional enhancement style
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "parsed_scene": {...},
+        "your_poses": [...],
+        "enhanced_poses": [...],
+        "scene_context": "..."
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Request body is required'
+            }), 400
+        
+        # Extract required fields
+        mush_output = data.get('mush_output', '').strip()
+        your_character_name = data.get('your_character_name', '').strip()
+        
+        if not mush_output:
+            return jsonify({
+                'success': False,
+                'error': 'mush_output is required'
+            }), 400
+            
+        if not your_character_name:
+            return jsonify({
+                'success': False,
+                'error': 'your_character_name is required'
+            }), 400
+        
+        # Extract optional fields
+        character_data = data.get('character')
+        enhancement_style = data.get('enhancement_style', 'balanced')
+        skip_enhancement = data.get('skip_enhancement', False)
+        
+        # Create character profile if provided
+        character = None
+        if character_data:
+            character = CharacterProfile(
+                name=character_data.get('name', ''),
+                background=character_data.get('background', ''),
+                personality=character_data.get('personality', []),
+                skills=character_data.get('skills', []),
+                goals=character_data.get('goals', []),
+                relationships=character_data.get('relationships', {}),
+                voice_notes=character_data.get('voice_notes', '')
+            )
+        
+        # Get pose service and parse MUSH output
+        service = get_pose_service()
+        results = service.enhance_from_mush_output(
+            mush_output=mush_output,
+            your_character_name=your_character_name,
+            character=character,
+            enhancement_style=enhancement_style,
+            skip_enhancement=skip_enhancement
+        )
+        
+        return jsonify({
+            'success': True,
+            **results
+        })
+        
+    except VeniceAPIError as e:
+        return jsonify({
+            'success': False,
+            'error': f'AI service error: {str(e)}'
+        }), 503
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
         
     except Exception as e:
         return jsonify({

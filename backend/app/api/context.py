@@ -14,6 +14,37 @@ context_bp = Blueprint('context', __name__)
 context_service = None
 
 
+@context_bp.route('/', methods=['GET'])
+def get_context():
+    """Get context API information.
+    
+    Returns:
+    {
+        "success": true,
+        "info": "Context API information",
+        "endpoints": [list of available endpoints]
+    }
+    """
+    endpoints = [
+        {
+            "path": "/analyze",
+            "method": "POST",
+            "description": "Analyze a pose to extract context for response crafting"
+        },
+        {
+            "path": "/analyze-multiple", 
+            "method": "POST",
+            "description": "Analyze multiple poses and return context for each"
+        }
+    ]
+    
+    return jsonify({
+        'success': True,
+        'info': 'Context analysis API for MUSH Pose Editor',
+        'endpoints': endpoints
+    })
+
+
 def get_context_service():
     """Get context service instance."""
     global context_service
@@ -32,6 +63,16 @@ def analyze_pose_context():
     """Analyze a pose to extract context for response crafting.
     
     Request body:
+    {
+        "poses": [
+            {
+                "character_name": "Character Name",
+                "content": "The pose content..."
+            }
+        ],
+        "character_name": "Optional character name for perspective"
+    }
+    OR (legacy support):
     {
         "pose_text": "The pose text to analyze...",
         "character_name": "Optional character name for perspective"
@@ -62,19 +103,38 @@ def analyze_pose_context():
                 'error': 'No JSON data provided'
             }), 400
         
-        # Validate required fields
-        pose_text = data.get('pose_text')
-        if not pose_text or not pose_text.strip():
-            return jsonify({
-                'success': False,
-                'error': 'pose_text is required and cannot be empty'
-            }), 400
-        
         character_name = data.get('character_name')
-        
-        # Analyze the pose context
         service = get_context_service()
-        context = service.analyze_pose_context(pose_text, character_name)
+        
+        # Check if poses are provided (new format)
+        poses = data.get('poses')
+        if poses and isinstance(poses, list):
+            # Validate poses structure
+            for pose in poses:
+                if not isinstance(pose, dict):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Each pose must be a dictionary'
+                    }), 400
+                if not pose.get('character_name') or not pose.get('content'):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Each pose must have character_name and content'
+                    }), 400
+            
+            # Analyze poses using the new method
+            context = service.analyze_poses_context(poses, character_name)
+        else:
+            # Legacy support: analyze pose_text
+            pose_text = data.get('pose_text')
+            if not pose_text or not pose_text.strip():
+                return jsonify({
+                    'success': False,
+                    'error': 'poses array or pose_text is required'
+                }), 400
+            
+            # Analyze using the old method
+            context = service.analyze_pose_context(pose_text, character_name)
         
         # Get response suggestions
         suggestions = service.get_response_suggestions(context, character_name)
@@ -100,7 +160,7 @@ def analyze_pose_context():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Internal server error: {str(e)}'
+            'error': f'An unexpected error occurred: {str(e)}'
         }), 500
 
 

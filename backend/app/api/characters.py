@@ -6,6 +6,7 @@ Provides endpoints for character brain dump processing and management.
 from flask import Blueprint, request, jsonify
 from app.services.character_service import CharacterService, CharacterProfile
 from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.middleware.auth_middleware import require_auth
 
 # Create blueprint
 characters_bp = Blueprint('characters', __name__)
@@ -35,6 +36,7 @@ def get_character_service():
 
 
 @characters_bp.route('/process', methods=['POST'])
+@require_auth
 def process_brain_dump():
     """Process a character brain dump into structured profile.
     
@@ -93,27 +95,25 @@ def process_brain_dump():
         
         # Process the brain dump
         character_service = get_character_service()
-        character_profile = character_service.process_brain_dump(
+        character = character_service.process_brain_dump(
             brain_dump, existing_character
         )
         
         return jsonify({
             'success': True,
-            'character': character_profile.to_dict()
-        })
+            'character': character.to_dict()
+        }), 200
         
     except VeniceAPIError as e:
         return jsonify({
             'success': False,
             'error': f'AI processing failed: {str(e)}'
         }), 503
-        
     except ValueError as e:
         return jsonify({
             'success': False,
-            'error': f'Invalid data: {str(e)}'
+            'error': str(e)
         }), 400
-        
     except Exception as e:
         return jsonify({
             'success': False,
@@ -122,8 +122,9 @@ def process_brain_dump():
 
 
 @characters_bp.route('/validate', methods=['POST'])
+@require_auth
 def validate_character():
-    """Validate character profile data structure.
+    """Validate a character profile structure.
     
     Request body:
     {
@@ -154,30 +155,29 @@ def validate_character():
                 'error': 'No JSON data provided'
             }), 400
         
-        # Get character data
+        # Validate character data
         character_data = data.get('character')
         if not character_data:
             return jsonify({
                 'success': False,
-                'error': 'character data is required'
+                'error': 'character field is required'
             }), 400
         
-        # Validate character data
+        # Attempt to create character profile to validate structure
         try:
-            character_service = get_character_service()
-            character_service._validate_character_data(character_data)
+            character = CharacterProfile(**character_data)
             return jsonify({
                 'success': True,
                 'valid': True,
                 'errors': []
-            })
-        except ValueError as e:
+            }), 200
+        except (TypeError, ValueError) as e:
             return jsonify({
                 'success': True,
                 'valid': False,
                 'errors': [str(e)]
-            })
-            
+            }), 200
+        
     except Exception as e:
         return jsonify({
             'success': False,
@@ -185,69 +185,114 @@ def validate_character():
         }), 500
 
 
+@characters_bp.route('/', methods=['GET'])
+@require_auth
+def get_characters():
+    """Get list of characters for the authenticated user.
+    
+    Returns:
+    {
+        "success": true,
+        "data": [character objects],
+        "meta": {
+            "total": total_count,
+            "limit": limit,
+            "skip": skip
+        }
+    }
+    """
+    try:
+        from app.models.character import Character
+        from flask import request, current_app
+        from flask_jwt_extended import get_jwt_identity
+        
+        # Get user ID from JWT
+        current_user = get_jwt_identity()
+        user_id = None
+        
+        if current_user:
+            # Extract user_id from identity (handle both string and dict formats)
+            user_id = current_user if isinstance(current_user, str) else current_user.get('id')
+        else:
+            current_app.logger.error("No JWT identity found")
+        
+        if not user_id:
+            return jsonify({
+                'success': False,
+                'message': 'Authentication required'
+            }), 401
+        
+        # Get all user's characters
+        try:
+            # Try to get characters with pagination if supported
+            skip = request.args.get('skip', default=0, type=int)
+            limit = min(request.args.get('limit', default=100, type=int), 100)  # Max 100
+            characters = Character.find_by_user(user_id, skip=skip, limit=limit)
+        except TypeError:
+            # If pagination not supported, get all characters
+            characters = Character.find_by_user(user_id)
+            
+        # Get total count
+        try:
+            total_count = Character.count_by_user(user_id)
+        except (AttributeError, TypeError):
+            # If count method doesn't exist, count the results manually
+            total_count = len(characters)
+        
+        return jsonify({
+            'success': True,
+            'data': [char.to_dict() for char in characters],
+            'meta': {
+                'total': total_count,
+                'limit': limit,
+                'skip': skip
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to retrieve characters: {str(e)}'
+        }), 500
+
 @characters_bp.route('/schema', methods=['GET'])
 def get_character_schema():
-    """Get the character profile data schema.
+    """Get the character profile schema definition.
     
     Returns:
     {
         "success": true,
         "schema": {
-            "fields": {
-                "name": {"type": "string", "required": true},
-                "background": {"type": "string", "required": true},
-                // ... other fields
-            }
+            "name": "string",
+            "background": "string",
+            "personality": ["string"],
+            "skills": ["string"],
+            "goals": ["string"],
+            "relationships": {"string": "string"},
+            "voice_notes": "string"
         }
     }
     """
-    schema = {
-        "fields": {
-            "name": {
-                "type": "string",
-                "required": True,
-                "description": "Character's full name"
-            },
-            "background": {
-                "type": "string", 
-                "required": True,
-                "description": "Character's history, origin, and life story"
-            },
-            "personality": {
-                "type": "array",
-                "items": {"type": "string"},
-                "required": True,
-                "description": "List of personality traits and characteristics"
-            },
-            "skills": {
-                "type": "array",
-                "items": {"type": "string"},
-                "required": True,
-                "description": "List of abilities, talents, and competencies"
-            },
-            "goals": {
-                "type": "array",
-                "items": {"type": "string"},
-                "required": True,
-                "description": "List of character motivations and objectives"
-            },
-            "relationships": {
-                "type": "object",
-                "required": True,
-                "description": "Important relationships (name: type)"
-            },
-            "voice_notes": {
-                "type": "string",
-                "required": True,
-                "description": "Notes about how the character speaks"
-            }
+    try:
+        schema = {
+            "name": "string",
+            "background": "string",
+            "personality": ["string"],
+            "skills": ["string"],
+            "goals": ["string"],
+            "relationships": {"string": "string"},
+            "voice_notes": "string"
         }
-    }
-    
-    return jsonify({
-        'success': True,
-        'schema': schema
-    })
+        
+        return jsonify({
+            'success': True,
+            'schema': schema
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}'
+        }), 500
 
 
 @characters_bp.errorhandler(404)

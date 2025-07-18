@@ -2,23 +2,19 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files first
 COPY package*.json ./
+COPY pnpm-lock.yaml ./
 
-# Install dependencies
-RUN npm ci
+# Install pnpm and dependencies
+RUN npm install -g pnpm
+RUN pnpm install
 
-# Copy source code
+# Copy source code (excluding node_modules via .dockerignore)
 COPY . .
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-RUN chown -R nextjs:nodejs /app
-USER nextjs
 
 # Expose port
 EXPOSE 3000
 
-# Start development server
-CMD ["npm", "run", "dev"] 
+# Start the development server
+CMD ["pnpm", "dev"] 

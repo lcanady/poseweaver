@@ -523,4 +523,69 @@ class VeniceClient:
             "supports_thinking": False,
             "max_context": 4096,
             "recommended_temperature": 0.7
-        }) 
+        })
+        
+    def extract_structured_data(self, 
+                               unstructured_text: str, 
+                               schema: Dict[str, Any],
+                               model: str = "dolphin-2.9-llama3-70b",
+                               temperature: float = 0.5,
+                               max_tokens: int = 1500) -> Dict[str, Any]:
+        """Extract structured data from unstructured text using the LLM.
+        
+        Args:
+            unstructured_text: Raw unstructured text to process
+            schema: Dictionary describing the structure to extract.
+                    For example: {
+                      "title": "string - extract the title",
+                      "characters": "list of strings - extract character names",
+                      "settings": "list of strings - extract setting descriptions",
+                      "mood": "string - extract the overall mood",
+                      "events": "list of strings - extract key events"
+                    }
+            model: Model to use for extraction
+            temperature: Sampling temperature (lower is more deterministic)
+            max_tokens: Maximum tokens to generate
+            
+        Returns:
+            Dictionary of extracted structured data matching the schema
+        """
+        # Validate the schema is a dictionary
+        if not isinstance(schema, dict):
+            raise ValueError("Schema must be a dictionary")
+            
+        # Create system prompt instructing the LLM how to structure data
+        schema_description = "\n".join([f"{key}: {description}" for key, description in schema.items()])
+        system_message = f"""You are a data extraction assistant. Extract the following structured information from the user's text.
+        Output ONLY valid JSON without any explanation or additional text.
+        
+        Extract the following fields:
+        {schema_description}
+        
+        Format your response as a JSON object with these exact keys.
+        Use only the information explicitly present in the text.
+        If information for a field is not found, use null for strings or [] for lists."""
+        
+        # Setup messages for the API call
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": unstructured_text}
+        ]
+        
+        # Call the LLM API
+        response = self.generate_completion(
+            messages=messages,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        
+        # Parse the response as JSON
+        try:
+            # Clean the response to ensure it only contains JSON
+            # Sometimes models might add markdown code block syntax ```json ... ```
+            cleaned_response = re.sub(r'^\s*```(?:json)?\s*|\s*```\s*$', '', response, flags=re.MULTILINE)
+            structured_data = json.loads(cleaned_response)
+            return structured_data
+        except json.JSONDecodeError as e:
+            raise VeniceAPIError(f"Failed to parse structured data from LLM response: {str(e)}. Response: {response}")

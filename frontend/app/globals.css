@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 257 100% 4%; /* Deep Purple/Blue */
+    --foreground: 210 40% 98%; /* White */
+
+    --card: 257 20% 13%; /* Lighter Purple for cards */
+    --card-foreground: 210 40% 96%;
+
+    --popover: 257 100% 4%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 43 96% 56%; /* Amber/Gold for CTAs */
+    --primary-foreground: 257 100% 4%;
+
+    --secondary: 271 91% 65%; /* Purple for accents */
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 257 10% 25%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 152 69% 47%; /* Soft Green for success */
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 257 20% 20%;
+    --input: 257 20% 20%;
+    --ring: 43 96% 56%;
+
+    --radius: 0.75rem;
+
+    --font-sans: "Inter", sans-serif;
+    --font-serif: "Lora", serif;
+    --font-mono: "Inconsolata", monospace;
+  }
+
+  .dark {
+    /* You can define dark mode colors here if they differ from the default */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

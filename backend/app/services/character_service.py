@@ -5,8 +5,9 @@ This service handles free-form character descriptions and converts them
 into structured character profiles using AI analysis.
 """
 import json
-from typing import Dict, List, Optional, Any
+from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, asdict
+from flask import current_app
 from app.services.venice_client import VeniceClient, VeniceAPIError
 
 
@@ -109,7 +110,7 @@ class CharacterService:
                 {"role": "user", "content": user_message}
             ],
             temperature=0.3,
-            max_tokens=1000
+            max_tokens=4000  # Increased token limit to handle larger responses
         )
         
         # Parse JSON response if needed
@@ -119,26 +120,38 @@ class CharacterService:
                 response = response.strip()
                 print(f"DEBUG: Raw character response: {response[:500]}...")
                 
-                if response.startswith('```json'):
-                    # Extract JSON from code block
-                    start = response.find('{')
-                    end = response.rfind('}') + 1
-                    if start != -1 and end != 0:
-                        response = response[start:end]
-                elif response.startswith('```'):
-                    # Extract JSON from generic code block
-                    lines = response.split('\n')
-                    json_lines = []
-                    in_json = False
-                    for line in lines:
-                        if line.strip().startswith('{') or in_json:
-                            in_json = True
-                            json_lines.append(line)
-                            if line.strip().endswith('}'):
-                                break
-                    response = '\n'.join(json_lines)
+                # More robust JSON extraction logic
+                if '```json' in response or '```' in response:
+                    # First try to find json code block
+                    json_start = response.find('```json')
+                    if json_start == -1:
+                        json_start = response.find('```')
+                    
+                    if json_start != -1:
+                        # Skip past the code block markers
+                        content_start = response.find('\n', json_start) + 1
+                        json_end = response.find('```', content_start)
+                        
+                        if json_end != -1:
+                            # Extract content between code block markers
+                            extracted_json = response[content_start:json_end].strip()
+                            print(f"DEBUG: Extracted JSON from code block: {extracted_json[:100]}...")
+                            response = extracted_json
                 
+                # Fallback approach: find the first { and last }
+                if not response.startswith('{'):
+                    start = response.find('{')
+                    if start != -1:
+                        response = response[start:]
+                
+                if not response.rstrip().endswith('}'):
+                    end = response.rfind('}')
+                    if end != -1:
+                        response = response[:end+1]
+                
+                print(f"DEBUG: Cleaned JSON for parsing: {response[:100]}...")
                 character_data = json.loads(response)
+                print("DEBUG: JSON successfully parsed!")
             except json.JSONDecodeError as e:
                 print(f"DEBUG: Failed to parse character response: {response[:200]}...")
                 raise ValueError(f"Invalid JSON response from AI: {str(e)}")
@@ -171,17 +184,21 @@ class CharacterService:
         You are an expert character analyst for MUSH (Multi-User Shared Hallucination) roleplay.
         Your task is to analyze character descriptions and extract structured information.
 
-        Extract the following information from character descriptions:
-        - name: Character's full name
-        - background: Character's history, origin, and life story
-        - personality: List of personality traits and characteristics
-        - skills: List of abilities, talents, and competencies
-        - goals: List of character motivations and objectives
-        - relationships: Dictionary of important relationships (name: relationship type)
-        - voice_notes: Notes about how the character speaks and communicates
+        Extract the following information from character descriptions and adhere to these format requirements:
+        - name: Character's full name (MUST BE A STRING)
+        - background: Character's history, origin, and life story (MUST BE A STRING)
+        - personality: List of personality traits and characteristics (MUST BE AN ARRAY)
+        - skills: List of abilities, talents, and competencies (MUST BE AN ARRAY)
+        - goals: List of character motivations and objectives (MUST BE AN ARRAY)
+        - relationships: Dictionary of important relationships (name: relationship type) (MUST BE AN OBJECT)
+        - voice_notes: Notes about how the character speaks and communicates (MUST BE A STRING)
 
-        Respond ONLY with a valid JSON object containing these fields.
-        Ensure all list fields are arrays and relationships is an object.
+        IMPORTANT FORMAT REQUIREMENTS:
+        1. Respond ONLY with a valid JSON object containing these fields.
+        2. String fields (name, background, voice_notes) MUST be returned as strings, not arrays/lists.
+        3. List fields (personality, skills, goals) MUST be arrays.
+        4. The relationships field MUST be an object (dictionary).
+        
         Be creative but consistent with the provided information.
         """
         
@@ -218,11 +235,24 @@ class CharacterService:
             if field not in data:
                 raise ValueError(f"Missing required field: {field}")
         
-        # Validate field types
+        # Define expected field types
         list_fields = ["personality", "skills", "goals"]
+        string_fields = ["name", "background", "voice_notes"]
+        
+        # Validate list fields
         for field in list_fields:
-            if not isinstance(data[field], list):
+            if field in data and not isinstance(data[field], list):
                 raise ValueError(f"Field '{field}' should be a list")
+        
+        # Convert list fields to strings if necessary
+        for field in string_fields:
+            if field in data:
+                if isinstance(data[field], list):
+                    # If it's a list, convert to string for consistency
+                    current_app.logger.info(f"Converting {field} from list to string")
+                    data[field] = "\n\n".join(str(item) for item in data[field])
+                elif not isinstance(data[field], str):
+                    raise ValueError(f"Field '{field}' should be a string or list of strings")
         
         if not isinstance(data["relationships"], dict):
             raise ValueError("Field 'relationships' should be a dictionary")

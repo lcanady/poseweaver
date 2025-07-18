@@ -1,0 +1,80 @@
+"use client"
+
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Wand2, Users, Settings, Feather, LayoutGrid, BookOpen, CreditCard } from "lucide-react"
+import { UserNav } from "./user-nav"
+import { cn } from "@/lib/utils"
+import { useAuth } from "@/contexts/auth-context"
+
+export function DashboardSidebar() {
+  const pathname = usePathname()
+  const { isAuthenticated } = useAuth()
+
+  const navItems = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
+    { href: "/dashboard/scene-weaver", label: "Scene Weaver", icon: Wand2 },
+    { href: "/dashboard/scenes", label: "Scenes", icon: BookOpen },
+    { href: "/dashboard/characters", label: "Characters", icon: Users },
+  ]
+
+  const bottomNavItems = [
+    // Settings and Billing moved to user dropdown menu
+  ]
+
+  return (
+    <aside className="hidden fixed left-0 top-0 z-40 w-14 h-screen flex-col border-r bg-background lg:flex">
+      <TooltipProvider>
+        <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
+          <Link
+            href={isAuthenticated ? "/dashboard" : "/"}
+            className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
+          >
+            <Feather className="h-4 w-4 transition-all group-hover:scale-110" />
+            <span className="sr-only">SceneForge</span>
+          </Link>
+          {navItems.map((item) => (
+            <Tooltip key={item.href}>
+              <TooltipTrigger asChild>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:text-foreground md:h-8 md:w-8",
+                    (pathname.startsWith(item.href) && item.href !== "/dashboard") || pathname === item.href
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span className="sr-only">{item.label}</span>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">{item.label}</TooltipContent>
+            </Tooltip>
+          ))}
+        </nav>
+        <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
+          {bottomNavItems.map((item) => (
+            <Tooltip key={item.href}>
+              <TooltipTrigger asChild>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:text-foreground md:h-8 md:w-8",
+                    pathname.startsWith(item.href) ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span className="sr-only">{item.label}</span>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">{item.label}</TooltipContent>
+            </Tooltip>
+          ))}
+          <UserNav />
+        </nav>
+      </TooltipProvider>
+    </aside>
+  )
+}

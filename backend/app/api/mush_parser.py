@@ -1,7 +1,8 @@
 """
 API endpoints for MUSH output parsing and enhancement.
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.services.pose_service import PoseService
 from app.services.venice_client import VeniceClient, VeniceAPIError
@@ -91,7 +92,9 @@ def enhance_from_mush_output():
             "speaking_style": "string",
             "physical_description": "string"
         },
-        "enhancement_style": "string - balanced/detailed/subtle (optional, default: balanced)"
+        "enhancement_style": "string - balanced/detailed/subtle (optional, default: balanced)",
+        "scene_id": "string - optional scene ID to save context to",
+        "user_id": "string - optional user ID who owns the scene"
     }
     """
     try:
@@ -108,7 +111,7 @@ def enhance_from_mush_output():
         if not your_character_name:
             return jsonify({"error": "your_character_name is required"}), 400
         
-        # Parse character profile if provided
+        # Parse character profile if provided (optional)
         character = None
         character_data = data.get('character')
         if character_data:
@@ -116,11 +119,15 @@ def enhance_from_mush_output():
                 name=character_data.get('name', ''),
                 background=character_data.get('background', ''),
                 personality=character_data.get('personality', []),
-                speaking_style=character_data.get('speaking_style', ''),
-                physical_description=character_data.get('physical_description', '')
+                skills=character_data.get('skills', []),
+                goals=character_data.get('goals', []),
+                relationships=character_data.get('relationships', {}),
+                voice_notes=character_data.get('voice_notes', '')
             )
         
         enhancement_style = data.get('enhancement_style', 'balanced')
+        scene_id = data.get('scene_id')
+        user_id = data.get('user_id')
         
         # Process the MUSH output
         service = get_pose_service()
@@ -128,7 +135,9 @@ def enhance_from_mush_output():
             mush_output=mush_output,
             your_character_name=your_character_name,
             character=character,
-            enhancement_style=enhancement_style
+            enhancement_style=enhancement_style,
+            scene_id=scene_id,
+            user_id=user_id
         )
         
         return jsonify(result)

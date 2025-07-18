@@ -201,11 +201,18 @@ class TestContextService:
         # Verify result
         assert isinstance(result, list)
         assert len(result) == 5  # Limited to 5 suggestions
-        assert "React to: examining, studying" in result
-        assert "Respond to emotional tone: curiosity" in result
-        assert "Address: artifact's purpose" in result
-        assert "Address: Bob's reaction" in result
-        assert "Take time for thoughtful response" in result
+        
+        # Check suggestion texts
+        suggestion_texts = [s["text"] for s in result]
+        assert "React to: examining, studying" in suggestion_texts
+        assert "Respond to emotional tone: curiosity" in suggestion_texts
+        assert "Address: artifact's purpose" in suggestion_texts
+        assert "Address: Bob's reaction" in suggestion_texts
+        assert "Take time for thoughtful response" in suggestion_texts
+        
+        # Check suggestion types
+        assert all("type" in s for s in result)
+        assert all("text" in s for s in result)
 
     def test_get_response_suggestions_without_character(self, context_service, 
                                                       mock_venice_client, 
@@ -219,11 +226,18 @@ class TestContextService:
         # Verify result
         assert isinstance(result, list)
         assert len(result) == 5  # Limited to 5 suggestions
-        assert "React to: examining, studying" in result
-        assert "Respond to emotional tone: curiosity" in result
-        assert "Address: artifact's purpose" in result
-        assert "Address: Bob's reaction" in result
-        assert "Take time for thoughtful response" in result
+        
+        # Check suggestion texts
+        suggestion_texts = [s["text"] for s in result]
+        assert "React to: examining, studying" in suggestion_texts
+        assert "Respond to emotional tone: curiosity" in suggestion_texts
+        assert "Address: artifact's purpose" in suggestion_texts
+        assert "Address: Bob's reaction" in suggestion_texts
+        assert "Take time for thoughtful response" in suggestion_texts
+        
+        # Check suggestion types
+        assert all("type" in s for s in result)
+        assert all("text" in s for s in result)
 
     def test_get_response_suggestions_high_urgency(self, context_service):
         """Test get_response_suggestions with high urgency context."""
@@ -241,7 +255,8 @@ class TestContextService:
         result = context_service.get_response_suggestions(high_urgency_context)
         
         assert isinstance(result, list)
-        assert "Consider immediate action or response" in result
+        suggestion_texts = [s["text"] for s in result]
+        assert "Consider immediate action or response" in suggestion_texts
 
     def test_get_response_suggestions_empty_context(self, context_service):
         """Test get_response_suggestions with empty context."""

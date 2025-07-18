@@ -150,9 +150,13 @@ def add_pose_to_scene(scene_id: str):
             scene_id, character_name, pose_text, pose_type
         )
         
+        # Return updated scene data
+        scene = scene_flow_service.get_scene(scene_id)
+        
         return jsonify({
             'success': True,
-            'pose': pose.to_dict()
+            'pose': pose.to_dict(),
+            'scene': scene.to_dict() if scene else None
         }), 201
         
     except ValueError as e:

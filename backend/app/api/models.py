@@ -4,6 +4,33 @@ from app.services.model_config import ModelConfig
 models_bp = Blueprint('models', __name__)
 
 
+@models_bp.route('/', methods=['GET'])
+def get_models():
+    """Get list of all available models and presets.
+    
+    Returns:
+    {
+        "success": true,
+        "models": [list of available models],
+        "presets": [list of model presets]
+    }
+    """
+    try:
+        models = ModelConfig.get_available_models()
+        presets = ModelConfig.get_model_presets()
+        
+        return jsonify({
+            'success': True,
+            'models': models,
+            'presets': presets
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to retrieve models: {str(e)}'
+        }), 500
+
+
 @models_bp.route('/presets', methods=['GET'])
 def get_model_presets():
     """Get all available model presets."""
