@@ -14,106 +14,16 @@ import { Wand2, Loader2, Copy, Sparkles, Save, ChevronDown, ChevronUp, MessageSq
 import { useToast } from "@/hooks/use-toast"
 import { SceneAnalysis } from "@/components/scene-analysis"
 import { SceneSelector } from "@/components/scene-selector"
+import { SceneDumpProcessor } from "@/components/scene-dump-processor"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
+import type { SceneDumpProcessingResult } from "@/hooks/useSceneDumpProcessor"
 
 // Initialize with empty strings instead of placeholder text
 const initialScene = ``
 const initialPost = ``
 
-// API function to analyze scene context
-async function analyzeSceneContext(sceneText: string, characterName?: string) {
-  try {
-    // Get access token for authentication
-    const accessToken = localStorage.getItem('access_token');
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
-    };
-    
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-    
-    console.log('Analyzing scene context with:', { 
-      sceneText: sceneText.substring(0, 100) + '...', // Log first 100 chars only
-      characterName,
-      headers: { ...headers, Authorization: accessToken ? 'Bearer [REDACTED]' : undefined }
-    });
-    
-    const response = await fetch('http://localhost:5001/api/context/analyze', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        pose_text: sceneText,
-        character_name: characterName
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Scene analysis API error:', errorData);
-      throw new Error(errorData.error || 'Failed to analyze scene context');
-    }
-    
-    const data = await response.json();
-    console.log('Scene analysis response:', {
-      success: data.success,
-      context: data.context,
-      suggestionCount: data.suggestions?.length || 0
-    });
-    return data;
-  } catch (error) {
-    console.error('Error analyzing scene context:', error);
-    throw error;
-  }
-}
 
-// API function to analyze scene context from poses
-async function analyzeSceneContextFromPoses(poses: any[], characterName?: string) {
-  try {
-    // Get access token for authentication
-    const accessToken = localStorage.getItem('access_token');
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
-    };
-    
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-    
-    console.log('Analyzing scene context from poses:', { 
-      poseCount: poses.length,
-      characterName,
-      headers: { ...headers, Authorization: accessToken ? 'Bearer [REDACTED]' : undefined }
-    });
-    
-    const response = await fetch('http://localhost:5001/api/context/analyze', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        poses: poses,
-        character_name: characterName
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Scene analysis API error:', errorData);
-      throw new Error(errorData.error || 'Failed to analyze scene context');
-    }
-    
-    const data = await response.json();
-    console.log('Scene analysis response:', {
-      success: data.success,
-      context: data.context,
-      suggestionCount: data.suggestions?.length || 0
-    });
-    return data;
-  } catch (error) {
-    console.error('Error analyzing scene context:', error);
-    throw error;
-  }
-}
 
 // API function to enhance a pose
 async function enhancePose(originalPose: string, sceneContext: any, characterData: any, enhancementStyle: string, includeEnvironmentalDetails: boolean = false) {
@@ -123,11 +33,11 @@ async function enhancePose(originalPose: string, sceneContext: any, characterDat
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
-    
+
     if (accessToken) {
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
-    
+
     const response = await fetch('http://localhost:5001/api/pose/enhance', {
       method: 'POST',
       headers,
@@ -137,17 +47,17 @@ async function enhancePose(originalPose: string, sceneContext: any, characterDat
         context: sceneContext,
         enhancement_style: enhancementStyle,
         include_environmental_details: includeEnvironmentalDetails,
-        instructions: includeEnvironmentalDetails ? 
-          "IMPORTANT: You MUST heavily incorporate the provided scene context into your enhancement. Reference key locations, atmospheres, and other characters mentioned in the scene context. Make your enhancement directly relevant to the specific scene described. You may include environmental details and sensory descriptions. Preserve any Discord-style formatting from the original pose, including indentation, paragraph structure, and message breaks." : 
+        instructions: includeEnvironmentalDetails ?
+          "IMPORTANT: You MUST heavily incorporate the provided scene context into your enhancement. Reference key locations, atmospheres, and other characters mentioned in the scene context. Make your enhancement directly relevant to the specific scene described. You may include environmental details and sensory descriptions. Preserve any Discord-style formatting from the original pose, including indentation, paragraph structure, and message breaks." :
           "IMPORTANT: You MUST heavily incorporate the provided scene context into your enhancement. Reference key locations, atmospheres, and other characters mentioned in the scene context. Make your enhancement directly relevant to the specific scene described. DO NOT add ANY environmental details, ambient descriptions, sensory perceptions, or atmospheric elements that weren't in the original post. Focus ONLY on enhancing character actions and explicit movements. Do not describe smells, sounds, feelings, or ambient environment that weren't in the original. Preserve all Discord-style formatting including indentation at paragraph beginnings, spacing between paragraphs, timestamps, usernames, and message structure."
       })
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error || 'Failed to enhance pose');
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error('Error enhancing pose:', error);
@@ -163,17 +73,17 @@ const defaultCharacters = [
 ]
 
 // CollapsiblePose component for displaying poses with drag and drop
-function CollapsiblePose({ 
-  pose, 
-  index, 
-  onDelete, 
-  onDragStart, 
-  onDragOver, 
+function CollapsiblePose({
+  pose,
+  index,
+  onDelete,
+  onDragStart,
+  onDragOver,
   onDrop,
   onDragEnd,
   isDragging,
-  isDropTarget 
-}: { 
+  isDropTarget
+}: {
   pose: Pose;
   index: number;
   onDelete: (index: number) => void;
@@ -185,9 +95,9 @@ function CollapsiblePose({
   isDropTarget: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(false)
-  
+
   return (
-    <div 
+    <div
       className={cn(
         "border-b last:border-b-0 border-gray-200 dark:border-gray-800 transition-all duration-200",
         isDragging && "opacity-50 scale-95",
@@ -205,9 +115,9 @@ function CollapsiblePose({
         <div className="flex items-center mr-2">
           <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
-        
+
         {/* Main Content */}
-        <div 
+        <div
           className="flex-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors rounded px-2 py-1 -mx-2 -my-1"
           onClick={() => setIsExpanded(!isExpanded)}
         >
@@ -220,7 +130,7 @@ function CollapsiblePose({
               </span>
             )}
           </div>
-          
+
           <div className={cn(
             "text-sm whitespace-pre-wrap",
             isExpanded ? "" : "line-clamp-1 text-muted-foreground"
@@ -228,7 +138,7 @@ function CollapsiblePose({
             {isExpanded ? pose.content : (pose.preview || pose.content.slice(0, 80) + (pose.content.length > 80 ? '...' : ''))}
           </div>
         </div>
-        
+
         {/* Controls */}
         <div className="flex items-center gap-1 ml-2 pt-1">
           <button
@@ -241,20 +151,16 @@ function CollapsiblePose({
           >
             <X className="h-3 w-3" />
           </button>
-          
+
           <div className="text-muted-foreground">
-            {isExpanded ? 
-              <ChevronUp className="h-4 w-4" /> : 
+            {isExpanded ?
+              <ChevronUp className="h-4 w-4" /> :
               <ChevronDown className="h-4 w-4" />}
           </div>
         </div>
       </div>
     </div>
   )
-}
-
-interface PostEditorProps {
-  onContextUpdate?: (context: PoseContext | null, suggestions: ResponseSuggestion[], loading: boolean, error: string | null) => void;
 }
 
 // Character type definition
@@ -267,12 +173,6 @@ interface Character {
   goals?: string;
   relationships?: string;
   voice_notes?: string;
-}
-
-// Define the Character interface
-interface Character {
-  id: string;
-  name: string;
 }
 
 interface PostEditorProps {
@@ -288,119 +188,119 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
   const [enhancementStyle, setEnhancementStyle] = useState("balanced")
   const [includeEnvironmentalDetails, setIncludeEnvironmentalDetails] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
+
   const [isSaving, setIsSaving] = useState(false)
   const [sceneContext, setSceneContext] = useState<PoseContext | null>(null)
   const [responseSuggestions, setResponseSuggestions] = useState<ResponseSuggestion[]>([])
   const [contextError, setContextError] = useState<string | null>(null)
   const [characters, setCharacters] = useState<Character[]>([])
-  const [currentCharacter, setCurrentCharacter] = useState<string>("") 
+  const [currentCharacter, setCurrentCharacter] = useState<string>("")
   const [isLoadingCharacters, setIsLoadingCharacters] = useState(true)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [sceneTitle, setSceneTitle] = useState("") // New state for scene title
   const [sceneId, setSceneId] = useState<string | null>(null) // Track if scene is saved
-  const debouncedSceneText = useDebounce(sceneText, 500)  
+  const debouncedSceneText = useDebounce(sceneText, 500)
   const { toast } = useToast()
-  
+
   // Drag and drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [showAllPoses, setShowAllPoses] = useState(false)
-  
+
   // Copy/newline settings state
   const [newlineReplacement, setNewlineReplacement] = useState("\\n")
   const [showCopySettings, setShowCopySettings] = useState(false)
-  
+
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/html', '')
   }
-  
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
   }
-  
+
   const handleDragEnter = (e: React.DragEvent, index: number) => {
     e.preventDefault()
     setDragOverIndex(index)
   }
-  
+
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault()
     setDragOverIndex(null)
   }
-  
+
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault()
-    
+
     if (draggedIndex === null || draggedIndex === dropIndex) {
       setDraggedIndex(null)
       setDragOverIndex(null)
       return
     }
-    
+
     if (!sceneContext?.poses) return
-    
+
     const newPoses = [...sceneContext.poses]
     const draggedPose = newPoses[draggedIndex]
-    
+
     // Remove the dragged item
     newPoses.splice(draggedIndex, 1)
-    
+
     // Insert at new position
     const insertIndex = draggedIndex < dropIndex ? dropIndex - 1 : dropIndex
     newPoses.splice(insertIndex, 0, draggedPose)
-    
+
     // Update the scene context
     const updatedContext = {
       ...sceneContext,
       poses: newPoses
     }
-    
+
     setSceneContext(updatedContext)
-    
+
     // Update parent component
     if (onContextUpdate) {
       onContextUpdate(updatedContext, responseSuggestions, false, null)
     }
-    
+
     setDraggedIndex(null)
     setDragOverIndex(null)
   }
-  
+
   const handleDragEnd = () => {
     setDraggedIndex(null)
     setDragOverIndex(null)
   }
-  
+
   // Delete pose handler
   const handleDeletePose = (index: number) => {
     if (!sceneContext?.poses) return
-    
+
     const newPoses = [...sceneContext.poses]
     newPoses.splice(index, 1)
-    
+
     const updatedContext = {
       ...sceneContext,
       poses: newPoses
     }
-    
+
     setSceneContext(updatedContext)
-    
+
     // Update parent component
     if (onContextUpdate) {
       onContextUpdate(updatedContext, responseSuggestions, false, null)
     }
-    
+
     toast({
       title: "Pose deleted",
       description: "The pose has been removed from the scene.",
     })
   }
-  
+
   // Effect to set current character once characters are loaded
   useEffect(() => {
     if (characters.length > 0 && currentCharacter === "") {
@@ -424,14 +324,14 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
           const headers: Record<string, string> = {
             'Content-Type': 'application/json',
           };
-          
+
           if (token) {
             headers['Authorization'] = `Bearer ${token}`;
           }
-          
+
           const sceneUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scenes/${autoLoadSceneId}`;
           const response = await fetch(sceneUrl, { headers });
-          
+
           if (response.ok) {
             const data = await response.json();
             if (data.success && data.data) {
@@ -449,10 +349,103 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
           });
         }
       };
-      
+
       loadScene();
     }
   }, [autoLoadSceneId, characters, sceneId])
+  
+  // Effect to listen for scene poses updates
+  useEffect(() => {
+    // Handler for the custom event
+    const handleScenePosesUpdated = async (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const updatedSceneId = customEvent.detail?.sceneId;
+      
+      // Only refresh if this is the current scene
+      if (updatedSceneId && updatedSceneId === sceneId) {
+        try {
+          console.log('Scene poses updated, refreshing poses view...');
+          
+          const token = localStorage.getItem('access_token');
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          };
+
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+
+          // Fetch the updated poses for this scene
+          const posesUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scenes/${sceneId}/poses`;
+          const posesResponse = await fetch(posesUrl, { headers });
+
+          if (posesResponse.ok) {
+            const posesData = await posesResponse.json();
+
+            if (posesData.success && posesData.data && Array.isArray(posesData.data)) {
+              // Create enhanced context with updated poses
+              const updatedPoses = posesData.data.map((pose: any) => ({
+                character_name: pose.character_name,
+                content: pose.pose_text,
+                timestamp: pose.created_at,
+                preview: pose.pose_text.slice(0, 80) + (pose.pose_text.length > 80 ? '...' : '')
+              }));
+              
+              // Update the scene context with the new poses
+              const updatedContext = {
+                ...sceneContext,
+                poses: updatedPoses
+              };
+              
+              // Update the state
+              setSceneContext(updatedContext);
+              
+              // Update parent component
+              if (onContextUpdate) {
+                onContextUpdate(updatedContext, responseSuggestions, false, null);
+              }
+              
+              toast({
+                title: "Scene Poses Updated",
+                description: `Refreshed ${updatedPoses.length} poses in the scene.`
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error refreshing scene poses:', error);
+        }
+      }
+    };
+    
+    // Add event listener for the custom event
+    window.addEventListener('scene-poses-updated', handleScenePosesUpdated);
+    
+    // Also listen for storage events (for cross-tab updates)
+    const handleStorageEvent = (event: StorageEvent) => {
+      if (event.key === 'scene-poses-updated') {
+        try {
+          const data = JSON.parse(event.newValue || '{}');
+          if (data.sceneId === sceneId) {
+            // Create a synthetic custom event
+            const syntheticEvent = new CustomEvent('scene-poses-updated', { 
+              detail: data 
+            });
+            handleScenePosesUpdated(syntheticEvent);
+          }
+        } catch (error) {
+          console.error('Error handling storage event:', error);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageEvent);
+    
+    // Clean up event listeners
+    return () => {
+      window.removeEventListener('scene-poses-updated', handleScenePosesUpdated);
+      window.removeEventListener('storage', handleStorageEvent);
+    };
+  }, [sceneId, sceneContext, onContextUpdate, responseSuggestions, toast])
 
   // Load characters from the backend when component mounts
   useEffect(() => {
@@ -461,29 +454,29 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
       try {
         // Get the access token from localStorage
         const accessToken = localStorage.getItem('access_token');
-        
+
         if (!accessToken) {
           console.warn('No access token found in localStorage');
           throw new Error('Authentication required');
         }
-        
+
         const response = await fetch('http://localhost:5001/api/characters/', {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`
           }
         });
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch characters: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        
+
         if (data.success && data.data) {
           // Log to verify character structure
           console.log('Fetched characters:', data.data);
-          
+
           // Ensure all characters have valid IDs
           const validatedCharacters = data.data.map((char: any) => {
             // Use name as fallback ID if ID is missing
@@ -493,7 +486,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
             }
             return char;
           });
-          
+
           setCharacters(validatedCharacters);
           // Set the current character to the first one if available
           if (validatedCharacters.length > 0) {
@@ -513,191 +506,26 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
         setIsLoadingCharacters(false);
       }
     };
-    
+
     fetchCharacters();
   }, [toast]);
 
-  // Analyze scene context
-  const analyzeContext = async () => {
-    const selectedCharacter = characters.find(c => c.id === currentCharacter)
-    
-    // Check if we have poses available to analyze
-    const existingPoses = sceneContext?.poses || [];
-    
-    if (existingPoses.length > 0) {
-      // Use poses for analysis
-      setIsAnalyzing(true)
-      setContextError(null)
-      
-      // Show toast notification that analysis is starting
-      toast({
-        title: "Analyzing Scene",
-        description: `Processing ${existingPoses.length} poses to extract context...`,
-      });
-      
-      // Propagate loading state to parent immediately
-      if (onContextUpdate) {
-        onContextUpdate(sceneContext, responseSuggestions, true, null);
-      }
-      
-      try {
-        const result = await analyzeSceneContextFromPoses(existingPoses, selectedCharacter?.name)
-        .then((data) => {
-          if (data.success) {
-            setSceneContext(data.context);
-            setResponseSuggestions(data.suggestions);
-            setContextError(null);
-            
-            // Show success toast
-            toast({
-              title: "Analysis Complete",
-              description: `Found ${data.suggestions?.length || 0} response opportunities.`,
-            });
-            
-            // Propagate context to parent component if callback provided
-            if (onContextUpdate) {
-              onContextUpdate(data.context, data.suggestions, false, null);
-            }
-          } else {
-            setContextError(data.message || "Failed to analyze context");
-            setSceneContext(null);
-            setResponseSuggestions([]);
-            // Propagate error to parent component if callback provided
-            if (onContextUpdate) {
-              onContextUpdate(null, [], false, data.message || "Failed to analyze context");
-            }
-          }
-          setIsAnalyzing(false);
-        })
-        .catch((error) => {
-          if (error instanceof Error) {
-            setContextError(error.message)
-          } else {
-            setContextError('An unknown error occurred')
-          }
-          setIsAnalyzing(false)
-        })
-      } catch (error) {
-        console.error('Error analyzing scene context from poses:', error);
-        throw error;
-      }
-    } else if (sceneText.trim()) {
-      // Fall back to scene text analysis if no poses available
-      setIsAnalyzing(true)
-      setContextError(null)
-      
-      // Show toast notification that analysis is starting
-      toast({
-        title: "Analyzing Scene",
-        description: "Processing scene text to extract context...",
-      });
-      
-      // Propagate loading state to parent immediately
-      if (onContextUpdate) {
-        onContextUpdate(sceneContext, responseSuggestions, true, null);
-      }
-      
-      try {
-        const result = await analyzeSceneContext(sceneText, selectedCharacter?.name)
-        .then((data) => {
-          if (data.success) {
-            // If we have a scene ID, use the saved scene's poses as the source of truth
-            // Otherwise, append new poses to existing ones in memory
-            if (sceneId) {
-              // Use the poses from the saved scene
-              setSceneContext(data.context);
-            } else {
-              // Append new poses to existing ones if we're just working in memory
-              const existingPoses = sceneContext?.poses || [];
-              const newPoses = data.context?.poses || [];
-              
-              // Combine poses, avoiding duplicates by comparing content
-              const combinedPoses = [...existingPoses];
-              
-              newPoses.forEach((newPose: Pose) => {
-                // Check if this pose already exists
-                const exists = combinedPoses.some(
-                  existing => existing.content === newPose.content && 
-                              existing.character_name === newPose.character_name
-                );
-                
-                if (!exists) {
-                  combinedPoses.push(newPose);
-                }
-              });
-              
-              // Update context with combined poses
-              setSceneContext({
-                ...data.context,
-                poses: combinedPoses
-              });
-            }
-            
-            setResponseSuggestions(data.suggestions);
-            setContextError(null);
-            
-            // Show success toast
-            toast({
-              title: "Analysis Complete",
-              description: `Found ${data.suggestions?.length || 0} response opportunities.`,
-            });
-            
-            // Propagate context to parent component if callback provided
-            if (onContextUpdate) {
-              // If we merged poses, use the merged context
-              const contextToUpdate = !sceneId && sceneContext?.poses ? {
-                ...data.context,
-                poses: sceneContext.poses
-              } : data.context;
-              
-              onContextUpdate(contextToUpdate, data.suggestions, false, null);
-            }
-            
-            // Clear the scene text input after successful analysis
-            setSceneText('');
-          } else {
-            setContextError(data.message || "Failed to analyze context");
-            setSceneContext(null);
-            setResponseSuggestions([]);
-            // Propagate error to parent component if callback provided
-            if (onContextUpdate) {
-              onContextUpdate(null, [], false, data.message || "Failed to analyze context");
-            }
-          }
-          setIsAnalyzing(false);
-        })
-        .catch((error) => {
-          if (error instanceof Error) {
-            setContextError(error.message)
-          } else {
-            setContextError('An unknown error occurred')
-          }
-          setIsAnalyzing(false)
-        })
-      } catch (error) {
-        console.error('Error analyzing scene context:', error);
-        throw error;
-      }
-    } else {
-      // No poses or scene text available
-      setSceneContext(null)
-      if (onContextUpdate) {
-        onContextUpdate(null, [], false, "No poses or scene text available for analysis")
-      }
-    }
-  }
+
 
   // Handle post enhancement with backend API
-    const handleEnhance = async () => {
-    // Check if scene context exists with poses
-    if (!sceneContext || !sceneContext.poses || sceneContext.poses.length === 0) {
-      toast({
-        title: "Missing scene context",
-        description: "Please add poses to your scene first. Use the scene dump to analyze and extract poses.",
-        variant: "destructive"
-      })
-      return
-    }
+  const handleEnhance = async () => {
+    // Create empty context if none exists
+    const contextToUse = sceneContext || {
+      poses: [],
+      actions: [],
+      character_interactions: [],
+      emotions: ["neutral"],
+      environmental_details: [],
+      responseHooks: [],
+      scene_timing: "Present",
+      urgency_level: "medium",
+      narrative_tone: "neutral"
+    };
 
     // Check if characters exist
     if (characters.length === 0) {
@@ -708,7 +536,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
       })
       return
     }
-    
+
     if (!postText.trim()) {
       toast({
         title: "Missing post content",
@@ -720,7 +548,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
 
     setIsLoading(true)
     setEnhancedPost("")
-    
+
     try {
       const selectedCharacter = characters.find(c => c.id === currentCharacter)
       const characterData = selectedCharacter ? {
@@ -733,20 +561,20 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
         voice_notes: selectedCharacter.voice_notes || ""
       } : undefined
 
-      // Convert poses to context text for the API
-      const contextText = sceneContext.poses.map(pose => 
-        `${pose.character_name}: ${pose.content}`
-      ).join('\n\n')
+      // Convert poses to context text for the API (if any poses exist)
+      const contextText = contextToUse.poses && contextToUse.poses.length > 0
+        ? contextToUse.poses.map(pose => `${pose.character_name}: ${pose.content}`).join('\n\n')
+        : "No previous context available.";
 
       // Create enhanced context object with poses converted to text
       const enhancedContext = {
-        ...sceneContext,
+        ...contextToUse,
         contextText, // Add the formatted poses as context text
-        poses: sceneContext.poses // Keep the original poses array
+        poses: contextToUse.poses || [] // Keep the original poses array or empty array
       }
 
       const result = await enhancePose(postText, enhancedContext, characterData, enhancementStyle, includeEnvironmentalDetails)
-      
+
       if (result.success) {
         setEnhancedPost(result.enhanced_pose)
       } else {
@@ -774,22 +602,22 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
       // Replace actual newlines with the custom replacement
       textToCopy = enhancedPost.replace(/\n/g, newlineReplacement)
     }
-    
+
     navigator.clipboard.writeText(textToCopy)
     toast({
       title: "Copied to clipboard!",
-      description: newlineReplacement !== "\\n" ? 
-        `Text copied with "${newlineReplacement}" as newlines.` : 
+      description: newlineReplacement !== "\\n" ?
+        `Text copied with "${newlineReplacement}" as newlines.` :
         "The enhanced post is ready to be pasted.",
     })
   }
 
   const handleAddToContext = () => {
-    if (!enhancedPost || !sceneContext) return
-    
+    if (!enhancedPost) return
+
     const selectedCharacter = characters.find(c => c.id === currentCharacter)
     const characterName = selectedCharacter?.name || "Unknown Character"
-    
+
     // Create a new pose object from the enhanced post
     const newPose: Pose = {
       character_name: characterName,
@@ -797,21 +625,35 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
       timestamp: new Date().toISOString(),
       preview: enhancedPost.slice(0, 80) + (enhancedPost.length > 80 ? '...' : '')
     }
-    
+
+    // Create base context if none exists
+    const baseContext: PoseContext = sceneContext || {
+      poses: [],
+      actions: [],
+      character_interactions: [],
+      emotions: ["neutral"],
+      environmental_details: [],
+      responseHooks: [],
+      scene_timing: "Present",
+      urgency_level: "medium",
+      narrative_tone: "neutral"
+    };
+
     // Add to the scene context
-    const updatedPoses = [...(sceneContext.poses || []), newPose]
+    const updatedPoses = [...(baseContext.poses || []), newPose]
     const updatedContext = {
-      ...sceneContext,
-      poses: updatedPoses
+      ...baseContext,
+      poses: updatedPoses,
+      character_interactions: Array.from(new Set([...baseContext.character_interactions, characterName])).slice(0, 5)
     }
-    
+
     setSceneContext(updatedContext)
-    
+
     // Update parent component
     if (onContextUpdate) {
       onContextUpdate(updatedContext, responseSuggestions, false, null)
     }
-    
+
     toast({
       title: "Added to context!",
       description: `Enhanced post added as ${characterName}'s pose.`,
@@ -829,76 +671,79 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
       return;
     }
 
-    // Only allow saving if we have context (analysis has been run)
-    if (!sceneContext && !sceneId) {
-      toast({
-        title: "Analysis Required",
-        description: "Please analyze your scene before saving.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+    // Create a default context if none exists
+    const contextToSave = sceneContext || {
+      poses: [],
+      actions: [],
+      character_interactions: [],
+      emotions: ["neutral"],
+      environmental_details: [],
+      responseHooks: [],
+      scene_timing: "Present",
+      urgency_level: "medium",
+      narrative_tone: "neutral"
+    };
+
     setIsSaving(true);
     try {
       const accessToken = localStorage.getItem('access_token');
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
       };
-      
+
       if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
-      
+
       // Create payload with title and context data including poses
       const payload = {
         name: sceneTitle,
         character_id: currentCharacter,
         // Save the context object including poses
-        context: sceneContext ? {
-          actions: sceneContext.actions,
-          character_interactions: sceneContext.character_interactions,
-          emotions: sceneContext.emotions,
-          environmental_details: sceneContext.environmental_details,
-          responseHooks: sceneContext.responseHooks,
-          scene_timing: sceneContext.scene_timing,
-          urgency_level: sceneContext.urgency_level || sceneContext.urgency,
-          narrative_tone: sceneContext.narrative_tone || sceneContext.tone,
-          poses: sceneContext.poses || [] // Include poses in the saved context
-        } : {},
+        context: {
+          actions: contextToSave.actions || [],
+          character_interactions: contextToSave.character_interactions || [],
+          emotions: contextToSave.emotions || ["neutral"],
+          environmental_details: contextToSave.environmental_details || [],
+          responseHooks: contextToSave.responseHooks || [],
+          scene_timing: contextToSave.scene_timing || "Present",
+          urgency_level: contextToSave.urgency_level || contextToSave.urgency || "medium",
+          narrative_tone: contextToSave.narrative_tone || contextToSave.tone || "neutral",
+          poses: contextToSave.poses || [] // Include poses in the saved context
+        },
       };
-      
+
       // If we have a scene ID, update it; otherwise create new
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-      const url = sceneId 
-        ? `${baseUrl}/api/scenes/${sceneId}` 
+      const url = sceneId
+        ? `${baseUrl}/api/scenes/${sceneId}`
         : `${baseUrl}/api/scenes`;
-        
+
       const method = sceneId ? 'PUT' : 'POST';
-      
+
       const response = await fetch(url, {
         method,
         headers,
         body: JSON.stringify(payload)
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to save scene');
       }
-      
+
       const data = await response.json();
-      
+
       // If this was a new scene, store the ID
       if (!sceneId && data.data?._id) {
         setSceneId(data.data._id);
       }
-      
+
       toast({
         title: "Scene Saved",
         description: "Your scene has been saved successfully.",
       });
-      
+
       // Trigger refresh of recent scenes
       localStorage.setItem('sceneUpdated', 'true');
       // Trigger storage event for same-tab updates
@@ -907,7 +752,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
         newValue: 'true',
         storageArea: localStorage
       }));
-      
+
     } catch (error) {
       console.error('Error saving scene:', error);
       toast({
@@ -920,35 +765,117 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
     }
   };
 
+  // Handler for scene dump processing completion
+  const handleSceneDumpProcessingComplete = async (result: SceneDumpProcessingResult) => {
+    if (result.success) {
+      // Convert processed poses to context format
+      const newPoses: Pose[] = result.poses.map(pose => ({
+        character_name: pose.character_name,
+        content: pose.pose_text,
+        timestamp: pose.timestamp,
+        preview: pose.pose_text.substring(0, 80) + (pose.pose_text.length > 80 ? '...' : '')
+      }))
+
+      // Get existing poses or empty array if none exist
+      const existingPoses = sceneContext?.poses || [];
+
+      // Combine existing and new poses
+      const combinedPoses = [...existingPoses, ...newPoses];
+
+      // Create base context if none exists
+      const baseContext: PoseContext = sceneContext || {
+        poses: [],
+        actions: [],
+        character_interactions: [],
+        emotions: ["neutral"],
+        environmental_details: [],
+        responseHooks: [],
+        scene_timing: "Present",
+        urgency_level: "medium",
+        narrative_tone: "neutral"
+      };
+
+      // Create updated scene context with combined poses
+      const updatedContext: PoseContext = {
+        ...baseContext,
+        poses: combinedPoses,
+        actions: combinedPoses.map(p => p.content).slice(-3), // Take the 3 most recent actions
+        character_interactions: Array.from(new Set(combinedPoses.map(p => p.character_name))).slice(0, 5),
+        emotions: ["engaged", "focused"],
+        environmental_details: baseContext.environmental_details,
+        responseHooks: ["Continue the scene", "Respond to recent actions"],
+        scene_timing: "Present",
+        urgency_level: "medium",
+        narrative_tone: "immersive"
+      }
+
+      setSceneContext(updatedContext)
+
+      // Update parent component
+      if (onContextUpdate) {
+        onContextUpdate(updatedContext, [], false, null)
+      }
+
+      // Clear the scene text since poses have been processed
+      setSceneText('')
+      
+      // Trigger a refresh of the scene-weaver poses view
+      if (typeof window !== 'undefined' && sceneId) {
+        // Create and dispatch a custom event to notify scene-weaver to refresh
+        const refreshEvent = new CustomEvent('scene-poses-updated', { 
+          detail: { 
+            sceneId,
+            posesCount: result.importedCount,
+            timestamp: new Date().toISOString()
+          } 
+        });
+        window.dispatchEvent(refreshEvent);
+      }
+
+      toast({
+        title: "Scene Processed Successfully",
+        description: `Added ${result.importedCount} poses to your scene context.`
+      })
+
+      // If we have continuity analysis results, show them
+      if (result.continuityAnalysis) {
+        toast({
+          title: "Continuity Analysis Complete",
+          description: "Scene continuity has been analyzed for potential issues."
+        })
+      }
+    }
+  }
+
   // Handler for when a scene is selected from the SceneSelector
   const handleSceneSelected = async (sceneId: string, title: string, context: PoseContext, characterId: string) => {
     // Update the editor state with the loaded scene data
     setSceneId(sceneId);
     setSceneTitle(title);
-    
+
     // If the character exists in our characters list, set it as current
     if (characterId && characters.some(char => char.id === characterId)) {
       setCurrentCharacter(characterId);
     }
-    
+
     // Fetch poses for this scene
     try {
       const token = localStorage.getItem('access_token');
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      
+
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
+
       const posesUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scenes/${sceneId}/poses`;
       const posesResponse = await fetch(posesUrl, { headers });
-      
+
       if (posesResponse.ok) {
         const posesData = await posesResponse.json();
-        
-        if (posesData.success && posesData.data && Array.isArray(posesData.data)) {
+
+        if (posesData.success && posesData.data && Array.isArray(posesData.data) && posesData.data.length > 0) {
           // Create enhanced context with poses from API
           const enhancedContext = {
             ...context,
@@ -959,149 +886,39 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
               preview: pose.pose_text.slice(0, 80) + (pose.pose_text.length > 80 ? '...' : '')
             }))
           };
-          
+
+          // Set the context with poses
           setSceneContext(enhancedContext);
-          
-          // If we have poses, run scene analysis on them
-          if (posesData.data.length > 0) {
-            try {
-              setIsAnalyzing(true);
-              setContextError(null);
-              
-              // Use poses directly for analysis
-              const posesForAnalysis = posesData.data.map((pose: any) => ({
-                character_name: pose.character_name,
-                content: pose.pose_text
-              }));
-              
-              const selectedCharacter = characters.find(c => c.id === characterId);
-              const analysisResult = await analyzeSceneContextFromPoses(posesForAnalysis, selectedCharacter?.name);
-              
-              if (analysisResult.success) {
-                // Merge the analysis results with the poses
-                const finalContext = {
-                  ...enhancedContext,
-                  ...analysisResult.context
-                };
-                
-                setSceneContext(finalContext);
-                setResponseSuggestions(analysisResult.suggestions);
-                
-                // Update parent component with full context and suggestions
-                if (onContextUpdate) {
-                  onContextUpdate(finalContext, analysisResult.suggestions, false, null);
-                }
-                
-                toast({
-                  title: "Scene Loaded",
-                  description: `"${title}" loaded with ${posesData.data.length} poses and analysis complete.`
-                });
-              } else {
-                // Even if analysis fails, we still have the poses
-                if (onContextUpdate) {
-                  onContextUpdate(enhancedContext, [], false, null);
-                }
-                
-                toast({
-                  title: "Scene Loaded",
-                  description: `"${title}" loaded with ${posesData.data.length} poses. Analysis failed but poses are available.`
-                });
-              }
-            } catch (error) {
-              console.error('Error analyzing loaded scene:', error);
-              // Even if analysis fails, we still have the poses
-              if (onContextUpdate) {
-                onContextUpdate(enhancedContext, [], false, null);
-              }
-              
-              toast({
-                title: "Scene Loaded",
-                description: `"${title}" loaded with ${posesData.data.length} poses. Analysis failed but poses are available.`
-              });
-            } finally {
-              setIsAnalyzing(false);
-            }
-          } else {
-            // No poses, just set the context
-            setSceneContext(enhancedContext);
-            if (onContextUpdate) {
-              onContextUpdate(enhancedContext, [], false, null);
-            }
-            
-            toast({
-              title: "Scene Loaded",
-              description: `"${title}" loaded (no poses found).`
-            });
+          if (onContextUpdate) {
+            onContextUpdate(enhancedContext, [], false, null);
           }
+
+          toast({
+            title: "Scene Loaded",
+            description: `"${title}" loaded with ${posesData.data.length} poses.`
+          });
         } else {
-          // No poses found in API, check if poses are in the saved context
+          // No poses in API response, check if poses are in the saved context
           const existingPoses = context.poses || [];
-          
+
           if (existingPoses.length > 0) {
             // We have poses in the saved context, use them
             setSceneContext(context);
-            
-            // Run analysis on the existing poses
-            try {
-              setIsAnalyzing(true);
-              setContextError(null);
-              
-              // Use poses directly for analysis
-              const posesForAnalysis = existingPoses.map((pose: any) => ({
-                character_name: pose.character_name,
-                content: pose.content
-              }));
-              
-              const selectedCharacter = characters.find(c => c.id === characterId);
-              const analysisResult = await analyzeSceneContextFromPoses(posesForAnalysis, selectedCharacter?.name);
-              
-              if (analysisResult.success) {
-                const finalContext = {
-                  ...context,
-                  ...analysisResult.context
-                };
-                
-                setSceneContext(finalContext);
-                setResponseSuggestions(analysisResult.suggestions);
-                
-                if (onContextUpdate) {
-                  onContextUpdate(finalContext, analysisResult.suggestions, false, null);
-                }
-                
-                toast({
-                  title: "Scene Loaded",
-                  description: `"${title}" loaded with ${existingPoses.length} poses from saved context.`
-                });
-              } else {
-                if (onContextUpdate) {
-                  onContextUpdate(context, [], false, null);
-                }
-                
-                toast({
-                  title: "Scene Loaded",
-                  description: `"${title}" loaded with ${existingPoses.length} poses. Analysis failed.`
-                });
-              }
-            } catch (error) {
-              console.error('Error analyzing saved context poses:', error);
-              if (onContextUpdate) {
-                onContextUpdate(context, [], false, null);
-              }
-              
-              toast({
-                title: "Scene Loaded",
-                description: `"${title}" loaded with ${existingPoses.length} poses. Analysis failed.`
-              });
-            } finally {
-              setIsAnalyzing(false);
+            if (onContextUpdate) {
+              onContextUpdate(context, [], false, null);
             }
+
+            toast({
+              title: "Scene Loaded",
+              description: `"${title}" loaded with ${existingPoses.length} poses from saved context.`
+            });
           } else {
             // No poses anywhere, just use the saved context
             setSceneContext(context);
             if (onContextUpdate) {
               onContextUpdate(context, [], false, null);
             }
-            
+
             toast({
               title: "Scene Loaded",
               description: `"${title}" loaded (no poses found).`
@@ -1115,7 +932,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
         if (onContextUpdate) {
           onContextUpdate(context, [], false, null);
         }
-        
+
         toast({
           title: "Scene Loaded",
           description: `"${title}" loaded. Could not fetch poses.`
@@ -1128,14 +945,14 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
       if (onContextUpdate) {
         onContextUpdate(context, [], false, null);
       }
-      
+
       toast({
         title: "Scene Loaded",
         description: `"${title}" loaded. Error fetching poses.`
       });
     }
   };
-  
+
   return (
     <div className="grid gap-6">
       <Card>
@@ -1149,14 +966,14 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="scene-title">Scene Title</Label>
-            <Input 
-              id="scene-title" 
+            <Input
+              id="scene-title"
               placeholder="Enter a title for your scene..."
               value={sceneTitle}
               onChange={(e) => setSceneTitle(e.target.value)}
             />
           </div>
-          
+
           {/* Display poses when available from context */}
           {sceneContext?.poses && sceneContext.poses.length > 0 && (
             <div className="mt-4 pt-2 border-t">
@@ -1176,41 +993,16 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
                   </Button>
                 </div>
               </div>
-              
-              {/* Show loading skeleton when analysis is in progress */}
-              {isAnalyzing && (
-                <div className="rounded-md bg-gray-50 dark:bg-gray-900 p-4 mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm text-muted-foreground">Analyzing scene context...</span>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="h-8 w-8 rounded-full" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-3/4" />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="h-8 w-8 rounded-full" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
+
+
               <div className="rounded-md bg-gray-50 dark:bg-gray-900">
                 {sceneContext.poses && (showAllPoses ? sceneContext.poses : sceneContext.poses.slice(Math.max(0, sceneContext.poses.length - 5)))
                   .map((pose, index) => {
                     const actualIndex = showAllPoses ? index : Math.max(0, sceneContext.poses!.length - 5) + index
                     return (
-                      <CollapsiblePose 
-                        key={`pose-${actualIndex}`} 
-                        pose={pose} 
+                      <CollapsiblePose
+                        key={`pose-${actualIndex}`}
+                        pose={pose}
                         index={actualIndex}
                         onDelete={handleDeletePose}
                         onDragStart={handleDragStart}
@@ -1225,52 +1017,11 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
               </div>
             </div>
           )}
-          
-          {/* Show loading skeleton when no poses but analysis is in progress */}
-          {!sceneContext?.poses && isAnalyzing && (
-            <div className="mt-4 pt-2 border-t">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
-                  <MessageSquareQuote className="h-4 w-4" />
-                  Scene Poses
-                </h3>
-              </div>
-              <div className="rounded-md bg-gray-50 dark:bg-gray-900 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">Analyzing scene context...</span>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-2/3" />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-1/2" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </CardContent>
         <CardFooter className="justify-end space-x-2">
-          <Button 
-            onClick={handleSaveScene} 
-            variant="outline" 
+          <Button
+            onClick={handleSaveScene}
+            variant="outline"
             disabled={isSaving || !sceneTitle.trim()}
           >
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -1278,33 +1029,13 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
           </Button>
         </CardFooter>
       </Card>
-      
+
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Scene Dump</CardTitle>
-            <CardDescription>
-              Paste raw scene text here to extract and organize poses. If you have poses loaded above, analysis will use those instead.
-            </CardDescription>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={analyzeContext} 
-            disabled={isAnalyzing || (!sceneText.trim() && (!sceneContext?.poses || sceneContext.poses.length === 0))}
-          >
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Sparkles className="mr-2 h-4 w-4" />
-                Analyze Scene
-              </>
-            )}
-          </Button>
+        <CardHeader>
+          <CardTitle>Scene Dump</CardTitle>
+          <CardDescription>
+            Paste raw scene text here. The Scene Dump Processor below will automatically extract and organize poses with advanced analysis.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Textarea
@@ -1317,36 +1048,32 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
           />
         </CardContent>
       </Card>
-      
+
+      {/* Scene Dump Processor */}
+      <SceneDumpProcessor
+        sceneDumpText={sceneText}
+        sceneId={sceneId ?? undefined}
+        sceneTitle={sceneTitle}
+        onProcessingComplete={handleSceneDumpProcessingComplete}
+        autoProcess={false}
+        className="mb-6"
+      />
+
       <Card>
         <CardHeader>
           <CardTitle>Your Post & Controls</CardTitle>
-          <CardDescription>Enter your specific post and choose the enhancement style. The AI will use the poses above as context.</CardDescription>
-          {(!sceneContext || !sceneContext.poses || sceneContext.poses.length === 0) && !isAnalyzing && (
-            <div className="mt-2 p-2 text-sm rounded-md bg-amber-50 border border-amber-100 text-amber-800 dark:bg-amber-900/30 dark:border-amber-800/30 dark:text-amber-500">
-              You need to have poses in your scene context before using these controls. Use the scene dump to extract poses.
-            </div>
-          )}
-          {isAnalyzing && (
-            <div className="mt-2 p-2 text-sm rounded-md bg-blue-50 border border-blue-100 text-blue-800 dark:bg-blue-900/30 dark:border-blue-800/30 dark:text-blue-500">
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Analyzing scene context... Please wait.
-              </div>
-            </div>
-          )}
+          <CardDescription>Enter your specific post and choose the enhancement style. The AI will use any available poses as context.</CardDescription>
         </CardHeader>
-        <CardContent className={`space-y-6 ${(!sceneContext || !sceneContext.poses || sceneContext.poses.length === 0) || isAnalyzing ? 'opacity-50 pointer-events-none' : ''}`}>
+        <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="post-input">Your Post</Label>
-                          <Textarea
-                id="post-input"
-                value={postText}
-                onChange={(e) => setPostText(e.target.value)}
-                className="min-h-20 font-mono text-sm"
-                placeholder="Jax looks around the room."
-                disabled={!sceneContext || !sceneContext.poses || sceneContext.poses.length === 0}
-              />
+            <Textarea
+              id="post-input"
+              value={postText}
+              onChange={(e) => setPostText(e.target.value)}
+              className="min-h-20 font-mono text-sm"
+              placeholder="Jax looks around the room."
+            />
           </div>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
@@ -1359,8 +1086,8 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
               ) : (
                 <div className="relative">
                   {/* Implement a simplified dropdown using standard components to avoid Radix UI key issues */}
-                  <button 
-                    id="character-select" 
+                  <button
+                    id="character-select"
                     type="button"
                     className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
                     onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -1372,41 +1099,41 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
                     ) : (
                       <span className="text-muted-foreground">Select a character profile...</span>
                     )}
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 opacity-50"><path d="m6 9 6 6 6-6"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 opacity-50"><path d="m6 9 6 6 6-6" /></svg>
                   </button>
-                  
+
                   {dropdownOpen && (
                     <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md" role="listbox">
                       <div className="p-1">
                         {characters.length > 0 ? characters.map((char) => {
                           const isSelected = currentCharacter === char.id;
                           return (
-                          <div 
-                            key={char.id}
-                            className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none ${isSelected ? 'bg-accent text-accent-foreground' : ''} hover:bg-accent hover:text-accent-foreground`}
-                            onClick={() => {
-                              console.log('Character selected:', char.id, char.name);
-                              setCurrentCharacter(char.id);
-                              setDropdownOpen(false);
-                            }}
-                            role="option"
-                            aria-selected={isSelected}
-                            data-state={isSelected ? 'checked' : 'unchecked'}
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
+                            <div
+                              key={char.id}
+                              className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none ${isSelected ? 'bg-accent text-accent-foreground' : ''} hover:bg-accent hover:text-accent-foreground`}
+                              onClick={() => {
+                                console.log('Character selected:', char.id, char.name);
                                 setCurrentCharacter(char.id);
                                 setDropdownOpen(false);
-                              }
-                            }}
-                          >
-                            {isSelected && (
-                              <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><polyline points="20 6 9 17 4 12"/></svg>
-                              </span>
-                            )}
-                            <span className="font-medium">{char.name}</span>
-                          </div>
+                              }}
+                              role="option"
+                              aria-selected={isSelected}
+                              data-state={isSelected ? 'checked' : 'unchecked'}
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  setCurrentCharacter(char.id);
+                                  setDropdownOpen(false);
+                                }
+                              }}
+                            >
+                              {isSelected && (
+                                <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><polyline points="20 6 9 17 4 12" /></svg>
+                                </span>
+                              )}
+                              <span className="font-medium">{char.name}</span>
+                            </div>
                           );
                         }) : (
                           <div className="py-2 px-1 text-sm text-center text-amber-800">
@@ -1434,10 +1161,10 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
               </Tabs>
             </div>
             <div className="flex items-center space-x-2">
-              <input 
-                type="checkbox" 
-                id="environmental-details" 
-                className="h-4 w-4 rounded border-gray-300 focus:ring-primary" 
+              <input
+                type="checkbox"
+                id="environmental-details"
+                className="h-4 w-4 rounded border-gray-300 focus:ring-primary"
                 checked={includeEnvironmentalDetails}
                 onChange={(e) => setIncludeEnvironmentalDetails(e.target.checked)}
               />
@@ -1446,7 +1173,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
           </div>
         </CardContent>
         <CardFooter className="justify-end">
-                        <Button onClick={handleEnhance} disabled={isLoading || !sceneContext || !sceneContext.poses || sceneContext.poses.length === 0}>
+          <Button onClick={handleEnhance} disabled={isLoading || !postText.trim()}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
             Enhance Post
           </Button>
@@ -1458,38 +1185,33 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
           <div>
             <CardTitle>Enhanced Narrative</CardTitle>
             <CardDescription>Your AI-crafted result. Ready to copy and paste.</CardDescription>
-            {(!sceneContext || !sceneContext.poses || sceneContext.poses.length === 0) && (
-              <div className="mt-2 p-2 text-sm rounded-md bg-amber-50 border border-amber-100 text-amber-800 dark:bg-amber-900/30 dark:border-amber-800/30 dark:text-amber-500">
-                Add poses to your scene context to see your enhanced narrative here.
-              </div>
-            )}
           </div>
           <div className="flex items-center gap-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7" 
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
               onClick={() => setShowCopySettings(!showCopySettings)}
               disabled={isLoading || !enhancedPost}
             >
               <Settings className="h-3.5 w-3.5" />
               <span className="sr-only">Copy Settings</span>
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7" 
-              onClick={handleAddToContext} 
-              disabled={isLoading || !enhancedPost || !sceneContext}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleAddToContext}
+              disabled={isLoading || !enhancedPost}
             >
               <Plus className="h-3.5 w-3.5" />
               <span className="sr-only">Add to Context</span>
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7" 
-              onClick={handleCopy} 
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleCopy}
               disabled={isLoading || !enhancedPost}
             >
               <Copy className="h-3.5 w-3.5" />

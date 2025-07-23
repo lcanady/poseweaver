@@ -4,8 +4,7 @@ Tests for authentication API endpoints.
 import json
 import pytest
 from app import create_app
-from app.extensions import db
-from app.models.user import User
+from app.models.user_mongo import User
 
 
 @pytest.fixture
@@ -14,9 +13,17 @@ def app():
     app = create_app('testing')
     
     with app.app_context():
-        db.create_all()
+        # Clean up any existing test data
+        from app.services.mongodb_service import get_mongodb_service
+        mongodb = get_mongodb_service()
+        
+        # Clean up test users
+        mongodb.get_collection('users').delete_many({'email': {'$regex': '@example.com$'}})
+        
         yield app
-        db.drop_all()
+        
+        # Clean up after tests
+        mongodb.get_collection('users').delete_many({'email': {'$regex': '@example.com$'}})
 
 
 @pytest.fixture
@@ -29,12 +36,20 @@ def client(app):
 def test_user(app):
     """Create a test user."""
     with app.app_context():
+        # Clean up any existing test user first
+        existing_user = User.find_by_email('test@example.com')
+        if existing_user:
+            existing_user.delete()
+        
         user = User.create_user(
             email='test@example.com',
             password='testpass123',
             display_name='Test User'
         )
-        return user
+        yield user
+        
+        # Clean up after test
+        user.delete()
 
 
 class TestAuthAPI:

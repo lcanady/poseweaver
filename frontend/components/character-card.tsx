@@ -27,7 +27,7 @@ export function CharacterCard({ character }: CharacterCardProps) {
       </CardContent>
       <CardFooter className="flex justify-end gap-2">
         <Button variant="outline" asChild>
-          <Link href={`/dashboard/characters/${character.id}`}>Edit</Link>
+          <Link href={`/dashboard/characters/${character.id}`}>View</Link>
         </Button>
         <DeleteCharacterDialog characterId={character.id} characterName={character.name} />
       </CardFooter>

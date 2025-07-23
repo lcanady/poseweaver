@@ -1,14 +1,9 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { PlusCircle, Loader2 } from "lucide-react"
-import { SceneCard } from "@/components/scene-card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import Link from "next/link"
 import { useEffect, useState } from "react"
+import { SceneManagementDashboard } from "@/components/scene-management/scene-management-dashboard"
 import { scenesApi } from "@/lib/api"
-import type { Scene } from "@/lib/types"
+import type { Scene, SceneCreationData, SceneExportOptions } from "@/types/scene"
 
 // Helper function to format relative time
 function formatRelativeTime(dateString: string): string {
@@ -28,6 +23,7 @@ function formatRelativeTime(dateString: string): string {
 function transformSceneData(backendScene: any): Scene | null {
   // Debug: log the backend scene data to see what fields are available
   console.log('Backend scene data:', backendScene)
+  
   // Get the most recent pose text
   let lastPose = "No poses yet"
   if (backendScene.poses && backendScene.poses.length > 0) {
@@ -39,9 +35,32 @@ function transformSceneData(backendScene: any): Scene | null {
     }
   }
 
-  // Get character names from participants
-  const characters = backendScene.participants 
-    ? backendScene.participants.map((p: any) => p.character_name)
+  // Get character names from participants - support both old and new formats
+  const participants = backendScene.participants 
+    ? backendScene.participants.map((p: any) => ({
+        character_id: p.character_id || p.id || '',
+        character_name: p.character_name || p.name || '',
+        joined_at: p.joined_at || backendScene.created_at,
+        pose_count: p.pose_count || 0,
+        last_pose_at: p.last_pose_at,
+        is_active: p.is_active !== undefined ? p.is_active : true
+      }))
+    : []
+
+  // Transform poses to new format
+  const poses = backendScene.poses 
+    ? backendScene.poses.map((pose: any) => ({
+        id: pose.id || pose._id || '',
+        character_id: pose.character_id || '',
+        character_name: pose.character_name || '',
+        pose_text: pose.pose_text || pose.content || '',
+        enhanced_text: pose.enhanced_text,
+        pose_type: pose.pose_type || 'mixed',
+        timestamp: pose.timestamp || pose.created_at || new Date().toISOString(),
+        tags: pose.tags || [],
+        is_ooc: pose.is_ooc || false,
+        word_count: pose.word_count || (pose.pose_text || '').split(/\s+/).length
+      }))
     : []
 
   // Format the updated_at timestamp with relative time
@@ -59,11 +78,31 @@ function transformSceneData(backendScene: any): Scene | null {
   
   return {
     id,
-    title: backendScene.name || "Untitled Scene",
-    lastPose,
-    characters,
+    name: backendScene.name || "Untitled Scene",
+    title: backendScene.name || "Untitled Scene", // For backward compatibility
+    description: backendScene.description || "",
+    created_at: backendScene.created_at || new Date().toISOString(),
+    updated_at: backendScene.updated_at || new Date().toISOString(),
+    created_by: backendScene.created_by || "",
+    is_active: backendScene.is_active !== undefined ? backendScene.is_active : true,
     status: backendScene.is_active ? "Ongoing" : "Completed",
-    lastUpdated,
+    participants,
+    poses,
+    tags: backendScene.tags || [],
+    lastPose, // For backward compatibility
+    lastUpdated, // For backward compatibility
+    characters: participants.map(p => p.character_name), // For backward compatibility
+    pose_count: poses.length,
+    metadata: {
+      total_words: poses.reduce((sum, p) => sum + (p.word_count || 0), 0),
+      average_pose_length: poses.length > 0 ? poses.reduce((sum, p) => sum + (p.word_count || 0), 0) / poses.length : 0,
+      most_active_character: participants.length > 0 ? participants.reduce((prev, current) => 
+        (prev.pose_count > current.pose_count) ? prev : current
+      ).character_name : undefined,
+      scene_duration: backendScene.created_at ? 
+        Math.floor((new Date().getTime() - new Date(backendScene.created_at).getTime()) / (1000 * 60 * 60 * 24)) + " days" : 
+        undefined
+    }
   }
 }
 
@@ -73,104 +112,156 @@ export default function ScenesPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchScenes = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        
-        const response = await scenesApi.getScenes()
-        
-        if (response.success && response.data) {
-          const transformedScenes = response.data.map(transformSceneData).filter(Boolean) as Scene[]
-          setScenes(transformedScenes)
-        } else {
-          setError('Failed to load scenes')
-        }
-      } catch (err) {
-        console.error('Error fetching scenes:', err)
-        setError('Failed to load scenes. Please try again.')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     fetchScenes()
   }, [])
 
-  if (error) {
-    return (
-      <div className="flex-1 p-4 md:p-8">
-        <div className="mx-auto grid w-full max-w-4xl gap-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Your Scenes</h1>
-              <p className="text-muted-foreground mt-1">Continue your stories or review completed narratives.</p>
-            </div>
-            <Button asChild>
-              <Link href="/dashboard/scene-weaver">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Start New Scene
-              </Link>
-            </Button>
-          </div>
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        </div>
-      </div>
-    )
+  const fetchScenes = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const response = await scenesApi.getScenes()
+      
+      if (response.success && response.data) {
+        const transformedScenes = response.data.map(transformSceneData).filter(Boolean) as Scene[]
+        setScenes(transformedScenes)
+      } else {
+        setError('Failed to load scenes')
+      }
+    } catch (err) {
+      console.error('Error fetching scenes:', err)
+      setError('Failed to load scenes. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSceneCreate = async (data: SceneCreationData) => {
+    try {
+      const response = await scenesApi.createScene(data)
+      
+      if (response.success) {
+        // Refresh scenes list
+        fetchScenes()
+      } else {
+        throw new Error(response.error || 'Failed to create scene')
+      }
+    } catch (error) {
+      console.error('Error creating scene:', error)
+      throw error
+    }
+  }
+
+  const handleSceneEdit = async (sceneId: string, data: Partial<SceneCreationData>) => {
+    try {
+      const response = await scenesApi.updateScene(sceneId, data)
+      
+      if (response.success) {
+        // Refresh scenes list
+        fetchScenes()
+      } else {
+        throw new Error(response.error || 'Failed to update scene')
+      }
+    } catch (error) {
+      console.error('Error updating scene:', error)
+      throw error
+    }
+  }
+
+  const handleSceneArchive = async (sceneId: string) => {
+    try {
+      const response = await scenesApi.archiveScene(sceneId)
+      
+      if (response.success) {
+        // Refresh scenes list
+        fetchScenes()
+      } else {
+        throw new Error(response.error || 'Failed to archive scene')
+      }
+    } catch (error) {
+      console.error('Error archiving scene:', error)
+      throw error
+    }
+  }
+
+  const handleSceneDelete = async (sceneId: string) => {
+    try {
+      const response = await scenesApi.deleteScene(sceneId)
+      
+      if (response.success) {
+        // Refresh scenes list
+        fetchScenes()
+      } else {
+        throw new Error(response.error || 'Failed to delete scene')
+      }
+    } catch (error) {
+      console.error('Error deleting scene:', error)
+      throw error
+    }
+  }
+
+  const handleSceneExport = async (sceneId: string, options: SceneExportOptions) => {
+    try {
+      const response = await fetch(`/api/search-summary/export/scenes/${sceneId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to export scene')
+      }
+
+      // Handle different response types based on format
+      if (options.format === 'json') {
+        const data = await response.json()
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `scene-${sceneId}.json`
+        a.click()
+        URL.revokeObjectURL(url)
+      } else {
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `scene-${sceneId}.${options.format}`
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+    } catch (error) {
+      console.error('Error exporting scene:', error)
+      throw error
+    }
   }
 
   return (
     <div className="flex-1 p-4 md:p-8">
-      <div className="mx-auto grid w-full max-w-4xl gap-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Your Scenes</h1>
-            <p className="text-muted-foreground mt-1">Continue your stories or review completed narratives.</p>
-          </div>
-          <Button asChild>
-            <Link href="/dashboard/scene-weaver">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Start New Scene
-            </Link>
-          </Button>
-        </div>
-        
-        {isLoading ? (
-          <div className="grid gap-6">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="border rounded-lg p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <Skeleton className="h-6 w-48" />
-                  <Skeleton className="h-6 w-20" />
-                </div>
-                <Skeleton className="h-4 w-32 mb-4" />
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-            ))}
-          </div>
-        ) : scenes.length === 0 ? (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-semibold mb-2">No scenes yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Start your first scene to begin crafting your story.
-            </p>
-            <Button asChild>
-              <Link href="/dashboard/scene-weaver">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Start New Scene
-              </Link>
-            </Button>
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            {scenes.map((scene) => (
-              <SceneCard key={scene.id} scene={scene} />
-            ))}
-          </div>
-        )}
+      <div className="mx-auto w-full max-w-7xl">
+        <SceneManagementDashboard
+          scenes={scenes}
+          onSceneCreate={handleSceneCreate}
+          onSceneEdit={handleSceneEdit}
+          onSceneArchive={handleSceneArchive}
+          onSceneDelete={handleSceneDelete}
+          onSceneExport={handleSceneExport}
+          options={{
+            allow_editing: true,
+            allow_archiving: true,
+            allow_deletion: true,
+            allow_participant_management: true,
+            allow_summary_generation: true,
+            allow_export: true,
+            show_analytics: true,
+            show_timeline: true,
+            show_search: true
+          }}
+          loading={isLoading}
+          error={error}
+        />
       </div>
     </div>
   )

@@ -26,11 +26,9 @@ def create_app(config_name='development'):
     )
     app.config['MONGODB_DB'] = os.getenv('MONGODB_DB', 'mush_pose_editor')
     
-    # Legacy SQLAlchemy configuration (kept for compatibility)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
-        'DATABASE_URL', 'sqlite:///mush_pose_editor.db'
-    )
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # File upload configuration
+    app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', 'uploads')
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
     
 
     
@@ -53,7 +51,6 @@ def create_app(config_name='development'):
     # Testing configuration
     if config_name == 'testing':
         app.config['TESTING'] = True
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         app.config['MONGODB_URI'] = 'mongodb://admin:password@localhost:27017/test_db?authSource=admin'
         app.config['MONGODB_DB'] = 'test_db'
     else:
@@ -71,17 +68,23 @@ def create_app(config_name='development'):
     from app.api.scenes import scenes_bp
     from app.api.character_mgmt import character_mgmt_bp
     from app.api.uploads import uploads_bp, ensure_upload_dir
+    from app.api.continuity import continuity_bp
+    from app.api.character_plot_tracking import character_plot_bp
+    from app.api.search_summary import search_summary_bp
     
     app.register_blueprint(characters_bp, url_prefix='/api/characters')
     app.register_blueprint(context_bp, url_prefix='/api/context')
     app.register_blueprint(pose_bp, url_prefix='/api/pose')
     app.register_blueprint(models_bp, url_prefix='/api/models')
     app.register_blueprint(scene_flow_bp)
-    app.register_blueprint(mush_parser_bp)
+    app.register_blueprint(mush_parser_bp, url_prefix='/api/mush')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(scenes_bp, url_prefix='/api/scenes')
     app.register_blueprint(character_mgmt_bp, url_prefix='/api/characters/mgmt')
     app.register_blueprint(uploads_bp, url_prefix='/api/uploads')
+    app.register_blueprint(continuity_bp, url_prefix='/api/continuity')
+    app.register_blueprint(character_plot_bp, url_prefix='/api/character-plot')
+    app.register_blueprint(search_summary_bp, url_prefix='/api/search-summary')
     
     # Ensure upload directories exist at startup
     ensure_upload_dir()
@@ -90,9 +93,9 @@ def create_app(config_name='development'):
     def health_check():
         return {'status': 'healthy', 'service': 'mush-pose-editor'}, 200
     
-    # Create database tables
+    # Initialize MongoDB indexes
     with app.app_context():
-        from app.extensions import db
-        db.create_all()
+        # MongoDB indexes are initialized in init_extensions
+        pass
     
     return app 

@@ -204,7 +204,7 @@ class TestVeniceClient:
         
         # Valid parameters
         assert client.validate_parameters(
-            temperature=0.7, max_tokens=1000) is True
+            temperature=0.7, max_tokens=4000) is True
         assert client.validate_parameters(
             temperature=0.0, max_tokens=1) is True
         assert client.validate_parameters(
@@ -212,10 +212,10 @@ class TestVeniceClient:
         
         # Invalid parameters
         with pytest.raises(ValueError):
-            client.validate_parameters(temperature=-0.1, max_tokens=1000)
+            client.validate_parameters(temperature=-0.1, max_tokens=4000)
         
         with pytest.raises(ValueError):
-            client.validate_parameters(temperature=1.1, max_tokens=1000)
+            client.validate_parameters(temperature=1.1, max_tokens=4000)
         
         with pytest.raises(ValueError):
             client.validate_parameters(temperature=0.7, max_tokens=0)
@@ -249,3 +249,90 @@ class TestVeniceClient:
         assert messages[0]['content'] == "You are a helpful assistant."
         assert messages[1]['role'] == 'user'
         assert messages[1]['content'] == "User prompt" 
+        
+    @patch('requests.post')
+    def test_generate_completion_with_response_format(self, mock_post):
+        """Test completion generation with response_format parameter."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": "{\"result\": \"structured data\"}"}}]
+        }
+        mock_post.return_value = mock_response
+        
+        client = VeniceClient("test_key")
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "test_schema",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "properties": {"result": {"type": "string"}},
+                    "required": ["result"],
+                    "additionalProperties": False
+                }
+            }
+        }
+        
+        # Need to patch json.loads to return the expected structured data
+        with patch('json.loads', return_value={"result": "structured data"}):
+            result = client.generate_completion(
+                prompt="Test prompt",
+                response_format=response_format
+            )
+            
+            assert result == '{"result": "structured data"}'
+            
+            # Verify response_format was included in the request
+            payload = mock_post.call_args[1]['json']
+            assert 'response_format' in payload
+            assert payload['response_format'] == response_format
+    
+    @patch('requests.post')
+    def test_extract_structured_data(self, mock_post):
+        """Test structured data extraction with response_format."""
+        # Setup mock response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": "{\"name\": \"Test Character\", \"traits\": [\"brave\", \"intelligent\"]}"}}]
+        }
+        mock_post.return_value = mock_response
+        
+        # Create test data to be returned by json.loads
+        test_data = {
+            "name": "Test Character",
+            "traits": ["brave", "intelligent"]
+        }
+        
+        # Test the client with a patched json.loads
+        client = VeniceClient("test_key")
+        schema = {
+            "name": "string - character name",
+            "traits": "list of strings - character traits"
+        }
+        
+        # Need to patch json.loads to return the expected structured data
+        with patch('json.loads', return_value=test_data):
+            result = client.extract_structured_data(
+                unstructured_text="Character description text",
+                schema=schema
+            )
+            
+            # Verify result
+            assert result["name"] == "Test Character"
+            assert "brave" in result["traits"]
+            assert "intelligent" in result["traits"]
+            
+            # Verify the API call was made correctly with response_format
+            payload = mock_post.call_args[1]['json']
+            assert 'response_format' in payload
+            assert payload['response_format']['type'] == "json_schema"
+            
+            # Verify schema conversion
+            json_schema = payload['response_format']['json_schema']['schema']
+            assert json_schema['properties']['name']['type'][0] == "string"
+            assert json_schema['properties']['traits']['type'] == "array"
+            assert json_schema['required'] == ["name", "traits"]
+            assert json_schema['additionalProperties'] is False

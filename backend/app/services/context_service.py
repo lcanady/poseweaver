@@ -258,7 +258,7 @@ class ContextService:
         
         # Generate completion using Venice.ai
         response = self.venice_client.generate_completion(
-            model="venice-uncensored",
+            model="qwen3-235b",
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": user_message}

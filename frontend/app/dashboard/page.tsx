@@ -16,7 +16,8 @@ import {
   Zap,
   ArrowUpRight,
   Plus,
-  User
+  User,
+  Shield
 } from "lucide-react"
 
 interface DashboardStats {
@@ -83,9 +84,15 @@ export default function DashboardPage() {
 
         // Fetch characters data from character management API
         try {
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 second timeout
+          
           const charactersResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt`, {
-            headers
+            headers,
+            signal: controller.signal
           })
+          
+          clearTimeout(timeoutId)
 
           console.log('Characters response status:', charactersResponse.status)
           
@@ -141,6 +148,12 @@ export default function DashboardPage() {
       description: "View all your scenes",
       href: "/dashboard/scenes",
       icon: <BookOpen className="h-4 w-4" />
+    },
+    {
+      title: "Continuity",
+      description: "Track story consistency",
+      href: "/dashboard/continuity",
+      icon: <Shield className="h-4 w-4" />
     }
   ]
 
@@ -194,26 +207,26 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Last Activity</CardTitle>
+              <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{isLoading ? "..." : stats.recentActivity}</div>
               <p className="text-xs text-muted-foreground">
-                Keep the momentum going
+                Last scene update
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Scenes</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Continuity</CardTitle>
+              <Shield className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{isLoading ? "..." : stats.activeScenes}</div>
+              <div className="text-2xl font-bold">{isLoading ? "..." : stats.totalScenes > 0 ? "Active" : "—"}</div>
               <p className="text-xs text-muted-foreground">
-                Stories in progress
+                Story tracking
               </p>
             </CardContent>
           </Card>
@@ -226,7 +239,7 @@ export default function DashboardPage() {
             <CardDescription>Jump into your most common tasks</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
               {quickActions.map((action, index) => (
                 <Button
                   key={index}
@@ -284,6 +297,15 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
+              <div className="flex items-start gap-3">
+                <Badge variant="outline" className="mt-1">4</Badge>
+                <div>
+                  <p className="font-medium">Track continuity</p>
+                  <p className="text-sm text-muted-foreground">
+                    Monitor story consistency and character development across scenes
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -314,25 +336,32 @@ export default function DashboardPage() {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Active Scenes</span>
+                      <Badge variant="default">{stats.activeScenes}</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Total Scenes</span>
-                      <Badge variant="secondary">{stats.totalScenes}</Badge>
+                      <Badge variant="outline">{stats.totalScenes}</Badge>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Active</span>
-                      <Badge variant={stats.activeScenes > 0 ? "default" : "outline"}>
-                        {stats.activeScenes}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Last Updated</span>
-                      <span className="text-sm text-muted-foreground">{stats.recentActivity}</span>
+                    <div className="pt-2 grid gap-2">
+                      <Button asChild variant="outline" size="sm">
+                        <Link href="/dashboard/scene-weaver">
+                          <Zap className="h-4 w-4 mr-2" />
+                          Scene Weaver
+                        </Link>
+                      </Button>
+                      <Button asChild variant="outline" size="sm">
+                        <Link href="/dashboard/continuity">
+                          <Shield className="h-4 w-4 mr-2" />
+                          Check Continuity
+                        </Link>
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Show characters section only if user has characters */}
             {stats.totalCharacters > 0 && (
               <Card>
                 <CardHeader className="flex flex-row items-center">

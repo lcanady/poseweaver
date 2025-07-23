@@ -30,6 +30,8 @@ class MushParserService:
     def __init__(self, data_extraction_service: Optional[DataExtractionService] = None):
         # Regex patterns for different MUSH output formats
         self.patterns = {
+            # Discord format: "Username — Date, Time"
+            'discord_header': re.compile(r'^([A-Za-z0-9_\-\']+)\s+—\s+(\d{1,2}/\d{1,2}/\d{2,4}),?\s+(\d{1,2}:\d{2}\s*[AP]M)'),
             # Character name separator: "======> Name <======"
             'name_separator': re.compile(r'^=+>\s*(.+?)\s*<=+$'),
             
@@ -65,9 +67,128 @@ class MushParserService:
             'you_pose': re.compile(r'^You\s+(.+)$'),
         }
     
+    def parse_with_llm(self, output: str, your_character_hint: Optional[str] = None) -> ParsedScene:
+        """
+        Parse any text format (MUSH, Discord, etc.) into structured scene data using LLM
+        
+        Args:
+            output: Raw text output (any format)
+            your_character_hint: Optional hint about which character is yours
+            
+        Returns:
+            ParsedScene with extracted poses and metadata
+        """
+        # Use the data extraction service to parse the text with LLM
+        if not hasattr(self, 'data_extraction_service') or not self.data_extraction_service:
+            from app.services.data_extraction_service import DataExtractionService
+            from app.services.venice_client import VeniceClient
+            from flask import current_app
+            
+            # Get the Venice API key from Flask app config
+            api_key = current_app.config.get('VENICE_API_KEY', 'test_key_12345')
+            venice_client = VeniceClient(api_key)
+            self.data_extraction_service = DataExtractionService(venice_client)
+            
+        # Prepare the prompt for the LLM
+        prompt = f"""
+        Parse the following roleplay text into structured scene data. Extract each character's poses, 
+        identify the room description, and list all characters present. The text may be in any format 
+        (MUSH, Discord, etc.).
+        
+        If a character hint is provided, identify which poses belong to that character.
+        Character hint: {your_character_hint or 'None provided'}
+        
+        IMPORTANT CHARACTER NAME EXTRACTION:
+        - Extract the ACTUAL CHARACTER NAMES from the content of the poses, NOT the Discord usernames
+        - Look for names mentioned in the text like "Kara", "Michelle", etc.
+        - For each pose, identify which character is performing the actions described
+        - Pay attention to third-person references like "Kara needed to get out" or "She followed her ears to the club"
+        - The character name should be the person who is the subject of the pose, not the Discord username
+        - If a character name cannot be determined from the content, use a generic name like "Narrator" or "Unknown"
+        
+        IMPORTANT DISCORD FORMAT HANDLING:
+        - For Discord chat logs, look for patterns like "Username — Date, Time" followed by message content
+        - Example: "FaeWitch — 5/8/23, 3:27 PM" followed by their message
+        - The entire message content after the timestamp belongs to one pose, even if it spans multiple paragraphs
+        - Do NOT treat each line as a separate pose
+        - A new pose only starts when you see a new "Username — Date, Time" pattern
+        - Date separators like "May 9, 2023" are not character names
+        
+        Text to parse:
+        ```
+        {output}
+        ```
+        
+        Return the result as JSON with the following structure:
+        {{
+            "poses": [
+                {{
+                    "character_name": "Actual character name from the pose content (e.g., 'Kara', 'Michelle')",
+                    "content": "The full text of their pose (all paragraphs combined)",
+                    "pose_type": "action", // or "dialogue", "mixed", "narrative", "internal"
+                    "is_ooc": false // true if this is an out-of-character comment
+                }}
+            ],
+            "room_description": "Description of the room/setting",
+            "characters_present": ["Character1", "Character2", ...],
+            "your_character": "Name of the character hint if found"
+        }}
+        """
+        
+        try:
+            # Extract structured data using LLM
+            # Define the schema for pose extraction
+            schema = {
+                "poses": "list of objects - each with character_name (EXTRACT FROM POSE CONTENT, NOT DISCORD USERNAME), content, pose_type (action/dialogue/mixed/narrative/internal), is_ooc (boolean)",
+                "room_description": "string - description of the room/setting",
+                "characters_present": "list of strings - names of actual characters mentioned in poses (NOT Discord usernames)",
+                "your_character": "string - name of the character hint if found",
+                "instructions": "CRITICAL: For Discord format 'Username — Date, Time', extract the ACTUAL CHARACTER NAME from the pose content (e.g., 'Kara', 'Michelle'), NOT the Discord username (e.g., 'FaeWitch', 'Kumakun'). Look for names mentioned in the text like 'Kara needed to get out' or 'Michelle dives back into the sea of bodies'."
+            }
+            
+            # Extract structured data using the data extraction service
+            # Pass just the raw text, not the entire prompt with instructions
+            result = self.data_extraction_service.extract_structured_data(
+                unstructured_text=output,  # Use the raw Discord text, not the prompt
+                schema=schema,
+                temperature=0.3
+            )
+            
+            # Convert the result to a ParsedScene
+            poses = []
+            for pose_data in result.get('poses', []):
+                pose_type_str = pose_data.get('pose_type', 'mixed').lower()
+                pose_type = PoseType.MIXED
+                if pose_type_str == 'action':
+                    pose_type = PoseType.ACTION
+                elif pose_type_str == 'dialogue':
+                    pose_type = PoseType.DIALOGUE
+                elif pose_type_str == 'narrative':
+                    pose_type = PoseType.NARRATIVE
+                elif pose_type_str == 'internal':
+                    pose_type = PoseType.INTERNAL
+                
+                poses.append(ParsedPose(
+                    character_name=pose_data.get('character_name', 'Unknown'),
+                    content=pose_data.get('content', ''),
+                    pose_type=pose_type,
+                    is_ooc=pose_data.get('is_ooc', False)
+                ))
+            
+            return ParsedScene(
+                poses=poses,
+                room_description=result.get('room_description', ''),
+                characters_present=result.get('characters_present', []),
+                your_character=result.get('your_character', your_character_hint)
+            )
+        except Exception as e:
+            # Fall back to regex parsing if LLM parsing fails
+            print(f"LLM parsing failed: {str(e)}. Falling back to regex parsing.")
+            return self.parse_mush_output(output, your_character_hint)
+    
     def parse_mush_output(self, output: str, your_character_hint: Optional[str] = None) -> ParsedScene:
         """
-        Parse MUSH game output into structured scene data
+        Parse MUSH game output into structured scene data using regex patterns
         
         Args:
             output: Raw MUSH output text
@@ -79,7 +200,7 @@ class MushParserService:
         lines = output.strip().split('\n')
         poses = []
         room_description = None
-        characters_present = []
+        characters_present = set()  # Using a set to ensure unique character names
         your_character = your_character_hint
         
         # State tracking
@@ -88,6 +209,7 @@ class MushParserService:
         room_desc_lines = []
         current_character = None
         current_pose_lines = []
+        current_timestamp = None
         
         for line in lines:
             line = line.strip()
@@ -97,7 +219,42 @@ class MushParserService:
                     current_pose_lines.append('')
                 continue
             
-            # Check for character name separator first
+            # Check for Discord format first: "Username — Date, Time"
+            discord_match = self.patterns['discord_header'].match(line)
+            if discord_match:
+                # Save previous pose if we have one
+                if current_character and current_pose_lines:
+                    pose_text = '\n'.join(current_pose_lines).strip()
+                    if pose_text:
+                        # Try to extract the actual character name from the content
+                        extracted_name = self._extract_character_name_from_content(pose_text)
+                        if extracted_name:
+                            actual_character_name = extracted_name
+                        else:
+                            actual_character_name = current_character
+                        
+                        pose_type = self._determine_pose_type(pose_text)
+                        parsed_pose = ParsedPose(
+                            character_name=actual_character_name,
+                            content=pose_text,
+                            pose_type=pose_type,
+                            is_ooc=False,
+                            timestamp=current_timestamp
+                        )
+                        poses.append(parsed_pose)
+                        # Only add non-empty character names to the set
+                        if actual_character_name and actual_character_name.strip():
+                            characters_present.add(actual_character_name.strip())
+                
+                # Start new character section
+                # Store Discord username as a fallback, but we'll try to extract the actual character name later
+                discord_username = discord_match.group(1).strip()
+                current_character = discord_username  # Will be updated if we can extract a character name
+                current_timestamp = f"{discord_match.group(2)} {discord_match.group(3)}"
+                current_pose_lines = []
+                continue
+            
+            # Check for character name separator
             name_match = self.patterns['name_separator'].match(line)
             if name_match:
                 # Save previous pose if we have one
@@ -112,7 +269,9 @@ class MushParserService:
                             is_ooc=False
                         )
                         poses.append(parsed_pose)
-                        characters_present.append(current_character)
+                        # Only add non-empty character names to the set
+                        if current_character and current_character.strip():
+                            characters_present.add(current_character.strip())
                 
                 # Start new character section
                 current_character = name_match.group(1).strip()
@@ -176,6 +335,9 @@ class MushParserService:
             parsed_pose = self._parse_pose_line(line, timestamp)
             if parsed_pose:
                 poses.append(parsed_pose)
+                # Add character to unique character set if it exists
+                if parsed_pose.character_name and parsed_pose.character_name.strip():
+                    characters_present.add(parsed_pose.character_name.strip())
                 
                 # Try to detect your character
                 if not your_character and self._is_likely_your_character(line):
@@ -185,15 +347,25 @@ class MushParserService:
         if current_character and current_pose_lines:
             pose_text = '\n'.join(current_pose_lines).strip()
             if pose_text:
+                # Try to extract the actual character name from the content
+                extracted_name = self._extract_character_name_from_content(pose_text)
+                if extracted_name:
+                    actual_character_name = extracted_name
+                else:
+                    actual_character_name = current_character
+                
                 pose_type = self._determine_pose_type(pose_text)
                 parsed_pose = ParsedPose(
-                    character_name=current_character,
+                    character_name=actual_character_name,
                     content=pose_text,
                     pose_type=pose_type,
-                    is_ooc=False
+                    is_ooc=False,
+                    timestamp=current_timestamp
                 )
                 poses.append(parsed_pose)
-                characters_present.append(current_character)
+                # Only add non-empty character names to the set
+                if actual_character_name and actual_character_name.strip():
+                    characters_present.add(actual_character_name.strip())
         
         # Finalize room description
         if room_desc_lines:
@@ -215,13 +387,18 @@ class MushParserService:
                 is_ooc=False
             )
             poses.append(single_pose)
-            characters_present.append(your_character_hint)
+            if your_character_hint and your_character_hint.strip():
+                characters_present.add(your_character_hint.strip())
             your_character = your_character_hint
         
+        # Create final cleaned character list from our set
+        final_characters = sorted(list(characters_present)) if characters_present else None
+        
+        # Create the parsed scene object
         return ParsedScene(
             poses=poses,
             room_description=room_description,
-            characters_present=list(set(characters_present)) if characters_present else None,
+            characters_present=final_characters,
             your_character=your_character
         )
     
@@ -362,6 +539,29 @@ class MushParserService:
         
         return your_poses
 
+    def _extract_character_name_from_content(self, content: str) -> Optional[str]:
+        """Extract the actual character name from pose content"""
+        if not content:
+            return None
+            
+        # Look for common patterns that indicate character names
+        # Pattern 1: First sentence often starts with character name
+        first_sentence_match = re.match(r'^([A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?\s+(?:is|was|has|had|seems|looks|moves|walks|sits|stands|takes)', content)
+        if first_sentence_match:
+            return first_sentence_match.group(1)
+            
+        # Pattern 2: Look for possessive forms
+        possessive_match = re.search(r'(?:^|\.\s+)([A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?\'s\s+(?:eyes|face|body|hand|hair|voice|gaze)', content)
+        if possessive_match:
+            return possessive_match.group(1)
+            
+        # Pattern 3: Look for character name followed by action verb
+        action_match = re.search(r'(?:^|\.\s+)([A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?\s+(?:takes|moves|walks|runs|jumps|looks|glances|stares|smiles|frowns|nods|shakes)', content)
+        if action_match:
+            return action_match.group(1)
+            
+        return None
+    
     def _is_character_name_match(self, pose_name: str, your_name: str) -> bool:
         """Check if pose character name matches your character name (including partial matches)"""
         if not pose_name or not your_name:
@@ -421,8 +621,8 @@ class MushParserService:
         return False
     
     def build_scene_context_from_parsed(self, parsed_scene: ParsedScene, max_poses: int = 20, 
-                                        use_llm: bool = False, 
-                                        data_extraction_service: Optional[DataExtractionService] = None) -> Dict[str, Any]:
+                                    use_llm: bool = False, 
+                                    data_extraction_service: Optional[DataExtractionService] = None) -> Dict[str, Any]:
         """Build scene context from parsed scene data
         
         Args:
@@ -435,6 +635,9 @@ class MushParserService:
             Either a dictionary of structured scene context (if use_llm is True)
             or a string representation of the scene context (if use_llm is False)
         """
+        # Use the provided data_extraction_service or the instance variable
+        if use_llm and not data_extraction_service and hasattr(self, 'data_extraction_service'):
+            data_extraction_service = self.data_extraction_service
         # Build the basic scene context string
         context_parts = []
         
@@ -442,21 +645,48 @@ class MushParserService:
         if parsed_scene.room_description:
             context_parts.append(f"Location: {parsed_scene.room_description}")
         
-        # Add characters present
+        # Add characters present with accurate count
         if parsed_scene.characters_present:
-            chars = ", ".join(parsed_scene.characters_present)
-            context_parts.append(f"Characters present: {chars}")
+            unique_chars = sorted(set(parsed_scene.characters_present))
+            chars = ", ".join(unique_chars)
+            context_parts.append(f"Characters present ({len(unique_chars)}): {chars}")
         
         # Add recent poses (limit to max_poses)
         if parsed_scene.poses:
-            context_parts.append("\nRecent scene activity:")
-            recent_poses = parsed_scene.poses[-max_poses:] if len(parsed_scene.poses) > max_poses else parsed_scene.poses
+            # Count unique poses after filtering duplicates
+            # Sort poses by timestamp if available to ensure consistent ordering
+            sorted_poses = sorted(parsed_scene.poses, 
+                                key=lambda p: p.timestamp if p.timestamp else "")
+            # Get unique pose IDs for counting
+            unique_pose_ids = set()
+            for pose in sorted_poses:
+                pose_id = f"{pose.character_name}:{pose.content[:50]}"
+                unique_pose_ids.add(pose_id)
+                
+            # Add activity header with accurate pose count
+            context_parts.append(f"\nRecent scene activity ({len(unique_pose_ids)} poses):")
+            # Sort poses by timestamp if available to ensure consistent ordering
+            sorted_poses = sorted(parsed_scene.poses, 
+                                 key=lambda p: p.timestamp if p.timestamp else "")
+            # Get recent poses (last max_poses)
+            recent_poses = sorted_poses[-max_poses:] if len(sorted_poses) > max_poses else sorted_poses
             
+            # Ensure we have no duplicates by tracking unique identifiers
+            processed_poses = set()
+            filtered_poses = []
             for pose in recent_poses:
+                # Create a unique identifier for this pose using character_name + content
+                pose_id = f"{pose.character_name}:{pose.content[:50]}"
+                if pose_id not in processed_poses:
+                    processed_poses.add(pose_id)
+                    filtered_poses.append(pose)
+                    
+            # Use filtered poses to build context
+            for pose in filtered_poses:
                 ooc_marker = "<OOC> " if pose.is_ooc else ""
                 timestamp_marker = f"[{pose.timestamp}] " if pose.timestamp else ""
                 context_parts.append(f"{timestamp_marker}{ooc_marker}{pose.character_name} {pose.content}")
-        
+    
         context_str = "\n".join(context_parts)
         
         # If LLM extraction is requested and we have a data extraction service
@@ -473,10 +703,60 @@ class MushParserService:
                 if not structured_context.get("poses") or len(structured_context["poses"]) == 0:
                     structured_poses = []
                     if parsed_scene.poses:
-                        recent_poses = parsed_scene.poses[-max_poses:] if len(parsed_scene.poses) > max_poses else parsed_scene.poses
+                        # Sort poses by timestamp to maintain consistent order
+                        sorted_poses = sorted(parsed_scene.poses, 
+                                             key=lambda p: p.timestamp if p.timestamp else "")
+                        recent_poses = sorted_poses[-max_poses:] if len(sorted_poses) > max_poses else sorted_poses
+                        
+                        # Track processed poses to avoid duplicates
+                        processed_pose_ids = set()
                         for pose in recent_poses:
-                            # Create preview by taking first ~10-15 words (roughly 80 characters)
                             content = pose.content
+                            pose_id = f"{pose.character_name}:{content[:50]}"
+                            
+                            if pose_id not in processed_pose_ids:
+                                processed_pose_ids.add(pose_id)
+                                preview = content[:80] + "..." if len(content) > 80 else content
+                                
+                                structured_poses.append({
+                                    "character_name": pose.character_name,
+                                    "content": content,
+                                    "preview": preview,
+                                    "is_ooc": pose.is_ooc,
+                                    "timestamp": pose.timestamp
+                                })
+                    
+                    # Add structured poses to the context
+                    structured_context["poses"] = structured_poses
+                        
+                    # Make sure all poses have preview field
+                    for pose in structured_context["poses"]:
+                        if "preview" not in pose or not pose["preview"]:
+                            content = pose["content"]
+                            pose["preview"] = content[:80] + "..." if len(content) > 80 else content
+                        
+                    return structured_context
+            except Exception as e:
+                print(f"Error extracting structured context: {str(e)}")
+                # Fall back to structured representation with manual pose extraction
+                structured_poses = []
+                if parsed_scene.poses:
+                    # Sort poses by timestamp to ensure consistent order
+                    sorted_poses = sorted(parsed_scene.poses, 
+                                         key=lambda p: p.timestamp if p.timestamp else "")
+                    # Count total unique poses before limiting to max_poses
+                    all_pose_ids = set(f"{pose.character_name}:{pose.content[:50]}" for pose in sorted_poses)
+                    # Get recent poses
+                    recent_poses = sorted_poses[-max_poses:] if len(sorted_poses) > max_poses else sorted_poses
+                    
+                    # Track processed poses to avoid duplicates
+                    processed_pose_ids = set()
+                    for pose in recent_poses:
+                        content = pose.content
+                        pose_id = f"{pose.character_name}:{content[:50]}"
+                        
+                        if pose_id not in processed_pose_ids:
+                            processed_pose_ids.add(pose_id)
                             preview = content[:80] + "..." if len(content) > 80 else content
                             
                             structured_poses.append({
@@ -486,34 +766,6 @@ class MushParserService:
                                 "is_ooc": pose.is_ooc,
                                 "timestamp": pose.timestamp
                             })
-                        
-                    # Add structured poses to the context
-                    structured_context["poses"] = structured_poses
-                    
-                # Make sure all poses have preview field
-                for pose in structured_context["poses"]:
-                    if "preview" not in pose or not pose["preview"]:
-                        content = pose["content"]
-                        pose["preview"] = content[:80] + "..." if len(content) > 80 else content
-                    
-                return structured_context
-            except Exception as e:
-                print(f"Error extracting structured context: {str(e)}")
-                # Fall back to structured representation with manual pose extraction
-                structured_poses = []
-                if parsed_scene.poses:
-                    recent_poses = parsed_scene.poses[-max_poses:] if len(parsed_scene.poses) > max_poses else parsed_scene.poses
-                    for pose in recent_poses:
-                        content = pose.content
-                        preview = content[:80] + "..." if len(content) > 80 else content
-                        
-                        structured_poses.append({
-                            "character_name": pose.character_name,
-                            "content": content,
-                            "preview": preview,
-                            "is_ooc": pose.is_ooc,
-                            "timestamp": pose.timestamp
-                        })
                 
                 return {
                     "setting": parsed_scene.room_description or "",
@@ -526,19 +778,31 @@ class MushParserService:
         # For non-LLM mode, return structured data with manual pose extraction
         if parsed_scene.poses:
             structured_poses = []
-            recent_poses = parsed_scene.poses[-max_poses:] if len(parsed_scene.poses) > max_poses else parsed_scene.poses
+            # Sort poses by timestamp for consistent ordering
+            sorted_poses = sorted(parsed_scene.poses, 
+                               key=lambda p: p.timestamp if p.timestamp else "")
+            # Count total unique poses before limiting to max_poses
+            all_pose_ids = set(f"{pose.character_name}:{pose.content[:50]}" for pose in sorted_poses)
+            # Get recent poses limited by max_poses
+            recent_poses = sorted_poses[-max_poses:] if len(sorted_poses) > max_poses else sorted_poses
             
+            # Track processed poses to avoid duplicates
+            processed_pose_ids = set()
             for pose in recent_poses:
                 content = pose.content
-                preview = content[:80] + "..." if len(content) > 80 else content
+                pose_id = f"{pose.character_name}:{content[:50]}"
                 
-                structured_poses.append({
-                    "character_name": pose.character_name,
-                    "content": content,
-                    "preview": preview,
-                    "is_ooc": pose.is_ooc,
-                    "timestamp": pose.timestamp
-                })
+                if pose_id not in processed_pose_ids:
+                    processed_pose_ids.add(pose_id)
+                    preview = content[:80] + "..." if len(content) > 80 else content
+                    
+                    structured_poses.append({
+                        "character_name": pose.character_name,
+                        "content": content,
+                        "preview": preview,
+                        "is_ooc": pose.is_ooc,
+                        "timestamp": pose.timestamp
+                    })
                 
             return {
                 "setting": parsed_scene.room_description or "",

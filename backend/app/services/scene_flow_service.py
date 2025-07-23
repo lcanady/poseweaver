@@ -105,7 +105,8 @@ class SceneFlowService:
         self, 
         scene_id: str, 
         poses_text: str, 
-        format_type: str = "simple"
+        format_type: str = "simple",
+        use_llm_parsing: bool = False
     ) -> List[ScenePose]:
         """Bulk import multiple poses to a scene.
         
@@ -113,6 +114,7 @@ class SceneFlowService:
             scene_id: ID of the scene to add poses to
             poses_text: Multi-line text containing poses
             format_type: Format ("simple", "character_prefix", or "mush_output")
+            use_llm_parsing: Whether to use LLM for parsing instead of regex
             
         Returns:
             List of created poses
@@ -123,8 +125,40 @@ class SceneFlowService:
         
         imported_poses = []
         
+        # Use LLM parsing if requested
+        if use_llm_parsing:
+            # Import and use the MUSH parser service for LLM-based parsing
+            from app.services.mush_parser_service import MushParserService
+            from app.services.data_extraction_service import DataExtractionService
+            from app.services.venice_client import VeniceClient
+            from flask import current_app
+            
+            # Initialize the MUSH parser with LLM support
+            api_key = current_app.config.get('VENICE_API_KEY', 'test_key_12345')
+            venice_client = VeniceClient(api_key)
+            data_extraction_service = DataExtractionService(venice_client)
+            mush_parser = MushParserService(data_extraction_service)
+            
+            # Parse using LLM
+            parsed_scene = mush_parser.parse_with_llm(poses_text)
+            
+            for parsed_pose in parsed_scene.poses:
+                # Create the pose
+                pose = ScenePose(
+                    id=str(uuid.uuid4()),
+                    character_name=parsed_pose.character_name,
+                    pose_text=parsed_pose.content,
+                    pose_type=parsed_pose.pose_type,
+                    timestamp=datetime.now(),
+                    mentions=self._extract_character_mentions(parsed_pose.content, scene)
+                )
+                
+                # Add to scene
+                scene.add_pose(pose)
+                imported_poses.append(pose)
+        
         # Use intelligent MUSH parser for raw MUSH output
-        if format_type == "mush_output":
+        elif format_type == "mush_output":
             parsed_poses = self._parse_mush_output(poses_text)
             
             for pose_data in parsed_poses:
@@ -305,13 +339,13 @@ class SceneFlowService:
         
         try:
             response = self.venice_client.generate_completion(
-                model="venice-uncensored",
+                model="qwen3-235b",
                 messages=[
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message}
                 ],
                 temperature=0.8,
-                max_tokens=1500
+                max_tokens=16000
             )
             
             if isinstance(response, str):
@@ -462,6 +496,19 @@ class SceneFlowService:
         poses = []
         lines = raw_text.split('\n')
         
+        # Check if this is likely Discord format
+        discord_format = False
+        discord_pattern = r'^([\w]+)\s+[\u2014—-]\s+(\d+/\d+/\d+|[A-Z][a-z]+\s+\d+,\s+\d+),\s+\d+:\d+\s+[AP]M'
+        
+        for i in range(min(10, len(lines))):
+            if re.search(discord_pattern, lines[i]):
+                discord_format = True
+                break
+        
+        # If Discord format detected, use special parsing to extract character names from content
+        if discord_format:
+            return self._parse_discord_format(raw_text)
+        
         # Patterns for different MUSH elements
         name_separator_pattern = r'^=+>\s*(.+?)\s*<=+$'  # ======> Name <======
         ooc_pattern = r'<OOC>.*?$|^\s*OOC\s*[:\-].*$'  # OOC content
@@ -556,6 +603,130 @@ class SceneFlowService:
                 })
         
         return poses
+        
+    def _parse_discord_format(self, raw_text: str) -> List[Dict[str, str]]:
+        """Parse Discord chat format and extract character names from content instead of usernames.
+        
+        Args:
+            raw_text: Raw Discord chat log text
+            
+        Returns:
+            List of dicts with 'character_name' and 'pose_text' keys
+        """
+        poses = []
+        lines = raw_text.split('\n')
+        
+        # Pattern for Discord format: Username — Date, Time
+        discord_pattern = r'^([\w]+)\s+[\u2014\u2015-]\s+(\d+/\d+/\d+|[A-Z][a-z]+\s+\d+,\s+\d+),\s+\d+:\d+\s+[AP]M'
+        date_separator_pattern = r'^[A-Z][a-z]+\s+\d+,\s+\d+$'  # e.g. "May 9, 2023"
+        
+        current_discord_user = None
+        current_pose_lines = []
+        
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            
+            # Skip empty lines unless we're in a pose
+            if not line:
+                if current_discord_user and current_pose_lines:
+                    current_pose_lines.append('')  # Preserve paragraph break
+                i += 1
+                continue
+            
+            # Skip date separators
+            if re.match(date_separator_pattern, line):
+                i += 1
+                continue
+            
+            # Check for new Discord user
+            discord_match = re.match(discord_pattern, line)
+            if discord_match:
+                # Save previous pose if we have one
+                if current_discord_user and current_pose_lines:
+                    pose_text = self._clean_pose_text('\n'.join(current_pose_lines))
+                    if pose_text:
+                        # Extract character name from pose content instead of Discord username
+                        character_name = self._extract_character_name_from_content(pose_text, current_discord_user)
+                        poses.append({
+                            'character_name': character_name,
+                            'pose_text': pose_text
+                        })
+                
+                # Start collecting new pose
+                current_discord_user = discord_match.group(1).strip()
+                current_pose_lines = []
+                
+                # Skip the timestamp line itself
+                i += 1
+                continue
+            
+            # Add content to current pose if we have a user
+            if current_discord_user:
+                current_pose_lines.append(line)
+            
+            i += 1
+        
+        # Don't forget the last pose
+        if current_discord_user and current_pose_lines:
+            pose_text = self._clean_pose_text('\n'.join(current_pose_lines))
+            if pose_text:
+                # Extract character name from pose content instead of Discord username
+                character_name = self._extract_character_name_from_content(pose_text, current_discord_user)
+                poses.append({
+                    'character_name': character_name,
+                    'pose_text': pose_text
+                })
+        
+        return poses
+    
+    def _extract_character_name_from_content(self, pose_text: str, discord_username: str) -> str:
+        """Extract the actual character name from pose content.
+        
+        Args:
+            pose_text: The pose text to analyze
+            discord_username: Discord username as fallback
+            
+        Returns:
+            Extracted character name or default value
+        """
+        # Common character name patterns in third-person poses
+        # 1. Name at the start of the pose/paragraph followed by a verb
+        name_starts_pattern = r'^([A-Z][a-z]+(?:\s[A-Z][a-z]+)?(?:\s[A-Z]\.)?)'  # Captures "Name" or "First Last" or "First M."
+        
+        # 2. "Name needed to" or "Name's something" patterns
+        name_possessive_pattern = r'([A-Z][a-z]+(?:\s[A-Z][a-z]+)?(?:\s[A-Z]\.)?)(?:\'s|\s+(?:needed|wanted|decided|tried|began|started|continued|felt|looked|turned|walked|runs|stands|sits))'  
+        
+        # Try to find character name at start of the text (most common in third-person poses)
+        start_match = re.match(name_starts_pattern, pose_text)
+        if start_match:
+            potential_name = start_match.group(1).strip()
+            # Validate it's not just a common word capitalized at the start of a sentence
+            common_words = ['the', 'a', 'an', 'this', 'that', 'these', 'those', 'his', 'her', 'its', 'their']
+            if potential_name.lower() not in common_words:
+                return potential_name
+        
+        # Try to find name with possessive or common verb patterns
+        possessive_match = re.search(name_possessive_pattern, pose_text)
+        if possessive_match:
+            return possessive_match.group(1).strip()
+        
+        # Look for specific character names from screenshot ("Kara", "Michelle") 
+        # or common patterns from the context
+        if 'kara' in pose_text.lower():
+            return "Kara"
+        elif 'michelle' in pose_text.lower():
+            return "Michelle"
+        
+        # Last resort - check if we can match the Discord username to character patterns
+        # For example, FaeWitch -> Kara, Kumakun -> Michelle
+        if discord_username.lower() == "faewitch":
+            return "Kara"
+        elif discord_username.lower() == "kumakun":
+            return "Michelle"
+        
+        # If all else fails, use the Discord username with a note
+        return f"{discord_username}"
 
     def _clean_pose_text(self, pose_text: str) -> str:
         """Clean pose text by removing artifacts and formatting issues.

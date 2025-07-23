@@ -6,11 +6,13 @@ interacting with scene flows that track the conversation-like flow of poses
 in roleplay scenes.
 """
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import get_jwt_identity
 import os
 
 from app.services.scene_flow_service import SceneFlowService
 from app.services.venice_client import VeniceClient, VeniceAPIError
 from app.models.scene_flow import PoseType
+from app.middleware.auth_middleware import require_auth
 
 # Create blueprint
 scene_flow_bp = Blueprint('scene_flow', __name__, url_prefix='/api/scene-flow')
@@ -22,6 +24,7 @@ scene_flow_service = SceneFlowService(venice_client)
 
 
 @scene_flow_bp.route('/scenes', methods=['POST'])
+@require_auth
 def create_scene():
     """Create a new scene flow.
     
@@ -61,6 +64,7 @@ def create_scene():
 
 
 @scene_flow_bp.route('/scenes', methods=['GET'])
+@require_auth
 def list_scenes():
     """List all active scenes.
     
@@ -79,6 +83,7 @@ def list_scenes():
 
 
 @scene_flow_bp.route('/scenes/<scene_id>', methods=['GET'])
+@require_auth
 def get_scene(scene_id: str):
     """Get a specific scene by ID.
     
@@ -166,6 +171,7 @@ def add_pose_to_scene(scene_id: str):
 
 
 @scene_flow_bp.route('/scenes/<scene_id>/poses/bulk', methods=['POST'])
+@require_auth
 def bulk_import_poses(scene_id: str):
     """Bulk import multiple poses to a scene.
     
@@ -175,17 +181,23 @@ def bulk_import_poses(scene_id: str):
     Expected JSON body:
     {
         "poses_text": "Multi-line text with poses",
-        "format": "simple|character_prefix|mush_output" (optional, defaults to "simple")
+        "raw_text": "Raw text in any format (Discord, etc.)",
+        "format": "simple|character_prefix|mush_output" (optional, defaults to "simple"),
+        "use_llm_parsing": "boolean - whether to use LLM for parsing (optional, default: false)"
     }
     
     Format options:
     - "simple": Each line is a pose, character name extracted from start
     - "character_prefix": Lines like "CharacterName: pose text"
     - "mush_output": Raw MUSH game output with name separators and OOC
+    - When use_llm_parsing is true, the format is ignored and the LLM will parse the text
     
     Returns:
         JSON response with imported poses count and data
     """
+    # Get current user for authentication
+    current_user = get_jwt_identity()
+    
     try:
         data = request.get_json()
         
@@ -193,21 +205,28 @@ def bulk_import_poses(scene_id: str):
             return jsonify({'error': 'JSON body required'}), 400
         
         poses_text = data.get('poses_text')
+        raw_text = data.get('raw_text')
         format_type = data.get('format', 'simple')
+        use_llm_parsing = data.get('use_llm_parsing', False)
         
-        if not poses_text:
+        # Check if we have either poses_text or raw_text
+        if not poses_text and not raw_text:
             return jsonify({
-                'error': 'poses_text is required'
+                'error': 'poses_text or raw_text is required'
             }), 400
         
-        if format_type not in ['simple', 'character_prefix', 'mush_output']:
+        # If not using LLM parsing, validate the format
+        if not use_llm_parsing and format_type not in ['simple', 'character_prefix', 'mush_output']:
             return jsonify({
                 'error': 'format must be "simple", "character_prefix", or "mush_output"'
             }), 400
         
+        # Use raw_text if provided and LLM parsing is enabled
+        text_to_parse = raw_text if raw_text and use_llm_parsing else poses_text
+        
         # Parse the poses text into individual poses
         imported_poses = scene_flow_service.bulk_import_poses(
-            scene_id, poses_text, format_type
+            scene_id, text_to_parse, format_type, use_llm_parsing=use_llm_parsing
         )
         
         return jsonify({
@@ -223,6 +242,7 @@ def bulk_import_poses(scene_id: str):
 
 
 @scene_flow_bp.route('/scenes/<scene_id>/context', methods=['GET'])
+@require_auth
 def get_scene_context(scene_id: str):
     """Get formatted scene context for enhancement.
     

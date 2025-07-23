@@ -4,7 +4,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface User {
-  id: number
+  id?: number
+  _id?: string  // MongoDB ObjectId
   email: string
   display_name: string
   bio?: string

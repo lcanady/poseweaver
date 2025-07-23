@@ -1,15 +1,11 @@
 """
 Flask extensions initialization.
 """
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
 from app.services.mongodb_service import MongoDBService
 
 # Initialize extensions
-db = SQLAlchemy()
-migrate = Migrate()
 jwt = JWTManager()
 bcrypt = Bcrypt()
 
@@ -23,13 +19,9 @@ def init_extensions(app):
     Args:
         app: Flask application instance
     """
-    # Initialize SQLAlchemy and other extensions
-    db.init_app(app)
-    migrate.init_app(app, db)
+    # Initialize extensions
     jwt.init_app(app)
     bcrypt.init_app(app)
-    
-    # JWT manager already initialized above
     
     # Initialize MongoDB connection
     with app.app_context():
@@ -40,11 +32,28 @@ def init_extensions(app):
             from app.models.user_mongo import User
             from app.models.character import Character
             from app.models.scene import Scene
+            from app.models.scene_memory import (
+                SceneMemory, Pose, CharacterState, 
+                EnvironmentState, PlotThread, ContinuityFlag
+            )
             
             # Initialize indexes for all models
             User.initialize_indexes()
             Character.initialize_indexes()
             Scene.initialize_indexes()
+            
+            # Initialize indexes for scene memory models using migration system
+            from app.migrations.migration_manager import run_migrations
+            migration_success = run_migrations()
+            
+            if not migration_success:
+                app.logger.warning("Some migrations failed, falling back to individual index initialization")
+                SceneMemory.initialize_indexes()
+                Pose.initialize_indexes()
+                CharacterState.initialize_indexes()
+                EnvironmentState.initialize_indexes()
+                PlotThread.initialize_indexes()
+                ContinuityFlag.initialize_indexes()
             
             app.logger.info("MongoDB service and models initialized successfully")
         except Exception as e:

@@ -1,0 +1,335 @@
+"""
+Scene Summary API endpoints.
+
+Provides endpoints for generating various types of scene summaries, including
+comprehensive, character-focused, and plot-focused summaries, as well as
+catch-up briefs for returning users.
+"""
+from flask import Blueprint, request, jsonify, current_app
+from flask_jwt_extended import get_jwt_identity
+from http import HTTPStatus
+from datetime import datetime
+from typing import Dict, Optional, Any
+
+from app.services.summary_service import SummaryService, SummaryOptions
+from app.middleware.auth_middleware import require_auth
+
+
+def _get_dict_data(obj: Any) -> Dict[str, Any]:
+    """Helper function to handle both dict objects and objects with to_dict method.
+    
+    Args:
+        obj: Object to convert to dictionary
+        
+    Returns:
+        Dictionary representation of the object
+    """
+    if hasattr(obj, 'to_dict') and callable(getattr(obj, 'to_dict')):
+        return obj.to_dict()
+    elif isinstance(obj, dict):
+        return obj
+    else:
+        # If it's neither a dict nor has to_dict(), convert object attributes to dict
+        return {k: v for k, v in obj.__dict__.items() if not k.startswith('_')}
+
+# Create blueprint
+scene_summary_bp = Blueprint('scene_summary', __name__)
+
+
+@scene_summary_bp.route('/<scene_id>/summary', methods=['GET'])
+@require_auth
+def get_scene_summary(scene_id):
+    """Generate a summary for the specified scene.
+    
+    Query parameters:
+        focus (str, optional): Summary focus type - 'comprehensive', 'character', 'plot', 'environment' 
+                             (default: 'comprehensive')
+        character_id (str, optional): Required if focus is 'character'
+        max_length (int, optional): Maximum length of summary in words (default: 500)
+        include_details (bool, optional): Whether to include detailed descriptions (default: true)
+        formal_style (bool, optional): Whether to use formal writing style (default: false)
+        chronological (bool, optional): Whether to organize events chronologically (default: true)
+        highlight_key_events (bool, optional): Whether to highlight key events (default: true)
+    
+    Returns:
+        200 OK: Generated summary
+        400 Bad Request: If parameters are invalid
+        404 Not Found: If scene not found or access denied
+    """
+    current_user = get_jwt_identity()
+    
+    try:
+        # Parse query parameters
+        focus = request.args.get('focus', 'comprehensive')
+        character_id = request.args.get('character_id')
+        max_length = int(request.args.get('max_length', 500))
+        include_details = request.args.get('include_details', 'true').lower() == 'true'
+        formal_style = request.args.get('formal_style', 'false').lower() == 'true'
+        chronological = request.args.get('chronological', 'true').lower() == 'true'
+        highlight_key_events = request.args.get('highlight_key_events', 'true').lower() == 'true'
+        
+        # Create summary options
+        options = SummaryOptions(
+            focus=focus,
+            character_id=character_id,
+            max_length=max_length,
+            include_details=include_details,
+            formal_style=formal_style,
+            chronological=chronological,
+            highlight_key_events=highlight_key_events
+        )
+        
+        # Validate character_id if focus is 'character'
+        if focus == 'character' and not character_id:
+            return jsonify({
+                'success': False,
+                'message': 'character_id is required when focus is set to character'
+            }), HTTPStatus.BAD_REQUEST
+        
+        # Generate summary based on focus type
+        if focus == 'character':
+            summary = SummaryService.generate_character_focused_summary(
+                scene_id=scene_id,
+                user_id=current_user,
+                character_id=character_id,
+                options=options
+            )
+        elif focus == 'plot':
+            summary = SummaryService.generate_plot_focused_summary(
+                scene_id=scene_id,
+                user_id=current_user,
+                options=options
+            )
+        elif focus == 'environment':
+            summary = SummaryService.generate_environment_focused_summary(
+                scene_id=scene_id,
+                user_id=current_user,
+                options=options
+            )
+        else:  # comprehensive (default)
+            summary = SummaryService.generate_summary(
+                scene_id=scene_id,
+                user_id=current_user,
+                options=options
+            )
+        
+        if not summary:
+            return jsonify({
+                'success': False,
+                'message': 'Scene not found, access denied, or summary generation failed'
+            }), HTTPStatus.NOT_FOUND
+            
+        return jsonify({
+            'success': True,
+            'data': summary.to_dict()
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), HTTPStatus.BAD_REQUEST
+    except Exception as e:
+        current_app.logger.error(f"Error generating summary: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while generating the summary'
+        }), HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+@scene_summary_bp.route('/<scene_id>/catchup', methods=['GET'])
+@require_auth
+def get_catchup_brief(scene_id):
+    """Generate a catch-up brief for a returning user.
+    
+    This summarizes what happened in a scene since the user was last active.
+    
+    Query parameters:
+        since (str, optional): ISO format date to generate catchup from
+                             (default: auto-detect user's last activity)
+        max_length (int, optional): Maximum length of brief in words (default: 300)
+        include_details (bool, optional): Whether to include detailed descriptions (default: true)
+    
+    Returns:
+        200 OK: Generated catch-up brief
+        404 Not Found: If scene not found or access denied
+    """
+    current_user = get_jwt_identity()
+    
+    try:
+        # Parse query parameters
+        since_str = request.args.get('since')
+        since_timestamp = datetime.fromisoformat(since_str) if since_str else None
+        max_length = int(request.args.get('max_length', 300))
+        include_details = request.args.get('include_details', 'true').lower() == 'true'
+        
+        # Create summary options
+        options = SummaryOptions(
+            max_length=max_length,
+            include_details=include_details
+        )
+        
+        # Generate catchup brief
+        summary = SummaryService.generate_catchup_brief(
+            scene_id=scene_id,
+            user_id=current_user,
+            since_timestamp=since_timestamp,
+            options=options
+        )
+        
+        if not summary:
+            return jsonify({
+                'success': False,
+                'message': 'Scene not found, access denied, or brief generation failed'
+            }), HTTPStatus.NOT_FOUND
+            
+        return jsonify({
+            'success': True,
+            'data': summary.to_dict()
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), HTTPStatus.BAD_REQUEST
+    except Exception as e:
+        current_app.logger.error(f"Error generating catchup brief: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while generating the catchup brief'
+        }), HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+@scene_summary_bp.route('/<scene_id>/summary', methods=['POST'])
+@require_auth
+def edit_summary(scene_id):
+    """Save a user-edited version of a summary.
+    
+    Request body:
+    {
+        "edited_text": "User-edited summary text",
+        "original_summary_type": "comprehensive",  // Required
+        "focus_character_id": "char_id"  // Required if original was character-focused
+    }
+    
+    Returns:
+        200 OK: The saved summary
+        400 Bad Request: If validation fails
+        404 Not Found: If scene not found or access denied
+    """
+    current_user = get_jwt_identity()
+    data = request.get_json()
+    
+    if not data or 'edited_text' not in data or 'original_summary_type' not in data:
+        return jsonify({
+            'success': False,
+            'message': 'edited_text and original_summary_type are required'
+        }), HTTPStatus.BAD_REQUEST
+    
+    try:
+        # Extract request data
+        edited_text = data['edited_text']
+        original_summary_type = data['original_summary_type']
+        focus_character_id = data.get('focus_character_id')
+        
+        # Validate character_id if original_summary_type is 'character'
+        if original_summary_type == 'character' and not focus_character_id:
+            return jsonify({
+                'success': False,
+                'message': 'focus_character_id is required when original_summary_type is character'
+            }), HTTPStatus.BAD_REQUEST
+        
+        # Save edited summary
+        summary = SummaryService.edit_summary(
+            scene_id=scene_id,
+            user_id=current_user,
+            edited_text=edited_text,
+            original_summary_type=original_summary_type,
+            focus_character_id=focus_character_id
+        )
+        
+        if not summary:
+            return jsonify({
+                'success': False,
+                'message': 'Scene not found or access denied'
+            }), HTTPStatus.NOT_FOUND
+            
+        return jsonify({
+            'success': True,
+            'data': summary.to_dict()
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), HTTPStatus.BAD_REQUEST
+    except Exception as e:
+        current_app.logger.error(f"Error saving edited summary: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while saving the edited summary'
+        }), HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+@scene_summary_bp.route('/<scene_id>/summary/export', methods=['GET'])
+@require_auth
+def export_summary(scene_id):
+    """Export a summary in the specified format.
+    
+    Query parameters:
+        format (str, optional): Format to export in - 'markdown', 'plain', 'html' (default: 'markdown')
+        include_metadata (bool, optional): Whether to include metadata (default: false)
+    
+    Returns:
+        200 OK: The exported summary
+        404 Not Found: If scene not found or access denied
+    """
+    current_user = get_jwt_identity()
+    
+    try:
+        # Parse query parameters
+        format_type = request.args.get('format', 'markdown')
+        include_metadata = request.args.get('include_metadata', 'false').lower() == 'true'
+        
+        # Validate format
+        if format_type not in ['markdown', 'plain', 'html']:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid format. Must be one of: markdown, plain, html'
+            }), HTTPStatus.BAD_REQUEST
+        
+        # Export summary
+        exported = SummaryService.export_summary(
+            scene_id=scene_id,
+            user_id=current_user,
+            format_type=format_type,
+            include_metadata=include_metadata
+        )
+        
+        if not exported:
+            return jsonify({
+                'success': False,
+                'message': 'Scene not found, access denied, or no summary available'
+            }), HTTPStatus.NOT_FOUND
+            
+        return jsonify({
+            'success': True,
+            'data': {
+                'format': format_type,
+                'content': exported
+            }
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), HTTPStatus.BAD_REQUEST
+    except Exception as e:
+        current_app.logger.error(f"Error exporting summary: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while exporting the summary'
+        }), HTTPStatus.INTERNAL_SERVER_ERROR

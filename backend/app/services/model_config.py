@@ -246,6 +246,19 @@ class ModelConfig:
             "HUMAN-LIKE WRITING MASTERY:\n"
             "You must write like a skilled human author, not an AI. This means:\n\n"
             
+            "BURSTINESS & PERPLEXITY REQUIREMENTS:\n"
+            "- Create HIGH BURSTINESS: Mix very short and very long sentences unpredictably\n"
+            "- Use HIGH PERPLEXITY: Choose unexpected but fitting word combinations\n"
+            "- Avoid predictable AI patterns - surprise with sentence structure\n"
+            "- Alternate between terse fragments and elaborate descriptions\n"
+            "- Use unconventional but natural phrasing that feels authentically human\n\n"
+            
+            "PUNCTUATION RULES:\n"
+            "- Use ONLY simple punctuation: periods, commas, semicolons, colons\n"
+            "- NO em-dashes (—) or en-dashes (–) - use simple alternatives\n"
+            "- Replace dashes with commas, periods, or parentheses\n"
+            "- Keep punctuation clean and straightforward\n\n"
+            
             "SENTENCE RHYTHM & FLOW:\n"
             "- Create natural rhythm through varied sentence lengths\n"
             "- Use short, impactful sentences for emphasis: 'He froze.'\n"

@@ -120,17 +120,117 @@ def enhance_pose():
                          'elaborate'
             }), 400
         
+        # Get enhancement options
+        enhancement_options = data.get('enhancement_options', {})
+        
         # Enhance the pose
         service = get_pose_service()
         enhancement = service.enhance_pose(
-            original_pose, character, context, enhancement_style
+            original_pose, character, context, enhancement_style, enhancement_options
         )
         
-        # Return just the enhanced pose text
-        return jsonify({
+        # Return enhanced pose with validation warnings
+        response_data = {
             'success': True,
-            'enhanced_pose': enhancement.enhanced_pose
-        })
+            'enhanced_pose': enhancement['enhanced_pose']
+        }
+        
+        # Include validation warnings if present
+        if enhancement.get('validation_warnings'):
+            response_data['validation_warnings'] = enhancement['validation_warnings']
+            
+        return jsonify(response_data)
+        
+    except VeniceAPIError as e:
+        return jsonify({
+            'success': False,
+            'error': f'AI processing failed: {str(e)}'
+        }), 503
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': f'Invalid data: {str(e)}'
+        }), 400
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}'
+        }), 500
+
+
+@pose_bp.route('/refine', methods=['POST'])
+def refine_pose():
+    """Refine an enhanced pose based on user suggestions.
+    
+    Expected JSON payload:
+    {
+        "current_pose": "The current enhanced pose text",
+        "edit_suggestion": "User's suggestion for improvement",
+        "original_pose": "The original pose (optional)",
+        "character": CharacterProfile (optional),
+        "context": PoseContext (optional),
+        "enhancement_style": "balanced|creative|detailed|concise",
+        "enhancement_options": {...}
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No JSON data provided'}), 400
+            
+        # Extract required fields
+        current_pose = data.get('current_pose')
+        edit_suggestion = data.get('edit_suggestion')
+        
+        if not current_pose or not edit_suggestion:
+            return jsonify({
+                'error': 'Both current_pose and edit_suggestion are required'
+            }), 400
+            
+        # Extract optional fields
+        original_pose = data.get('original_pose')
+        character_data = data.get('character')
+        context_data = data.get('context')
+        enhancement_style = data.get('enhancement_style', 'balanced')
+        enhancement_options = data.get('enhancement_options', {})
+        
+        # Parse character and context if provided
+        character = None
+        context = None
+        
+        if character_data:
+            try:
+                character = CharacterProfile(**character_data)
+            except TypeError as e:
+                return jsonify({
+                    'error': f'Invalid character data: {str(e)}'
+                }), 400
+                
+        if context_data:
+            try:
+                context = PoseContext(**context_data)
+            except TypeError as e:
+                return jsonify({
+                    'error': f'Invalid context data: {str(e)}'
+                }), 400
+        
+        # Get pose service instance
+        service = get_pose_service()
+        
+        # Refine the pose
+        result = service.refine_pose(
+            current_pose=current_pose,
+            edit_suggestion=edit_suggestion,
+            original_pose=original_pose,
+            character=character,
+            context=context,
+            enhancement_style=enhancement_style,
+            enhancement_options=enhancement_options
+        )
+        
+        return jsonify(result)
         
     except VeniceAPIError as e:
         return jsonify({
@@ -540,6 +640,359 @@ def generate_pose():
         'success': False,
         'error': 'This endpoint has been replaced by /enhance'
     }), 410
+
+
+@pose_bp.route('/enhance-with-continuity', methods=['POST'])
+def enhance_pose_with_continuity():
+    """Enhance a pose with integrated continuity analysis.
+    
+    Request body:
+    {
+        "original_pose": "Basic pose text...",
+        "scene_id": "scene-uuid-here",  // Required for continuity analysis
+        "character_name": "Character Name",  // Required
+        "character": {  // Optional
+            "name": "Character Name",
+            "background": "...",
+            // ... other character fields
+        },
+        "context": {  // Optional
+            "actions": [...],
+            "emotions": [...],
+            // ... other context fields
+        },
+        "enhancement_style": "balanced",  // minimal, balanced, elaborate
+        "analyze_continuity": true  // Optional, default: true
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "enhanced_pose": "Enhanced pose text...",
+        "continuity_analysis": {
+            "character_consistency_score": 0.85,
+            "environment_consistency_score": 0.90,
+            "plot_consistency_score": 0.78,
+            "timeline_consistency_score": 0.95,
+            "overall_confidence": 0.87,
+            "flags_count": 1,
+            "issues": [...],
+            "suggestions": [...]
+        },
+        "character_state_changes": [...],
+        "environment_changes": [...]
+    }
+    """
+    try:
+        # Get request data
+        data = request.get_json(force=True, silent=True)
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No JSON data provided'
+            }), 400
+        
+        # Validate required fields for continuity analysis
+        original_pose = data.get('original_pose')
+        if not original_pose or not original_pose.strip():
+            return jsonify({
+                'success': False,
+                'error': 'original_pose is required and cannot be empty'
+            }), 400
+        
+        scene_id = data.get('scene_id')
+        if not scene_id or not scene_id.strip():
+            return jsonify({
+                'success': False,
+                'error': 'scene_id is required for continuity analysis'
+            }), 400
+        
+        character_name = data.get('character_name')
+        if not character_name or not character_name.strip():
+            return jsonify({
+                'success': False,
+                'error': 'character_name is required'
+            }), 400
+        
+        # Handle optional character data
+        character = None
+        if 'character' in data and data['character']:
+            try:
+                character_data = data['character']
+                character = CharacterProfile(**character_data)
+            except (TypeError, ValueError) as e:
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid character data: {str(e)}'
+                }), 400
+        
+        # Handle optional context data
+        context = None
+        if 'context' in data and data['context']:
+            try:
+                context_data = data['context']
+                context = PoseContext.from_dict(context_data)
+            except (TypeError, ValueError) as e:
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid context data: {str(e)}'
+                }), 400
+        
+        # Get enhancement options
+        enhancement_style = data.get('enhancement_style', 'balanced')
+        if enhancement_style not in ['minimal', 'balanced', 'elaborate']:
+            return jsonify({
+                'success': False,
+                'error': 'enhancement_style must be minimal, balanced, or '
+                         'elaborate'
+            }), 400
+        
+        analyze_continuity = data.get('analyze_continuity', True)
+        
+        # Enhance the pose with continuity analysis
+        service = get_pose_service()
+        enhancement = service.enhance_pose_with_continuity(
+            original_pose=original_pose,
+            scene_id=scene_id,
+            character_name=character_name,
+            character=character,
+            context=context,
+            enhancement_style=enhancement_style,
+            analyze_continuity=analyze_continuity
+        )
+        
+        # Build response data
+        response_data = {
+            'success': True,
+            'enhanced_pose': enhancement.enhanced_pose,
+            'enhancement_notes': enhancement.enhancement_notes,
+            'sensory_details': enhancement.sensory_details,
+            'character_voice_elements': enhancement.character_voice_elements,
+            'narrative_techniques': enhancement.narrative_techniques
+        }
+        
+        # Add continuity analysis if present
+        if enhancement.continuity_analysis:
+            response_data['continuity_analysis'] = {
+                'character_consistency_score': enhancement.continuity_analysis.character_consistency_score,
+                'environment_consistency_score': enhancement.continuity_analysis.environment_consistency_score,
+                'plot_consistency_score': enhancement.continuity_analysis.plot_consistency_score,
+                'timeline_consistency_score': enhancement.continuity_analysis.timeline_consistency_score,
+                'overall_confidence': enhancement.continuity_analysis.overall_confidence,
+                'flags_count': len(enhancement.continuity_analysis.flags),
+                'analysis_notes': enhancement.continuity_analysis.analysis_notes
+            }
+        
+        if enhancement.character_state_changes:
+            response_data['character_state_changes'] = enhancement.character_state_changes
+        
+        if enhancement.environment_changes:
+            response_data['environment_changes'] = enhancement.environment_changes
+        
+        return jsonify(response_data)
+        
+    except VeniceAPIError as e:
+        return jsonify({
+            'success': False,
+            'error': f'AI processing failed: {str(e)}'
+        }), 503
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': f'Invalid data: {str(e)}'
+        }), 400
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}'
+        }), 500
+
+
+@pose_bp.route('/enhance-with-precheck', methods=['POST'])
+def enhance_pose_with_precheck():
+    """Enhance a pose with pre-enhancement continuity checking.
+    
+    This endpoint performs continuity analysis BEFORE enhancement and provides
+    warnings about potential issues. Users can review these warnings and
+    decide whether to proceed or modify their pose.
+    
+    Request body:
+    {
+        "original_pose": "Basic pose text...",
+        "scene_id": "scene-uuid-here",  // Required for continuity analysis
+        "character_name": "Character Name",  // Required
+        "character": {  // Optional
+            "name": "Character Name",
+            "background": "...",
+            // ... other character fields
+        },
+        "context": {  // Optional
+            "actions": [...],
+            "emotions": [...],
+            // ... other context fields
+        },
+        "enhancement_style": "balanced",  // minimal, balanced, elaborate
+        "continuity_threshold": 0.6  // Optional, minimum score for warnings
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "enhanced_pose": "Enhanced pose text...",
+        "warnings": [
+            "Character consistency concern (score: 0.55). This pose may not match established character behavior.",
+            "Environment consistency concern (score: 0.48). This pose may contradict established environmental details."
+        ],
+        "continuity_scores": {
+            "character_consistency_score": 0.55,
+            "environment_consistency_score": 0.48,
+            "plot_consistency_score": 0.75,
+            "timeline_consistency_score": 0.90,
+            "overall_confidence": 0.67
+        },
+        "enhancement_details": {
+            "enhancement_notes": [...],
+            "sensory_details": [...],
+            "character_voice_elements": [...],
+            "narrative_techniques": [...]
+        }
+    }
+    """
+    try:
+        # Get request data
+        data = request.get_json(force=True, silent=True)
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No JSON data provided'
+            }), 400
+        
+        # Validate required fields
+        original_pose = data.get('original_pose')
+        if not original_pose or not original_pose.strip():
+            return jsonify({
+                'success': False,
+                'error': 'original_pose is required and cannot be empty'
+            }), 400
+        
+        scene_id = data.get('scene_id')
+        if not scene_id or not scene_id.strip():
+            return jsonify({
+                'success': False,
+                'error': 'scene_id is required for continuity analysis'
+            }), 400
+        
+        character_name = data.get('character_name')
+        if not character_name or not character_name.strip():
+            return jsonify({
+                'success': False,
+                'error': 'character_name is required'
+            }), 400
+        
+        # Handle optional character data
+        character = None
+        if 'character' in data and data['character']:
+            try:
+                character_data = data['character']
+                character = CharacterProfile(**character_data)
+            except (TypeError, ValueError) as e:
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid character data: {str(e)}'
+                }), 400
+        
+        # Handle optional context data
+        context = None
+        if 'context' in data and data['context']:
+            try:
+                context_data = data['context']
+                context = PoseContext.from_dict(context_data)
+            except (TypeError, ValueError) as e:
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid context data: {str(e)}'
+                }), 400
+        
+        # Get enhancement options
+        enhancement_style = data.get('enhancement_style', 'balanced')
+        if enhancement_style not in ['minimal', 'balanced', 'elaborate']:
+            return jsonify({
+                'success': False,
+                'error': 'enhancement_style must be minimal, balanced, or '
+                         'elaborate'
+            }), 400
+        
+        continuity_threshold = data.get('continuity_threshold', 0.6)
+        if not isinstance(continuity_threshold, (int, float)) or continuity_threshold < 0 or continuity_threshold > 1:
+            return jsonify({
+                'success': False,
+                'error': 'continuity_threshold must be a number between 0 and 1'
+            }), 400
+        
+        # Enhance the pose with pre-check continuity analysis
+        service = get_pose_service()
+        enhancement, warnings = service.enhance_pose_with_pre_check(
+            original_pose=original_pose,
+            scene_id=scene_id,
+            character_name=character_name,
+            character=character,
+            context=context,
+            enhancement_style=enhancement_style,
+            continuity_threshold=continuity_threshold
+        )
+        
+        # Build response data
+        response_data = {
+            'success': True,
+            'enhanced_pose': enhancement.enhanced_pose,
+            'warnings': warnings,
+            'enhancement_details': {
+                'enhancement_notes': enhancement.enhancement_notes,
+                'sensory_details': enhancement.sensory_details,
+                'character_voice_elements': enhancement.character_voice_elements,
+                'narrative_techniques': enhancement.narrative_techniques
+            }
+        }
+        
+        # Add continuity scores if available
+        if enhancement.continuity_analysis:
+            response_data['continuity_scores'] = {
+                'character_consistency_score': enhancement.continuity_analysis.character_consistency_score,
+                'environment_consistency_score': enhancement.continuity_analysis.environment_consistency_score,
+                'plot_consistency_score': enhancement.continuity_analysis.plot_consistency_score,
+                'timeline_consistency_score': enhancement.continuity_analysis.timeline_consistency_score,
+                'overall_confidence': enhancement.continuity_analysis.overall_confidence
+            }
+        
+        if enhancement.character_state_changes:
+            response_data['character_state_changes'] = enhancement.character_state_changes
+        
+        if enhancement.environment_changes:
+            response_data['environment_changes'] = enhancement.environment_changes
+        
+        return jsonify(response_data)
+        
+    except VeniceAPIError as e:
+        return jsonify({
+            'success': False,
+            'error': f'AI processing failed: {str(e)}'
+        }), 503
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': f'Invalid data: {str(e)}'
+        }), 400
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}'
+        }), 500
 
 
 @pose_bp.errorhandler(404)

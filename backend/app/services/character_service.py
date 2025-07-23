@@ -104,13 +104,13 @@ class CharacterService:
         
         # Generate completion using Venice.ai
         response = self.venice_client.generate_completion(
-            model="venice-uncensored",
+            model="qwen3-235b",
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": user_message}
             ],
             temperature=0.3,
-            max_tokens=4000  # Increased token limit to handle larger responses
+            max_tokens=16000  # Much higher token limit for detailed character analysis
         )
         
         # Parse JSON response if needed
