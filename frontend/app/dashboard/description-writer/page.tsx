@@ -2,362 +2,496 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useAuth } from '@/contexts/auth-context'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { 
-  Upload, 
-  Image as ImageIcon, 
-  Wand2, 
-  Copy, 
-  Download,
-  Loader2,
-  FileText,
-  Sparkles,
-  Eye,
-  Crown
-} from 'lucide-react'
+
+// Import modular components
 import { ImageUpload } from '@/components/description-writer/image-upload'
-import { DescriptionResult } from '@/components/description-writer/description-result'
-import { StyleSelector } from '@/components/description-writer/style-selector'
+import { DescriptionInput } from '@/components/description-writer/description-input'
+import { DescriptionOutput } from '@/components/description-writer/description-output'
+import { DescriptionVersionHistory } from '@/components/description-writer/description-version-history'
+import { DescriptionRefinement } from '@/components/description-writer/description-refinement'
 import { UsageDisplay } from '@/components/pose-enhancer/usage-display'
 import { InlinePaywall } from '@/components/pose-enhancer/inline-paywall'
 
-interface DescriptionResponse {
-  success: boolean
-  description?: string
-  metadata?: {
-    style: string
-    prompt_used: string
-    model_used: string
-    word_count: number
-    processing_time_ms: number
-    timestamp: string
-  }
-  usage_info?: {
-    generations_used: number
-    generations_limit: number
-    subscription_status: string
-  }
-  error?: string
+interface DescriptionVersion {
+  id: string
+  description: string
+  timestamp: Date
+  style: string
+  focusArea: string
+  metadata?: DescriptionMetadata
+}
+
+interface DescriptionMetadata {
+  style: string
+  word_count: number
+  processing_time_ms: number
+  model_used: string
+  timestamp: string
 }
 
 export default function DescriptionWriterPage() {
   const { user } = useAuth()
+  const currentUserId = user?._id || null
+  
+  // Image state
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  
+  // Input state
   const [prompt, setPrompt] = useState('')
   const [style, setStyle] = useState('balanced')
-  const [focusAreas, setFocusAreas] = useState('')
+  const [focusArea, setFocusArea] = useState('overall')
+  
+  // Advanced settings
+  const [detailLevel, setDetailLevel] = useState(70)
+  const [creativity, setCreativity] = useState(50)
+  const [formality, setFormality] = useState(60)
+  const [includeEmotions, setIncludeEmotions] = useState(false)
+  const [includeTechnicalDetails, setIncludeTechnicalDetails] = useState(false)
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
+  
+  // Generation state
   const [isGenerating, setIsGenerating] = useState(false)
-  const [result, setResult] = useState<DescriptionResponse | null>(null)
-  const [showPaywall, setShowPaywall] = useState(false)
-  const [usageInfo, setUsageInfo] = useState<any>(null)
-
-  // Check if user has access to description writer
-  const hasAccess = user && ['basic', 'pro', 'premium', 'admin'].includes(usageInfo?.subscription_status || '')
-
+  const [currentDescription, setCurrentDescription] = useState('')
+  const [descriptionVersions, setDescriptionVersions] = useState<DescriptionVersion[]>([])
+  const [currentVersionIndex, setCurrentVersionIndex] = useState(-1)
+  
+  // Refinement state
+  const [refinementSuggestion, setRefinementSuggestion] = useState('')
+  const [isRefining, setIsRefining] = useState(false)
+  
+  // Copy format state
+  const [copyFormat, setCopyFormat] = useState('standard')
+  
+  // Usage state - real usage info from backend
+  const [usageInfo, setUsageInfo] = useState<any>({
+    available_generations: 15,
+    monthly_limit: 20,
+    current_usage: 5,
+    extra_generations: 0,
+    subscription_status: 'free'
+  })
+  
+  // Fetch current usage info
+  const fetchUsageInfo = useCallback(async () => {
+    if (!currentUserId) return
+    
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/usage-status?user_id=${currentUserId}`
+      )
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setUsageInfo(data.usage_info)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching usage info:', error)
+    }
+  }, [currentUserId])
+  
+  // Fetch usage info on mount and when user changes
+  useEffect(() => {
+    fetchUsageInfo()
+  }, [fetchUsageInfo])
+  
+  // Handle image selection
   const handleImageSelect = useCallback((file: File) => {
     setSelectedImage(file)
-    
-    // Create preview URL
     const reader = new FileReader()
     reader.onload = (e) => {
       setImagePreview(e.target?.result as string)
     }
     reader.readAsDataURL(file)
   }, [])
-
+  
   const handleImageRemove = useCallback(() => {
     setSelectedImage(null)
     setImagePreview(null)
   }, [])
-
-  // Fetch usage info on component mount
-  useEffect(() => {
-    const fetchUsageInfo = async () => {
-      if (!user?._id) return
-      
-      try {
-        const accessToken = localStorage.getItem('access_token')
-        if (!accessToken) return
-        
-        const response = await fetch('/api/purchase/usage-status', {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include'
-        })
-        
-        if (response.ok) {
-          const data = await response.json()
-          setUsageInfo(data)
-        }
-      } catch (error) {
-        console.error('Error fetching usage info:', error)
-      }
+  
+  // Generate description
+  const generateDescription = useCallback(async () => {
+    if (!selectedImage || !prompt.trim()) {
+      toast.error('Please select an image and enter instructions')
+      return
     }
     
-    fetchUsageInfo()
-  }, [user?._id])
-
-  const handleGenerate = async () => {
-    if (!selectedImage || !prompt.trim()) {
-      toast.error('Please select an image and enter a prompt')
+    if (usageInfo.subscription_status === 'free' && usageInfo.available_generations <= 0) {
+      toast.error('Usage limit reached. Please upgrade to continue.')
       return
     }
-
-    if (!hasAccess) {
-      setShowPaywall(true)
-      return
-    }
-
+    
     setIsGenerating(true)
-    setResult(null)
-
+    
     try {
       const formData = new FormData()
       formData.append('image', selectedImage)
-      formData.append('prompt', prompt.trim())
+      formData.append('prompt', prompt)
       formData.append('style', style)
-      if (focusAreas.trim()) {
-        formData.append('focus_areas', focusAreas.trim())
+      
+      // Map focus area to backend expected format
+      let focusAreas = ''
+      switch (focusArea) {
+        case 'people':
+          focusAreas = 'people,characters,faces'
+          break
+        case 'objects':
+          focusAreas = 'objects,items,details'
+          break
+        case 'environment':
+          focusAreas = 'environment,background,setting'
+          break
+        case 'mood':
+          focusAreas = 'mood,atmosphere,lighting'
+          break
+        default:
+          focusAreas = 'overall,general'
       }
-
-      const response = await fetch('/api/description/generate', {
+      formData.append('focus_areas', focusAreas)
+      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+      const accessToken = localStorage.getItem('access_token')
+      
+      const headers: Record<string, string> = {}
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`
+      }
+      
+      const response = await fetch(`${apiUrl}/api/description/generate`, {
         method: 'POST',
         body: formData,
-        credentials: 'include'
+        headers,
       })
-
-      const data: DescriptionResponse = await response.json()
-
-      if (data.success) {
-        setResult(data)
-        toast.success('Description generated successfully!')
-      } else {
-        if (response.status === 402) {
-          setShowPaywall(true)
-        } else {
-          toast.error(data.error || 'Failed to generate description')
-        }
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
+      
+      const data = await response.json()
+      const description = data.description
+      
+      // Calculate metadata
+      const wordCount = description.split(' ').length
+      
+      const metadata: DescriptionMetadata = {
+        style,
+        word_count: wordCount,
+        processing_time_ms: 0, // Will be updated from backend response if available
+        model_used: 'qwen-2.5-vl',
+        timestamp: new Date().toISOString()
+      }
+      
+      // Create new version
+      const newVersion: DescriptionVersion = {
+        id: Date.now().toString(),
+        description,
+        timestamp: new Date(),
+        style,
+        focusArea,
+        metadata
+      }
+      
+      setCurrentDescription(description)
+      setDescriptionVersions(prev => [newVersion, ...prev])
+      setCurrentVersionIndex(0)
+      
+      // Update usage info from response if available
+      if (data.usage_info) {
+        setUsageInfo(data.usage_info)
+      } else {
+        // Fallback: manually update usage
+        setUsageInfo((prev: any) => ({
+          ...prev,
+          available_generations: Math.max(0, prev.available_generations - 1),
+          current_usage: prev.current_usage + 1
+        }))
+      }
+      
+      toast.success('Description generated successfully!')
     } catch (error) {
       console.error('Error generating description:', error)
-      toast.error('Failed to generate description')
+      toast.error('Failed to generate description. Please try again.')
     } finally {
       setIsGenerating(false)
     }
-  }
-
-  const handleCopyDescription = () => {
-    if (result?.description) {
-      navigator.clipboard.writeText(result.description)
-      toast.success('Description copied to clipboard!')
+  }, [selectedImage, prompt, style, focusArea, detailLevel, creativity, formality, includeEmotions, includeTechnicalDetails, usageInfo, currentUserId])
+  
+  // Handle refinement
+  const handleRefineDescription = useCallback(async () => {
+    if (!currentDescription || !refinementSuggestion.trim()) {
+      toast.error('Please enter refinement instructions')
+      return
     }
-  }
-
-  const handleDownloadDescription = () => {
-    if (result?.description) {
-      const blob = new Blob([result.description], { type: 'text/plain' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `description-${Date.now()}.txt`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      toast.success('Description downloaded!')
+    
+    setIsRefining(true)
+    
+    try {
+      const formData = new FormData()
+      if (selectedImage) formData.append('image', selectedImage)
+      formData.append('prompt', `${currentDescription}\n\nRefinement request: ${refinementSuggestion}`)
+      formData.append('style', style)
+      
+      // Map focus area to backend expected format
+      let focusAreas = ''
+      switch (focusArea) {
+        case 'people':
+          focusAreas = 'people,characters,faces'
+          break
+        case 'objects':
+          focusAreas = 'objects,items,details'
+          break
+        case 'environment':
+          focusAreas = 'environment,background,setting'
+          break
+        case 'mood':
+          focusAreas = 'mood,atmosphere,lighting'
+          break
+        default:
+          focusAreas = 'overall,general'
+      }
+      formData.append('focus_areas', focusAreas)
+      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+      const accessToken = localStorage.getItem('access_token')
+      
+      const headers: Record<string, string> = {}
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`
+      }
+      
+      const response = await fetch(`${apiUrl}/api/description/generate`, {
+        method: 'POST',
+        body: formData,
+        headers,
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      const refinedDescription = data.description
+      
+      // Calculate metadata
+      const wordCount = refinedDescription.split(' ').length
+      
+      const metadata: DescriptionMetadata = {
+        style,
+        word_count: wordCount,
+        processing_time_ms: 0, // Will be updated from backend response if available
+        model_used: 'qwen-2.5-vl',
+        timestamp: new Date().toISOString()
+      }
+      
+      // Create refined version
+      const refinedVersion: DescriptionVersion = {
+        id: Date.now().toString(),
+        description: refinedDescription,
+        timestamp: new Date(),
+        style,
+        focusArea,
+        metadata
+      }
+      
+      setCurrentDescription(refinedDescription)
+      setDescriptionVersions(prev => [refinedVersion, ...prev])
+      setCurrentVersionIndex(0)
+      setRefinementSuggestion('')
+      
+      // Update usage info from response if available
+      if (data.usage_info) {
+        setUsageInfo(data.usage_info)
+      }
+      
+      toast.success('Description refined successfully!')
+    } catch (error) {
+      console.error('Error refining description:', error)
+      toast.error('Failed to refine description. Please try again.')
+    } finally {
+      setIsRefining(false)
     }
-  }
-
-  if (showPaywall) {
-    return (
-      <InlinePaywall 
-        onBack={() => setShowPaywall(false)}
-        currentFeature="Description Writer"
-      />
-    )
-  }
-
+  }, [currentDescription, refinementSuggestion, selectedImage, style, focusArea, detailLevel, creativity, formality, currentUserId])
+  
+  // Handle version selection
+  const handleVersionSelect = useCallback((index: number) => {
+    const version = descriptionVersions[index]
+    if (version) {
+      setCurrentDescription(version.description)
+      setCurrentVersionIndex(index)
+    }
+  }, [descriptionVersions])
+  
+  // Handle copy
+  const handleCopy = useCallback(async () => {
+    if (!currentDescription) return
+    
+    let textToCopy = currentDescription
+    
+    switch (copyFormat) {
+      case 'markdown':
+        textToCopy = `# Image Description\n\n${currentDescription}`
+        break
+      case 'plain':
+        textToCopy = currentDescription.replace(/[*_~`]/g, '')
+        break
+      case 'quoted':
+        textToCopy = `"${currentDescription}"`
+        break
+    }
+    
+    try {
+      await navigator.clipboard.writeText(textToCopy)
+      toast.success('Copied to clipboard!')
+    } catch (error) {
+      toast.error('Failed to copy to clipboard')
+    }
+  }, [currentDescription, copyFormat])
+  
+  // Handle download
+  const handleDownload = useCallback(() => {
+    if (!currentDescription) return
+    
+    const blob = new Blob([currentDescription], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `description-${Date.now()}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    
+    toast.success('Description downloaded!')
+  }, [currentDescription])
+  
+  // Handle upgrade click
+  const handleUpgradeClick = useCallback(() => {
+    // Navigate to upgrade page or show upgrade modal
+    toast.info('Upgrade functionality would be implemented here')
+  }, [])
+  
+  const currentMetadata = descriptionVersions[currentVersionIndex]?.metadata
+  
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <Eye className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Description Writer</h1>
-            <p className="text-muted-foreground">
-              Generate detailed physical descriptions from images using AI
-            </p>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-8">
+        <div className="lg:col-span-3">
+          <h1 className="text-3xl font-bold">Description Writer</h1>
+          <p className="text-muted-foreground mt-1">
+            Generate detailed descriptions of your images using AI
+          </p>
         </div>
-
-        {/* Free user notice */}
-        {!hasAccess && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-2 text-amber-800">
-              <Crown className="h-5 w-5" />
-              <span className="font-medium">Premium Feature</span>
-            </div>
-            <p className="text-amber-700 mt-1">
-              The Description Writer is available to Basic and Pro subscribers. 
-              <Button 
-                variant="link" 
-                className="text-amber-800 p-0 h-auto font-medium"
-                onClick={() => setShowPaywall(true)}
-              >
-                Upgrade now
-              </Button> to unlock this feature.
-            </p>
-          </div>
-        )}
+        <div className="lg:col-span-1">
+          <UsageDisplay 
+            usageInfo={usageInfo}
+          />
+        </div>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column - Input */}
-        <div className="lg:col-span-2 space-y-6">
+      
+      {/* Main Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Main Content */}
+        <div className="lg:col-span-3 space-y-6">
           {/* Image Upload */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ImageIcon className="h-5 w-5" />
-                Upload Image
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ImageUpload
-                onImageSelect={handleImageSelect}
-                onImageRemove={handleImageRemove}
-                selectedImage={selectedImage}
-                imagePreview={imagePreview}
-                disabled={!hasAccess}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Prompt Input */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Description Prompt
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Describe what you want the AI to focus on in the image. For example: 'Describe the person's clothing and physical appearance in detail' or 'Focus on the facial features and expression'"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={4}
-                disabled={!hasAccess}
-              />
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Description Style
-                  </label>
-                  <StyleSelector
-                    value={style}
-                    onChange={setStyle}
-                    disabled={!hasAccess}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Focus Areas (Optional)
-                  </label>
-                  <Textarea
-                    placeholder="Comma-separated areas to focus on (e.g., facial features, clothing, posture, background)"
-                    value={focusAreas}
-                    onChange={(e) => setFocusAreas(e.target.value)}
-                    rows={2}
-                    disabled={!hasAccess}
-                  />
-                </div>
-              </div>
-
-              <Button
-                onClick={handleGenerate}
-                disabled={!selectedImage || !prompt.trim() || isGenerating || !hasAccess}
-                className="w-full"
-                size="lg"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating Description...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    Generate Description
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+          <ImageUpload
+            onImageSelect={handleImageSelect}
+            onImageRemove={handleImageRemove}
+            selectedImage={selectedImage}
+            imagePreview={imagePreview}
+            disabled={isGenerating || isRefining}
+          />
+          
+          {/* Description Input */}
+          <DescriptionInput
+            prompt={prompt}
+            onPromptChange={setPrompt}
+            style={style}
+            onStyleChange={setStyle}
+            focusArea={focusArea}
+            onFocusAreaChange={setFocusArea}
+            detailLevel={detailLevel}
+            onDetailLevelChange={setDetailLevel}
+            creativity={creativity}
+            onCreativityChange={setCreativity}
+            formality={formality}
+            onFormalityChange={setFormality}
+            includeEmotions={includeEmotions}
+            onIncludeEmotionsChange={setIncludeEmotions}
+            includeTechnicalDetails={includeTechnicalDetails}
+            onIncludeTechnicalDetailsChange={setIncludeTechnicalDetails}
+            showAdvancedSettings={showAdvancedSettings}
+            onShowAdvancedSettingsChange={setShowAdvancedSettings}
+            isGenerating={isGenerating}
+            onGenerate={generateDescription}
+            disabled={!selectedImage || isGenerating || isRefining}
+            hasAccess={usageInfo.subscription_status !== 'free'}
+            onUpgradeClick={handleUpgradeClick}
+          />
+          
+          {/* Output */}
+          {currentDescription && (
+            <DescriptionOutput
+              description={currentDescription}
+              copyFormat={copyFormat}
+              onCopyFormatChange={setCopyFormat}
+              onCopy={handleCopy}
+              onDownload={handleDownload}
+              metadata={currentMetadata}
+            />
+          )}
         </div>
-
-        {/* Right Column - Results & Usage */}
-        <div className="space-y-6">
-          {/* Usage Display */}
-          {hasAccess && (
-            <UsageDisplay />
+        
+        {/* Sidebar */}
+        <div className="lg:col-span-1 space-y-6">
+          {/* Refinement */}
+          {currentDescription && (
+            <DescriptionRefinement
+              refinementSuggestion={refinementSuggestion}
+              onRefinementSuggestionChange={setRefinementSuggestion}
+              isRefining={isRefining}
+              onRefineDescription={handleRefineDescription}
+              hasDescription={!!currentDescription}
+              disabled={isGenerating || isRefining}
+            />
           )}
-
-          {/* Results */}
-          {result && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" />
-                  Generated Description
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DescriptionResult
-                  result={result}
-                  onCopy={handleCopyDescription}
-                  onDownload={handleDownloadDescription}
-                />
-              </CardContent>
-            </Card>
+          
+          {/* Version History */}
+          {descriptionVersions.length > 0 && (
+            <DescriptionVersionHistory
+              versions={descriptionVersions}
+              currentVersionIndex={currentVersionIndex}
+              onVersionSelect={handleVersionSelect}
+            />
           )}
-
+          
           {/* Tips */}
           <Card>
             <CardHeader>
-              <CardTitle>Tips for Better Descriptions</CardTitle>
+              <CardTitle className="text-sm">Tips</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div>
-                <strong>Be Specific:</strong> Instead of "describe this person," try "describe their facial features and clothing style"
-              </div>
-              <div>
-                <strong>Set the Context:</strong> Mention if it's for creative writing, character creation, or accessibility
-              </div>
-              <div>
-                <strong>Use Focus Areas:</strong> List specific elements you want emphasized
-              </div>
-              <div>
-                <strong>Choose the Right Style:</strong> Minimal for key points, Elaborate for rich detail
-              </div>
+            <CardContent className="space-y-3 text-xs text-muted-foreground">
+              <p>• Be specific about what you want described</p>
+              <p>• Choose the right style for your use case</p>
+              <p>• Use refinement to improve results</p>
+              <p>• Try different focus areas for variety</p>
             </CardContent>
           </Card>
         </div>
       </div>
+      
+      {/* Paywall */}
+      {usageInfo.subscription_status === 'free' && usageInfo.available_generations <= 0 && (
+        <InlinePaywall
+          subscriptionStatus={usageInfo.subscription_status}
+          onPurchaseComplete={() => fetchUsageInfo()}
+        />
+      )}
     </div>
   )
 }

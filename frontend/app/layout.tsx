@@ -27,7 +27,7 @@ const fontMono = Inconsolata({
 })
 
 export const metadata: Metadata = {
-  title: "SceneForge - AI Co-writer for Roleplayers",
+  title: "PoseWeaver - AI Co-writer for Roleplayers",
   description: "Your AI co-writer for immersive roleplay. Elevate your storytelling in seconds.",
     generator: 'v0.dev'
 }

@@ -81,6 +81,14 @@ def get_recharge_package(generation_count: int) -> Dict[str, Any]:
     return RECHARGE_PACKAGES.get(generation_count)
 
 
+def get_recharge_package_by_price_id(price_id: str) -> Dict[str, Any]:
+    """Get recharge package info for a specific Stripe price ID."""
+    for generation_count, package in RECHARGE_PACKAGES.items():
+        if package['price_id'] == price_id:
+            return package
+    return None
+
+
 def get_subscription_plan(plan_name: str) -> Dict[str, Any]:
     """Get subscription plan info for a specific plan."""
     return SUBSCRIPTION_PLANS.get(plan_name)

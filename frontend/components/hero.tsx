@@ -10,9 +10,9 @@ import { Wand2, Loader2 } from "lucide-react"
 const initialPost = `From the shadows of the alley, a figure emerges. It's Jax. He looks at the neon sign flickering above the bar, then at you. "Been a while," he says, his voice low.`
 
 const enhancedPosts = {
-  minimal: `Jax steps out from the alley's deep shadows, his form materializing under the stuttering light of a neon sign. He glances from the sign to you, a flicker of recognition in his eyes. "Been a while," he says, his voice a low rumble that barely cuts through the city's hum.`,
-  balanced: `The oppressive darkness of the alleyway relinquishes its hold on a solitary figure. Jax emerges, his silhouette sharpened by the erratic pulse of a cheap neon sign advertising 'The Rusty Cog'. His gaze drifts from its flickering promise of drink to your own face, a long, unreadable moment passing between you. "Been a while," he finally rumbles, the words laced with the grit of the streets and the weight of unspoken history.`,
-  elaborate: `As if peeled from the very fabric of the alley's oppressive gloom, a figure solidifies into the tangible form of Jax. He moves with a predator's coiled grace, each step silent on the grimy pavement. Above, a neon sign for 'The Rusty Cog' sputters and dies, casting his hardened features in a fleeting, ghostly light. His eyes, chips of obsidian, leave the sign and lock onto yours, a silent acknowledgment of a shared, dangerous past. The air crackles with unspoken tension before he breaks the silence, his voice a low, gravelly current beneath the city's din. "Been a while."`,
+  minimal: `Jax steps out of the alley. The neon sign flickers red, then blue, then goes dark. He looks at you with tired eyes. "Been a while," he says, voice rough from too many cigarettes.`,
+  balanced: `Jax walks out of the alley and stops under the neon sign. The Rusty Cog, it says in faded letters. His jacket looks too big on him now. When he sees you, something changes in his face. Recognition, maybe regret. "Been a while," he says. The words sound heavy.`,
+  elaborate: `Jax steps into the light from the alley. The neon sign above him flickers on and off, casting red and blue shadows across his weathered face. The Rusty Cog, the sign reads, though some letters are burned out. He stops when he sees you. His hands go to his jacket pockets, an old habit. The city noise fills the silence between you, cars and music and voices from the apartments above. He looks older than you remember. More tired. "Been a while," he finally says. The words hang in the air like smoke.`,
 }
 
 export function Hero() {
@@ -40,17 +40,22 @@ export function Hero() {
       <div className="grid lg:grid-cols-2 gap-12 items-center">
         <div className="space-y-6">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tighter">
-            AI-Powered Pose Enhancement for Roleplayers
+            <span className="bg-gradient-to-r from-primary to-amber-500 bg-clip-text text-transparent">PoseWeaver</span><br />
+            Your AI Co-Writer for Immersive Roleplay
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground">
-            Create and manage your characters, then transform simple poses into rich, engaging narratives with our character-aware AI. Start free (20/month), upgrade to Basic (200/month) or Pro (500/month).
+            Transform simple poses into rich narratives and generate vivid descriptions from images. Character-aware AI that understands your voice, follows MUSH etiquette, and elevates your storytelling without replacing your creativity.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" className="w-full sm:w-auto">
-              Start Free - 20 Poses/Month
+            <Button size="lg" className="w-full sm:w-auto" asChild>
+              <a href="/signup">
+                Start Free - 20 Poses/Month
+              </a>
             </Button>
-            <Button size="lg" variant="outline" className="w-full sm:w-auto bg-transparent">
-              View All Plans
+            <Button size="lg" variant="outline" className="w-full sm:w-auto bg-transparent" asChild>
+              <a href="#pricing">
+                View All Plans
+              </a>
             </Button>
           </div>
         </div>

@@ -27,8 +27,8 @@ interface DescriptionResultProps {
       timestamp: string
     }
     usage_info?: {
-      generations_used: number
-      generations_limit: number
+      current_usage: number
+      monthly_limit: number
       subscription_status: string
     }
   }
@@ -177,7 +177,7 @@ export function DescriptionResult({ result, onCopy, onDownload }: DescriptionRes
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Generations Used:</span>
               <span className="font-medium">
-                {result.usage_info.generations_used} / {result.usage_info.generations_limit}
+                {result.usage_info.current_usage} / {result.usage_info.monthly_limit}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">

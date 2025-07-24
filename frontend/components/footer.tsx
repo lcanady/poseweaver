@@ -7,7 +7,7 @@ export function Footer() {
         <div className="flex items-center gap-2">
           <Feather className="h-5 w-5 text-primary" />
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} SceneForge. All rights reserved.
+            &copy; {new Date().getFullYear()} PoseWeaver. All rights reserved.
           </p>
         </div>
         <nav className="flex items-center gap-4 text-sm text-muted-foreground">

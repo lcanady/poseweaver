@@ -40,7 +40,7 @@ export function DashboardHeader() {
               onClick={() => setIsOpen(false)}
             >
               <Feather className="h-5 w-5 transition-all group-hover:scale-110" />
-              <span className="sr-only">SceneForge</span>
+              <span className="sr-only">PoseWeaver</span>
             </Link>
             {navItems.map((item) => (
               <Link

@@ -1,5 +1,5 @@
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { BrainCircuit, Users, Sparkles, Crown } from "lucide-react"
+import { BrainCircuit, Users, Sparkles, Eye, Wand2, Crown } from "lucide-react"
 
 const features = [
   {
@@ -9,22 +9,34 @@ const features = [
       "Create and manage multiple characters with detailed profiles. Free (3), Basic (10), or Pro (unlimited) characters.",
   },
   {
-    icon: <BrainCircuit className="w-8 h-8 text-primary" />,
-    title: "Character-Aware AI",
+    icon: <Wand2 className="w-8 h-8 text-primary" />,
+    title: "AI Pose Enhancement",
     description:
-      "Our AI understands your character's personality, background, and voice to generate authentic, in-character poses.",
+      "Transform simple poses into rich, engaging narratives with character-aware AI that understands your character's voice and personality.",
+  },
+  {
+    icon: <Eye className="w-8 h-8 text-primary" />,
+    title: "Image Description Writer",
+    description:
+      "Upload images and generate detailed, vivid descriptions perfect for character profiles, scenes, and roleplay references.",
   },
   {
     icon: <Sparkles className="w-8 h-8 text-primary" />,
-    title: "Three Enhancement Styles",
+    title: "Advanced Customization",
     description:
-      "Choose minimal polish, balanced enrichment, or elaborate narrative expansion. Perfect for any roleplay situation.",
+      "Three enhancement styles, refinement tools, version history, and advanced settings for complete creative control.",
+  },
+  {
+    icon: <BrainCircuit className="w-8 h-8 text-primary" />,
+    title: "Smart AI Integration",
+    description:
+      "Powered by Venice AI's multimodal models with built-in character control validation and MUSH roleplay etiquette.",
   },
   {
     icon: <Crown className="w-8 h-8 text-primary" />,
-    title: "Tiered Pricing",
+    title: "Flexible Pricing",
     description:
-      "Start free (20/month), upgrade to Basic (200/month) or Pro (500/month). Buy recharge packs when you need more.",
+      "Start free (20/month), upgrade to Basic ($9.99 - 200/month) or Pro ($19.99 - 500/month). Buy recharge packs when needed.",
   },
 ]
 
@@ -37,7 +49,7 @@ export function Features() {
           From character creation to AI-powered pose enhancement, we provide the tools to elevate your storytelling without replacing your creativity.
         </p>
       </div>
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
         {features.map((feature, index) => (
           <Card
             key={index}

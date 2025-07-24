@@ -7,7 +7,7 @@ const faqs = [
       "Absolutely not. Think of it as a creative partner. It handles the descriptive heavy lifting, freeing you up to focus on dialogue, action, and plot. You always have the final say and can edit the enhanced post as you see fit.",
   },
   {
-    question: "What platforms does SceneForge support?",
+    question: "What platforms does PoseWeaver support?",
     answer:
       "Our parser is designed to be flexible. It can intelligently identify posts and ignore system messages from most platforms, including Discord, forums, and Google Docs. If you encounter a format it struggles with, let us know and we'll work on adding support.",
   },

@@ -234,9 +234,9 @@ class User:
         return effective_status in ['free', 'expired'] and not self.can_generate_pose()
     
     def can_purchase_extra_generations(self) -> bool:
-        """Check if user can purchase extra generations (premium users only)."""
-        effective_status = self.get_effective_subscription_status()
-        return effective_status == 'premium'
+        """Check if user can purchase extra generations (available to all users)."""
+        # Recharge packs are available to all user tiers (free, basic, pro, premium, admin)
+        return True
     
     def set_stripe_customer_id(self, stripe_customer_id: str) -> None:
         """Set the Stripe customer ID for this user."""

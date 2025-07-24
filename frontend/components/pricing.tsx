@@ -89,8 +89,10 @@ export function Pricing() {
               </ul>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" variant={tier.variant as "default" | "outline"}>
-                {tier.cta}
+              <Button className="w-full" variant={tier.variant as "default" | "outline"} asChild>
+                <a href={tier.name === "Free" ? "/signup" : `/signup?plan=${tier.name.toLowerCase()}`}>
+                  {tier.cta}
+                </a>
               </Button>
             </CardFooter>
           </Card>
@@ -118,6 +120,11 @@ export function Pricing() {
                 {pack.savings && (
                   <div className="text-xs text-green-600 font-medium">{pack.savings}</div>
                 )}
+                <Button size="sm" className="mt-4 w-full" asChild>
+                  <a href="/login">
+                    Buy Now
+                  </a>
+                </Button>
               </CardContent>
             </Card>
           ))}

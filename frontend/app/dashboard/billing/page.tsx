@@ -48,14 +48,18 @@ export default function BillingPage() {
   const [pricingData, setPricingData] = useState<PricingData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPurchasing, setIsPurchasing] = useState(false);
-  const [currentSubscription, setCurrentSubscription] = useState('free'); // This should come from user context
+  const [usageInfo, setUsageInfo] = useState<any>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Fetch pricing data on component mount
+  // Get current subscription status from usage info
+  const currentSubscription = usageInfo?.subscription_status || 'free';
+
+  // Fetch pricing data and usage info on component mount
   useEffect(() => {
     fetchPricingData();
-  }, []);
+    fetchUsageInfo();
+  }, [user?._id]);
 
   const fetchPricingData = async () => {
     try {
@@ -80,6 +84,35 @@ export default function BillingPage() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchUsageInfo = async () => {
+    if (!user?._id) return;
+    
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/usage-status?user_id=${user._id}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Usage info response:', data); // Debug log
+        if (data.success && data.usage_info) {
+          setUsageInfo(data.usage_info);
+        }
+      } else {
+        console.error('Failed to fetch usage info:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching usage info:', error);
     }
   };
 
@@ -133,7 +166,7 @@ export default function BillingPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            type: 'recharge_pack',
+            type: 'recharge',
             generation_count: generationCount,
             user_id: user?._id || user?.id
           })
@@ -154,6 +187,56 @@ export default function BillingPage() {
       toast({
         title: "Purchase Failed",
         description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!user?._id) {
+      toast({
+        title: "Error",
+        description: "Please log in to manage your subscription.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsPurchasing(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/customer-portal`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: user._id,
+            return_url: `${window.location.origin}/dashboard/billing`
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create customer portal session');
+      }
+
+      const data = await response.json();
+      if (data.success && data.portal_url) {
+        // Redirect to Stripe customer portal
+        window.location.href = data.portal_url;
+      } else {
+        throw new Error('No portal URL received');
+      }
+    } catch (error) {
+      console.error('Customer portal error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to open subscription management.",
         variant: "destructive"
       });
     } finally {
@@ -201,8 +284,22 @@ export default function BillingPage() {
             <CardHeader>
               <CardTitle>Your Plan</CardTitle>
               <CardDescription>
-                You are currently on the <strong>{currentSubscription === 'free' ? 'Free' : currentSubscription === 'basic' ? 'Basic' : 'Pro'}</strong> plan.
+                You are currently on the <strong>
+                  {currentSubscription === 'free' ? 'Free' : 
+                   currentSubscription === 'basic' ? 'Basic' : 
+                   currentSubscription === 'pro' ? 'Pro' : 
+                   currentSubscription === 'premium' ? 'Premium (Legacy)' : 
+                   currentSubscription === 'admin' ? 'Admin' : 'Free'}
+                </strong> plan.
                 {currentSubscription !== 'free' && ' Your plan renews on the 1st of next month.'}
+                {usageInfo && (
+                  <div className="mt-2 text-sm">
+                    <strong>Usage this month:</strong> {usageInfo.current_usage || 0} / {usageInfo.monthly_limit === -1 ? 'Unlimited' : usageInfo.monthly_limit || 0} generations
+                    {usageInfo.extra_generations > 0 && (
+                      <span className="ml-2 text-green-600">+ {usageInfo.extra_generations} extra</span>
+                    )}
+                  </div>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-3">
@@ -227,8 +324,16 @@ export default function BillingPage() {
                   <div className="pt-4">
                     {currentSubscription === 'free' ? (
                       <Button variant="outline" className="w-full">Current Plan</Button>
+                    ) : currentSubscription === 'admin' ? (
+                      <Button variant="outline" className="w-full" disabled>Admin Access</Button>
                     ) : (
-                      <Button variant="outline" className="w-full" disabled>Downgrade Unavailable</Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full text-red-600 border-red-200 hover:bg-red-50" 
+                        onClick={handleCancelSubscription}
+                      >
+                        Cancel Subscription
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -256,6 +361,10 @@ export default function BillingPage() {
                   <div className="pt-4">
                     {currentSubscription === 'basic' ? (
                       <Button variant="outline" className="w-full">Current Plan</Button>
+                    ) : currentSubscription === 'admin' ? (
+                      <Button variant="outline" className="w-full" disabled>
+                        Admin Access
+                      </Button>
                     ) : (
                       <Button 
                         className="w-full" 
@@ -274,7 +383,7 @@ export default function BillingPage() {
               </div>
 
               {/* Pro Plan */}
-              <div className={`rounded-lg border p-6 flex flex-col min-h-[400px] ${currentSubscription === 'pro' ? "border-primary bg-primary/5" : "border-border"}`}>
+              <div className={`rounded-lg border p-6 flex flex-col min-h-[400px] ${(currentSubscription === 'pro' || currentSubscription === 'premium') ? "border-primary bg-primary/5" : "border-border"}`}>
                 <div className="flex flex-col flex-1 justify-between">
                   <div>
                     <h3 className="text-lg font-semibold">Pro</h3>
@@ -293,8 +402,14 @@ export default function BillingPage() {
                     )) || []}
                   </ul>
                   <div className="pt-4">
-                    {currentSubscription === 'pro' ? (
-                      <Button variant="outline" className="w-full">Current Plan</Button>
+                    {(currentSubscription === 'pro' || currentSubscription === 'premium') ? (
+                      <Button variant="outline" className="w-full">
+                        {currentSubscription === 'premium' ? 'Current Plan (Legacy)' : 'Current Plan'}
+                      </Button>
+                    ) : currentSubscription === 'admin' ? (
+                      <Button variant="outline" className="w-full" disabled>
+                        Admin Access
+                      </Button>
                     ) : (
                       <Button 
                         className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600" 

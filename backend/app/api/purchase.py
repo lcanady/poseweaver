@@ -9,6 +9,7 @@ import os
 from ..services.usage_tracking_service import UsageTrackingService
 from ..config.stripe_config import (
     get_recharge_package, 
+    get_recharge_package_by_price_id,
     get_subscription_plan,
     create_checkout_session,
     create_subscription_checkout_session,
@@ -393,26 +394,7 @@ def handle_subscription_checkout_completed(session):
         traceback.print_exc()
 
 
-def handle_successful_payment(session):
-    """Handle successful one-time payment (recharge packs)."""
-    try:
-        metadata = session.get('metadata', {})
-        user_id = metadata.get('user_id')
-        purchase_type = metadata.get('type')
-        
-        if not user_id or purchase_type != 'recharge':
-            return
-        
-        user = User.find_by_id(user_id)
-        if not user:
-            return
-        
-        generation_count = int(metadata.get('generation_count', 0))
-        if generation_count > 0:
-            user.add_extra_pose_generations(generation_count)
-            
-    except Exception as e:
-        print(f"Error handling successful payment: {e}")
+
 
 
 def handle_subscription_payment(invoice):
@@ -700,8 +682,8 @@ def handle_successful_payment(session):
             price_id = item.get('price', {}).get('id')
             quantity = item.get('quantity', 1)
             
-            # Find the recharge package
-            package = get_recharge_package(price_id)
+            # Find the recharge package by price_id
+            package = get_recharge_package_by_price_id(price_id)
             if package:
                 generations_to_add = package['generations'] * quantity
                 user.add_extra_pose_generations(generations_to_add)
@@ -968,6 +950,12 @@ def payment_success():
         
         elif purchase_type == 'recharge':
             generation_count = int(metadata.get('generation_count', 0))
+            if generation_count > 0:
+                # Add the extra generations to the user's account (in case webhook failed)
+                current_extra = user.extra_pose_generations
+                user.add_extra_pose_generations(generation_count)
+                print(f"[DEBUG] Added {generation_count} extra generations to user {user.email} (was {current_extra}, now {user.extra_pose_generations})")
+            
             return jsonify({
                 'success': True,
                 'message': f'Successfully purchased {generation_count} additional generations!',
@@ -993,6 +981,85 @@ def payment_success():
             'success': False,
             'error': f'Internal server error: {str(e)}',
             'redirect_url': '/dashboard'
+        }), 500
+
+
+@purchase_bp.route('/customer-portal', methods=['POST'])
+def create_customer_portal_session():
+    """Create a Stripe customer portal session for subscription management.
+    
+    Request body:
+    {
+        "user_id": "user-id-here",
+        "return_url": "https://yourapp.com/billing"  // Optional
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "portal_url": "https://billing.stripe.com/session/..."
+    }
+    """
+    try:
+        from ..config.stripe_config import _ensure_stripe_initialized
+        _ensure_stripe_initialized()
+        
+        data = request.get_json(force=True, silent=True)
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No JSON data provided'
+            }), 400
+        
+        # Get user
+        user_id = data.get('user_id')
+        if not user_id:
+            return jsonify({
+                'success': False,
+                'error': 'user_id is required'
+            }), 400
+        
+        user = User.find_by_id(user_id)
+        if not user:
+            return jsonify({
+                'success': False,
+                'error': 'User not found'
+            }), 404
+        
+        # Check if user has a Stripe customer ID
+        if not user.stripe_customer_id:
+            return jsonify({
+                'success': False,
+                'error': 'No Stripe customer found for this user'
+            }), 400
+        
+        # Create customer portal session
+        return_url = data.get('return_url', 'http://localhost:3000/dashboard/billing')
+        
+        portal_session = stripe.billing_portal.Session.create(
+            customer=user.stripe_customer_id,
+            return_url=return_url,
+        )
+        
+        return jsonify({
+            'success': True,
+            'portal_url': portal_session.url
+        })
+        
+    except stripe.error.StripeError as e:
+        return jsonify({
+            'success': False,
+            'error': f'Stripe error: {str(e)}'
+        }), 400
+        
+    except Exception as e:
+        print(f"Error creating customer portal session: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}'
         }), 500
 
 

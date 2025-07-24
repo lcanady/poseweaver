@@ -1,14 +1,15 @@
-# MUSH Pose Editor
+# PoseWeaver
 
-An AI-powered writing assistant specifically designed for MUSH (Multi-User Shared Hallucination) roleplayers. This application helps enhance roleplay poses, develop consistent characters, and analyze scene context using Venice.ai's Dolphin uncensored thinking model.
+Your AI co-writer for immersive roleplay. PoseWeaver transforms simple poses into rich narratives and generates vivid descriptions from images. Built specifically for MUSH (Multi-User Shared Hallucination) roleplayers with character-aware AI that follows proper roleplay etiquette.
 
 ## Features
 
-- **Character Brain Dump Processing**: Transform free-form character descriptions into structured profiles
-- **Pose Context Analysis**: Analyze poses from other players to identify key response elements
-- **Intelligent Pose Enhancement**: Transform basic actions into rich, detailed narratives
-- **Uncensored AI Support**: Handle mature roleplay content appropriately without restrictions
-- **Character Voice Consistency**: Maintain established character personalities and speech patterns
+- **Character Management**: Create and manage multiple characters with detailed profiles (Free: 3, Basic: 10, Pro: unlimited)
+- **AI Pose Enhancement**: Transform simple poses into rich, engaging narratives with character-aware AI
+- **Image Description Writer**: Upload images and generate detailed, vivid descriptions for characters and scenes
+- **Advanced Customization**: Three enhancement styles, refinement tools, version history, and advanced settings
+- **Smart AI Integration**: Powered by Venice AI's multimodal models with MUSH roleplay etiquette validation
+- **Flexible Pricing**: Start free (20 generations/month), upgrade to Basic ($9.99 - 200/month) or Pro ($19.99 - 500/month)
 - **Mobile-Responsive Design**: Works seamlessly across desktop and mobile devices
 
 ## Technology Stack
@@ -39,7 +40,7 @@ An AI-powered writing assistant specifically designed for MUSH (Multi-User Share
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd mush-pose-editor
+   cd poseweaver
    ```
 
 2. **Set up environment variables**

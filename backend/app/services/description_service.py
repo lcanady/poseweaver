@@ -201,10 +201,9 @@ Ensure these areas receive detailed coverage in your description."""
         return f"{base_requirements}\n{style_guidelines[style]}{focus_section}"
     
     def _get_vision_model(self) -> str:
-        """Get the best available vision-capable model."""
-        # For now, use a common vision model - this should be configurable
-        # In production, you'd query the Venice API for available vision models
-        return "llama-3.2-90b-vision"  # This is a common vision-capable model
+        """Get a vision-capable model from Venice AI."""
+        # Use qwen-2.5-vl which actually supports vision according to Venice AI API
+        return "qwen-2.5-vl"  # Qwen 2.5 VL 72B - specifically designed for vision tasks
     
     def _get_temperature_for_style(self, style: str) -> float:
         """Get appropriate temperature setting for description style."""
