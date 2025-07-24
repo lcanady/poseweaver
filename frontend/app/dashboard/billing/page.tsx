@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { Check, Download, Crown, Zap } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { getApiUrl } from '@/utils/api-utils';
 
 interface PricingData {
   success: boolean;
@@ -64,7 +65,7 @@ export default function BillingPage() {
   const fetchPricingData = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/pricing`
+        `${getApiUrl()}/api/purchase/pricing`
       );
 
       if (!response.ok) {
@@ -92,7 +93,7 @@ export default function BillingPage() {
     
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/usage-status?user_id=${user._id}`,
+        `${getApiUrl()}/api/purchase/usage-status?user_id=${user._id}`,
         {
           method: 'GET',
           headers: {
@@ -120,7 +121,7 @@ export default function BillingPage() {
     setIsPurchasing(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/create-checkout-session`,
+        `${getApiUrl()}/api/purchase/create-checkout-session`,
         {
           method: 'POST',
           headers: {
@@ -159,7 +160,7 @@ export default function BillingPage() {
     setIsPurchasing(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/create-checkout-session`,
+        `${getApiUrl()}/api/purchase/create-checkout-session`,
         {
           method: 'POST',
           headers: {
@@ -207,7 +208,7 @@ export default function BillingPage() {
     setIsPurchasing(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/customer-portal`,
+        `${getApiUrl()}/api/purchase/customer-portal`,
         {
           method: 'POST',
           headers: {

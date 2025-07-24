@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getApiUrl } from '@/utils/api-utils';
 import { 
   Dialog,
   DialogContent,
@@ -47,7 +48,7 @@ export function CreateSceneButton({
             // Get the latest token from localStorage
             const currentToken = localStorage.getItem('access_token');
             
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt`, {
+            const response = await fetch(`${getApiUrl()}/api/characters/mgmt`, {
               headers: {
                 'Authorization': `Bearer ${currentToken}`,
                 'Content-Type': 'application/json',

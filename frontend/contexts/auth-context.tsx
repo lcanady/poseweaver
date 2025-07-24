@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { getApiUrl } from '@/utils/api-utils'
 
 interface User {
   id?: number
@@ -11,6 +12,7 @@ interface User {
   bio?: string
   avatar_url?: string
   is_active: boolean
+  is_admin?: boolean  // Admin flag for admin access
   created_at: string
   updated_at: string
   last_login?: string
@@ -29,7 +31,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -71,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       
       // Use JWT token-based authentication
-      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      const response = await fetch(`${getApiUrl()}/api/auth/me`, {
         headers,
       })
 
@@ -117,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch(`${getApiUrl()}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -156,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signup = async (email: string, password: string, displayName: string) => {
     setIsLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+      const response = await fetch(`${getApiUrl()}/api/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -208,7 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      await fetch(`${API_BASE_URL}/api/auth/logout`, {
+      await fetch(`${getApiUrl()}/api/auth/logout`, {
         method: 'POST',
         headers
       })
@@ -235,7 +237,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('No refresh token available');
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      const response = await fetch(`${getApiUrl()}/api/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

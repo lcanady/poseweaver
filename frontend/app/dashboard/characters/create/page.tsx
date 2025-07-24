@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Loader2, Crown, AlertTriangle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { AvatarUpload } from "@/components/avatar-upload";
+import { getApiUrl } from '@/utils/api-utils';
 
 export default function CreateCharacterPage() {
   const router = useRouter();
@@ -87,7 +88,7 @@ export default function CreateCharacterPage() {
         
         // Fetch current characters to check limits
         const data = await fetchWithRefresh(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt`
+          `${getApiUrl()}/api/characters/mgmt`
         );
         
         // Extract subscription metadata
@@ -169,7 +170,7 @@ export default function CreateCharacterPage() {
       console.log('Brain dump payload:', brainDumpPayload);
       
       const processedData = await fetchWithRefresh(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/process`,
+        `${getApiUrl()}/api/characters/process`,
         'POST',
         brainDumpPayload
       );
@@ -188,7 +189,7 @@ export default function CreateCharacterPage() {
 
       // Use the same fetchWithRefresh function for creating the character
       const result = await fetchWithRefresh(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt`,
+        `${getApiUrl()}/api/characters/mgmt`,
         'POST',
         characterData
       );

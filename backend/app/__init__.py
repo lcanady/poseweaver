@@ -33,17 +33,13 @@ def create_app(config_name='development'):
 
     
     # Configure CORS for frontend communication with JWT support
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": ["http://localhost:3000", "http://localhost:3001", "http://localhost:5173", 
-                       "http://localhost:*", "http://127.0.0.1:*"],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", 
-                           "Access-Control-Allow-Origin", "Origin"],
-            "supports_credentials": True,
-            "allow_credentials": True
-        }
-    })
+    # Allow all origins in development for network access
+    CORS(app, 
+         origins="*",  # Allow all origins in development
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With", 
+                       "Access-Control-Allow-Origin", "Origin"],
+         supports_credentials=False)  # Must be False when using origins="*"
     
     # Initialize extensions
     init_extensions(app)
@@ -73,6 +69,9 @@ def create_app(config_name='development'):
     from app.api.search_summary import search_summary_bp
     from app.api.purchase import purchase_bp
     from app.api.description import description_bp
+    from app.api.admin import admin_bp
+    from app.api.setup import setup_bp
+    from app.api.user import user_bp
     
     app.register_blueprint(characters_bp, url_prefix='/api/characters')
     app.register_blueprint(context_bp, url_prefix='/api/context')
@@ -89,6 +88,9 @@ def create_app(config_name='development'):
     app.register_blueprint(search_summary_bp, url_prefix='/api/search-summary')
     app.register_blueprint(purchase_bp, url_prefix='/api/purchase')
     app.register_blueprint(description_bp, url_prefix='/api/description')
+    app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    app.register_blueprint(setup_bp, url_prefix='/api/setup')
+    app.register_blueprint(user_bp, url_prefix='/api/user')
     
     # Ensure upload directories exist at startup
     ensure_upload_dir()

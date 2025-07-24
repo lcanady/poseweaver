@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { getApiUrl } from '@/utils/api-utils';
 
 interface SuccessResponse {
   success: boolean;
@@ -33,7 +34,7 @@ export default function SuccessPage() {
     }
 
     // Call the backend success endpoint
-    fetch(`http://localhost:5001/api/purchase/success?session_id=${sessionId}`)
+    fetch(`${getApiUrl()}/api/purchase/success?session_id=${sessionId}`)
       .then(res => res.json())
       .then((data: SuccessResponse) => {
         setResponse(data);

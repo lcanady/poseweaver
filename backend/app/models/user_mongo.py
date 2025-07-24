@@ -21,7 +21,7 @@ class User:
                  created_at: datetime = None, updated_at: datetime = None, subscription_status: str = 'free',
                  is_admin: bool = False, subscription_expires_at: datetime = None,
                  pose_generations_used: int = 0, pose_generations_reset_date: datetime = None,
-                 extra_pose_generations: int = 0, stripe_customer_id: str = None):
+                 extra_pose_generations: int = 0, stripe_customer_id: str = None, settings: Dict[str, Any] = None):
         """Initialize a User instance."""
         self.id = _id
         self.email = email
@@ -38,6 +38,28 @@ class User:
         self.pose_generations_reset_date = pose_generations_reset_date
         self.extra_pose_generations = extra_pose_generations
         self.stripe_customer_id = stripe_customer_id
+        
+        # User settings with defaults
+        self.settings = settings or {
+            'theme': 'system',
+            'notifications': {
+                'email_updates': True,
+                'pose_generation_alerts': False,
+                'subscription_reminders': True,
+                'feature_announcements': True
+            },
+            'privacy': {
+                'profile_visibility': 'private',
+                'analytics_tracking': True,
+                'data_collection': True
+            },
+            'preferences': {
+                'default_enhancement_style': 'balanced',
+                'auto_save_poses': True,
+                'show_advanced_settings': False,
+                'character_limit_warnings': True
+            }
+        }
         
         # Hash password if provided
         if password:
@@ -63,7 +85,8 @@ class User:
             pose_generations_used=data.get('pose_generations_used', 0),
             pose_generations_reset_date=data.get('pose_generations_reset_date'),
             extra_pose_generations=data.get('extra_pose_generations', 0),
-            stripe_customer_id=data.get('stripe_customer_id')
+            stripe_customer_id=data.get('stripe_customer_id'),
+            settings=data.get('settings')
         )
         user.password_hash = data.get('password_hash')
         return user
@@ -86,7 +109,8 @@ class User:
             'pose_generations_used': self.pose_generations_used,
             'pose_generations_reset_date': self.pose_generations_reset_date,
             'extra_pose_generations': self.extra_pose_generations,
-            'stripe_customer_id': self.stripe_customer_id
+            'stripe_customer_id': self.stripe_customer_id,
+            'settings': self.settings
         }
     
     def save(self) -> str:
@@ -309,6 +333,22 @@ class User:
             # Extend expiration for tier changes
             self.subscription_expires_at = datetime.utcnow() + timedelta(days=30)
             self.save()
+    
+    def update_settings(self, new_settings: Dict[str, Any]) -> None:
+        """Update user settings with new values."""
+        if new_settings:
+            # Deep merge settings to preserve existing values not being updated
+            for key, value in new_settings.items():
+                if key in self.settings and isinstance(self.settings[key], dict) and isinstance(value, dict):
+                    self.settings[key].update(value)
+                else:
+                    self.settings[key] = value
+            self.updated_at = datetime.utcnow()
+            self.save()
+    
+    def get_settings(self) -> Dict[str, Any]:
+        """Get user settings."""
+        return self.settings
     
     def _reset_monthly_usage_if_needed(self) -> None:
         """Reset monthly usage counter if a new month has started."""

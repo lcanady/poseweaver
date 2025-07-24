@@ -12,6 +12,7 @@ import { EnhancedOutput } from "@/components/pose-enhancer/enhanced-output";
 import { VersionHistory } from "@/components/pose-enhancer/version-history";
 import { Refinement } from "@/components/pose-enhancer/refinement";
 import { EnhancementAnalysis } from "@/components/pose-enhancer/enhancement-analysis";
+import { getApiUrl } from '@/utils/api-utils';
 
 interface PoseVersion {
   id: string;
@@ -68,7 +69,7 @@ export default function PoseEnhancerPage() {
         }
         
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt`, 
+          `${getApiUrl()}/api/characters/mgmt`, 
           {
             headers: {
               'Content-Type': 'application/json',
@@ -179,7 +180,7 @@ export default function PoseEnhancerPage() {
       // We'll try the old way but just include the pose input directly
       const currentCharName = characterName || "Character";
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+      const apiUrl = getApiUrl();
       const response = await fetch(`${apiUrl}/api/pose/enhance`, {
         method: "POST",
         headers: {
@@ -388,7 +389,7 @@ export default function PoseEnhancerPage() {
     
     try {
       const currentCharName = characterName || "Character";
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+      const apiUrl = getApiUrl();
       
       const response = await fetch(`${apiUrl}/api/pose/refine`, {
         method: "POST",

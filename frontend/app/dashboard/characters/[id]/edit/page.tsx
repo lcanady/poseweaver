@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { AvatarUpload } from "@/components/avatar-upload";
+import { getApiUrl } from '@/utils/api-utils';
 
 interface CharacterFormData {
   name: string;
@@ -57,7 +58,7 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
         }
         
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt/${unwrappedParams.id}`, 
+          `${getApiUrl()}/api/characters/mgmt/${unwrappedParams.id}`, 
           {
             headers: {
               'Content-Type': 'application/json',
@@ -179,7 +180,7 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
           }
           
           const processResponse = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/process`, 
+            `${getApiUrl()}/api/characters/process`, 
             {
               method: 'POST',
               headers: {
@@ -224,7 +225,7 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
       
       // Update the character
       const updateResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt/${unwrappedParams.id}`, 
+        `${getApiUrl()}/api/characters/mgmt/${unwrappedParams.id}`, 
         {
           method: 'PUT',
           headers: {

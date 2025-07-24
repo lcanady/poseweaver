@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/auth-context'
+import { getApiUrl } from '@/utils/api-utils';
 
 // Discord format regex patterns
 const DISCORD_USER_PATTERN = /^([^\u2014]+)\s+\u2014\s+(\d+\/\d+\/\d+,\s+\d+:\d+\s+[AP]M)/
@@ -277,7 +278,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
       console.log('Validating scene ID:', sceneId)
       try {
         const sceneResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scenes/${sceneId}`,
+          `${getApiUrl()}/api/scenes/${sceneId}`,
           {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -368,7 +369,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
         })
 
         const response = await makeAuthenticatedRequest(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/mush/enhance`,
+          `${getApiUrl()}/api/mush/enhance`,
           {
             method: 'POST',
             headers: {
@@ -424,7 +425,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
             try {
               // Store poses in the scene using the bulk import endpoint
               const bulkImportResponse = await makeAuthenticatedRequest(
-                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scene-flow/scenes/${sceneId}/poses/bulk`,
+                `${getApiUrl()}/api/scene-flow/scenes/${sceneId}/poses/bulk`,
                 {
                   method: 'POST',
                   headers: {
@@ -505,7 +506,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
         if (isDiscordFormatted && discordPoses.length > 0) {
           // Use the bulk import endpoint with pre-parsed poses
           const bulkImportResponse = await makeAuthenticatedRequest(
-            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scene-flow/scenes/${sceneId}/poses/bulk`,
+            `${getApiUrl()}/api/scene-flow/scenes/${sceneId}/poses/bulk`,
             {
               method: 'POST',
               headers: {
@@ -579,7 +580,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
         } else {
           // Let the LLM handle the parsing of non-Discord format
           const response = await makeAuthenticatedRequest(
-            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scene-flow/scenes/${sceneId}/poses/bulk`,
+            `${getApiUrl()}/api/scene-flow/scenes/${sceneId}/poses/bulk`,
             {
               method: 'POST',
               headers: {

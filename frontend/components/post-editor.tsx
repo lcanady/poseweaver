@@ -18,6 +18,7 @@ import { SceneDumpProcessor } from "@/components/scene-dump-processor"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { SceneDumpProcessingResult } from "@/hooks/useSceneDumpProcessor"
+import { getApiUrl } from '@/utils/api-utils';
 
 // Initialize with empty strings instead of placeholder text
 const initialScene = ``
@@ -38,7 +39,7 @@ async function enhancePose(originalPose: string, sceneContext: any, characterDat
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
-    const response = await fetch('http://localhost:5001/api/pose/enhance', {
+    const response = await fetch(`${getApiUrl()}/api/pose/enhance`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -329,7 +330,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
             headers['Authorization'] = `Bearer ${token}`;
           }
 
-          const sceneUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scenes/${autoLoadSceneId}`;
+          const sceneUrl = `${getApiUrl()}/api/scenes/${autoLoadSceneId}`;
           const response = await fetch(sceneUrl, { headers });
 
           if (response.ok) {
@@ -376,7 +377,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
           }
 
           // Fetch the updated poses for this scene
-          const posesUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scenes/${sceneId}/poses`;
+          const posesUrl = `${getApiUrl()}/api/scenes/${sceneId}/poses`;
           const posesResponse = await fetch(posesUrl, { headers });
 
           if (posesResponse.ok) {
@@ -460,7 +461,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
           throw new Error('Authentication required');
         }
 
-        const response = await fetch('http://localhost:5001/api/characters/', {
+        const response = await fetch(`${getApiUrl()}/api/characters/`, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`
@@ -714,7 +715,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
       };
 
       // If we have a scene ID, update it; otherwise create new
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+      const baseUrl = getApiUrl();
       const url = sceneId
         ? `${baseUrl}/api/scenes/${sceneId}`
         : `${baseUrl}/api/scenes`;
@@ -869,7 +870,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const posesUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scenes/${sceneId}/poses`;
+      const posesUrl = `${getApiUrl()}/api/scenes/${sceneId}/poses`;
       const posesResponse = await fetch(posesUrl, { headers });
 
       if (posesResponse.ok) {

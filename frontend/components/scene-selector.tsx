@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, FolderOpen } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { getApiUrl } from '@/utils/api-utils';
 
 // Define the Scene type
 interface Scene {
@@ -75,7 +76,7 @@ export function SceneSelector({ onSceneSelected }: SceneSelectorProps) {
   const fetchSavedScenes = async () => {
     setIsLoading(true)
     try {
-      const scenesUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scenes?limit=50&sort=updated_at&order=desc`
+      const scenesUrl = `${getApiUrl()}/api/scenes?limit=50&sort=updated_at&order=desc`
       const data = await fetchWithRefresh(scenesUrl)
 
       if (data.success && data.data) {
@@ -103,7 +104,7 @@ export function SceneSelector({ onSceneSelected }: SceneSelectorProps) {
   const handleSceneSelect = async (sceneId: string, title: string) => {
     try {
       // Fetch the full scene data
-      const sceneUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scenes/${sceneId}`
+      const sceneUrl = `${getApiUrl()}/api/scenes/${sceneId}`
       const data = await fetchWithRefresh(sceneUrl)
       
       if (data.success && data.data) {

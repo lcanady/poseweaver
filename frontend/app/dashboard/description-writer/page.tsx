@@ -13,6 +13,7 @@ import { DescriptionVersionHistory } from '@/components/description-writer/descr
 import { DescriptionRefinement } from '@/components/description-writer/description-refinement'
 import { UsageDisplay } from '@/components/pose-enhancer/usage-display'
 import { InlinePaywall } from '@/components/pose-enhancer/inline-paywall'
+import { getApiUrl } from '@/utils/api-utils';
 
 interface DescriptionVersion {
   id: string
@@ -80,7 +81,7 @@ export default function DescriptionWriterPage() {
     
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/usage-status?user_id=${currentUserId}`
+        `${getApiUrl()}/api/purchase/usage-status?user_id=${currentUserId}`
       )
       
       if (response.ok) {
@@ -154,7 +155,7 @@ export default function DescriptionWriterPage() {
       }
       formData.append('focus_areas', focusAreas)
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+      const apiUrl = getApiUrl()
       const accessToken = localStorage.getItem('access_token')
       
       const headers: Record<string, string> = {}
@@ -256,7 +257,7 @@ export default function DescriptionWriterPage() {
       }
       formData.append('focus_areas', focusAreas)
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+      const apiUrl = getApiUrl()
       const accessToken = localStorage.getItem('access_token')
       
       const headers: Record<string, string> = {}

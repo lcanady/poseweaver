@@ -8,6 +8,7 @@ import { PlusCircle, Loader2, Crown, AlertTriangle } from "lucide-react"
 import { CharacterCard } from "@/components/character-card"
 import Link from "next/link"
 import { toast } from "@/components/ui/use-toast"
+import { getApiUrl } from '@/utils/api-utils';
 
 // Define the Character type to match the one from lib/types.ts
 interface Character {
@@ -60,7 +61,7 @@ export default function CharactersPage() {
       }
       
       // Call refresh endpoint
-      const refreshResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/auth/refresh`, {
+      const refreshResponse = await fetch(`${getApiUrl()}/api/auth/refresh`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${refreshToken}`,
@@ -104,7 +105,7 @@ export default function CharactersPage() {
       try {
         // Use JWT token authentication
         const response = await fetchWithRefresh(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt`
+          `${getApiUrl()}/api/characters/mgmt`
         );
         
         if (!response.ok) {

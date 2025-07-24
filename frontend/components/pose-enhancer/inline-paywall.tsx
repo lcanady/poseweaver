@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { Crown, Zap, Check, Star, Sparkles } from "lucide-react";
+import { getApiUrl } from '@/utils/api-utils';
 
 interface PricingPackage {
   generation_count: number;
@@ -79,7 +80,7 @@ export function InlinePaywall({
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/pricing`
+        `${getApiUrl()}/api/purchase/pricing`
       );
 
       if (!response.ok) {
@@ -135,7 +136,7 @@ export function InlinePaywall({
     setIsPurchasing(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/create-checkout-session`,
+        `${getApiUrl()}/api/purchase/create-checkout-session`,
         {
           method: 'POST',
           headers: {
@@ -210,7 +211,7 @@ export function InlinePaywall({
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/create-checkout-session`,
+        `${getApiUrl()}/api/purchase/create-checkout-session`,
         {
           method: 'POST',
           headers: {

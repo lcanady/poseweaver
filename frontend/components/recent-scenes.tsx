@@ -8,6 +8,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { formatDistanceToNow } from "date-fns"
+import { getApiUrl } from '@/utils/api-utils';
 
 // Define the Scene type
 interface Scene {
@@ -44,7 +45,7 @@ export function RecentScenes({ onDataLoaded }: { onDataLoaded?: (hasData: boolea
             headers['Authorization'] = `Bearer ${token}`;
           }
           
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scenes?limit=10&sort=updated_at&order=desc`, {
+          const response = await fetch(`${getApiUrl()}/api/scenes?limit=10&sort=updated_at&order=desc`, {
             headers
           })
           

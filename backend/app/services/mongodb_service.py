@@ -23,23 +23,34 @@ class MongoDBService:
         """Connect to MongoDB."""
         try:
             # Get MongoDB URI from environment or use default localhost connection
-            # Note: Using localhost instead of hostname 'mongodb' for local development
             mongodb_uri = os.getenv(
                 'MONGODB_URI', 
                 'mongodb://admin:password@localhost:27017/mush_pose_editor?authSource=admin'
             )
             db_name = os.getenv('MONGODB_DB', 'mush_pose_editor')
             
-            self._client = MongoClient(mongodb_uri)
+            logger.info(f"Attempting to connect to MongoDB: {mongodb_uri.split('@')[0]}@[REDACTED]")
+            
+            # Configure MongoClient with appropriate timeouts for remote connections
+            self._client = MongoClient(
+                mongodb_uri,
+                serverSelectionTimeoutMS=5000,  # 5 second timeout for server selection
+                connectTimeoutMS=10000,         # 10 second timeout for connection
+                socketTimeoutMS=10000,          # 10 second timeout for socket operations
+                maxPoolSize=10,                 # Maximum connection pool size
+                retryWrites=True                # Enable retryable writes
+            )
             self._db = self._client[db_name]
             
-            # Test the connection
+            # Test the connection with timeout
             self._client.admin.command('ping')
-            logger.info(f"Connected to MongoDB database: {db_name}")
+            logger.info(f"Successfully connected to MongoDB database: {db_name}")
             
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {e}")
-            raise
+            # Don't raise the exception immediately, allow the service to retry later
+            self._client = None
+            self._db = None
     
     def disconnect(self) -> None:
         """Disconnect from MongoDB."""

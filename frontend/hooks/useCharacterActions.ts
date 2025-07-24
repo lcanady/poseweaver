@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from "@/components/ui/use-toast";
+import { getApiUrl } from '@/utils/api-utils';
 
 export function useCharacterActions() {
   const router = useRouter();
@@ -21,7 +22,7 @@ export function useCharacterActions() {
       }
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt/${characterId}`, 
+        `${getApiUrl()}/api/characters/mgmt/${characterId}`, 
         {
           method: 'DELETE',
           headers: {

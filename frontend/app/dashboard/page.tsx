@@ -8,6 +8,7 @@ import { useState, useEffect } from "react"
 
 import { useAuth } from "@/contexts/auth-context"
 import { formatDistanceToNow } from "date-fns"
+import { getApiUrl } from '@/utils/api-utils';
 import { 
   Users, 
   Clock, 
@@ -22,7 +23,11 @@ import {
   CreditCard,
   Crown,
   Star,
-  Wand2
+  Wand2,
+  Palette,
+  BarChart3,
+  UserPlus,
+  Lock
 } from "lucide-react"
 
 interface DashboardStats {
@@ -76,7 +81,7 @@ export default function DashboardPage() {
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 60000)
           
-          const charactersResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt`, {
+          const charactersResponse = await fetch(`${getApiUrl()}/api/characters/mgmt`, {
             headers,
             signal: controller.signal
           })
@@ -100,7 +105,7 @@ export default function DashboardPage() {
         try {
           if (user?._id) {
             const usageResponse = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/usage-status?user_id=${user._id}`,
+              `${getApiUrl()}/api/purchase/usage-status?user_id=${user._id}`,
               {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
@@ -158,12 +163,28 @@ export default function DashboardPage() {
       badge: "Soon"
     },
     {
-      title: "Dialogue Enhancer",
-      description: "Improve character dialogue and conversations with natural language AI",
+      title: "Style Mimic",
+      description: "AI learns your writing style and applies it to enhanced poses for authentic voice",
       href: "#",
-      icon: <Wand2 className="h-5 w-5" />,
+      icon: <Palette className="h-5 w-5" />,
       status: "coming-soon",
-      badge: "Soon"
+      badge: "Pro Only"
+    },
+    {
+      title: "Writing Analytics",
+      description: "Track your writing evolution, style metrics, and character usage patterns",
+      href: "#",
+      icon: <BarChart3 className="h-5 w-5" />,
+      status: "coming-soon",
+      badge: "Pro Only"
+    },
+    {
+      title: "Scene Collaboration",
+      description: "Real-time co-writing tools and shared character libraries for group roleplay",
+      href: "#",
+      icon: <UserPlus className="h-5 w-5" />,
+      status: "coming-soon",
+      badge: "Pro Only"
     }
   ]
 

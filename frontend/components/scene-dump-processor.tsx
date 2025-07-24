@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils'
 import { useSceneDumpProcessor } from '@/hooks/useSceneDumpProcessor'
 import { useAuth } from '@/contexts/auth-context'
 import type { ProcessedPose, SceneDumpProcessingResult } from '@/hooks/useSceneDumpProcessor'
+import { getApiUrl } from '@/utils/api-utils';
 
 interface SceneDumpProcessorProps {
   sceneDumpText: string
@@ -230,7 +231,7 @@ export function SceneDumpProcessor({
                         try {
                           const token = localStorage.getItem('access_token')
                           const response = await fetch(
-                            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scenes/${sceneId}`,
+                            `${getApiUrl()}/api/scenes/${sceneId}`,
                             {
                               headers: {
                                 'Authorization': `Bearer ${token}`,
@@ -287,7 +288,7 @@ export function SceneDumpProcessor({
                     try {
                       const token = localStorage.getItem('access_token')
                       const response = await fetch(
-                        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scenes/${sceneId}`,
+                        `${getApiUrl()}/api/scenes/${sceneId}`,
                         {
                           headers: {
                             'Authorization': `Bearer ${token}`,
@@ -382,7 +383,7 @@ export function SceneDumpProcessor({
                   console.log('Direct token check:', !!token)
                   
                   if (token) {
-                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/auth/me`, {
+                    const response = await fetch(`${getApiUrl()}/api/auth/me`, {
                       headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'

@@ -4,6 +4,7 @@ import { useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Loader2 } from 'lucide-react';
+import { getApiUrl } from '@/utils/api-utils';
 
 interface CharacterCheckWrapperProps {
   children: ReactNode;
@@ -30,7 +31,7 @@ export function CharacterCheckWrapper({
         }
 
         // Use the character management API to check if user has characters
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt`, {
+        const response = await fetch(`${getApiUrl()}/api/characters/mgmt`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

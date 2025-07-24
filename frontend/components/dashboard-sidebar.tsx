@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users, Settings, Feather, LayoutGrid, CreditCard, Sparkles, Eye } from "lucide-react"
+import { Users, Settings, Feather, LayoutGrid, CreditCard, Sparkles, Eye, Shield } from "lucide-react"
 import { UserNav } from "./user-nav"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
@@ -16,7 +16,7 @@ interface NavItem {
 
 export function DashboardSidebar() {
   const pathname = usePathname()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
 
   const navItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
@@ -24,6 +24,11 @@ export function DashboardSidebar() {
     { href: "/dashboard/pose-enhancer", label: "Pose Enhancer", icon: Sparkles },
     { href: "/dashboard/description-writer", label: "Description Writer", icon: Eye },
   ]
+
+  // Add admin navigation for admin users
+  if (user?.is_admin) {
+    navItems.push({ href: "/dashboard/admin", label: "Admin Panel", icon: Shield });
+  }
 
   const bottomNavItems: NavItem[] = [
     // Settings and Billing moved to user dropdown menu

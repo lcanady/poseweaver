@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { getApiUrl } from '@/utils/api-utils';
 
 interface AvatarUploadProps {
   initialImage?: string;
@@ -85,7 +86,7 @@ export function AvatarUpload({
         // Get the latest token
         const currentToken = localStorage.getItem('access_token');
         
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/uploads/avatar`, {
+        const response = await fetch(`${getApiUrl()}/api/uploads/avatar`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${currentToken}`

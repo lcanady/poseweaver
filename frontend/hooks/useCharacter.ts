@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from "@/components/ui/use-toast";
+import { getApiUrl } from '@/utils/api-utils';
 
 export interface Character {
   id: string;
@@ -36,7 +37,7 @@ export function useCharacter(characterId: string) {
         }
         
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt/${characterId}`, 
+          `${getApiUrl()}/api/characters/mgmt/${characterId}`, 
           {
             headers: {
               'Content-Type': 'application/json',

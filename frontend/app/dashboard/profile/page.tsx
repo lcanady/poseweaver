@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { AvatarUpload } from "@/components/avatar-upload"
 import { useState, useEffect } from "react"
+import { getApiUrl } from '@/utils/api-utils';
 
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth()
@@ -41,7 +42,7 @@ export default function ProfilePage() {
 
     try {
       const token = localStorage.getItem('access_token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/auth/update-profile`, {
+      const response = await fetch(`${getApiUrl()}/api/auth/update-profile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

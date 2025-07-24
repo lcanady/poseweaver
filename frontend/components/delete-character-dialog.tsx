@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { useState } from 'react'
 import { Loader2 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
+import { getApiUrl } from '@/utils/api-utils';
 
 interface DeleteCharacterDialogProps {
   characterId: string;
@@ -37,7 +38,7 @@ export function DeleteCharacterDialog({ characterId, characterName }: DeleteChar
       }
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt/${characterId}`,
+        `${getApiUrl()}/api/characters/mgmt/${characterId}`,
         {
           method: 'DELETE',
           headers: {

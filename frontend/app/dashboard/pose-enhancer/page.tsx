@@ -15,6 +15,7 @@ import { Refinement } from "@/components/pose-enhancer/refinement";
 import { EnhancementAnalysis } from "@/components/pose-enhancer/enhancement-analysis";
 import { UsageDisplay } from "@/components/pose-enhancer/usage-display";
 import { InlinePaywall } from "@/components/pose-enhancer/inline-paywall";
+import { getApiUrl, apiRequest } from "@/utils/api-utils";
 
 interface PoseVersion {
   id: string;
@@ -86,15 +87,7 @@ export default function PoseEnhancerPage() {
           throw new Error('No access token found. Please log in.');
         }
         
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt`, 
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`
-            }
-          }
-        );
+        const response = await apiRequest('/api/characters/mgmt');
         
         if (!response.ok) {
           throw new Error(`Failed to fetch characters: ${response.status}`);
@@ -210,9 +203,8 @@ export default function PoseEnhancerPage() {
       console.log('Sending request with user_id:', currentUserId);
       console.log('Full request payload:', requestPayload);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/pose/enhance`, {
+      const response = await apiRequest('/api/pose/enhance', {
         method: 'POST',
-        headers,
         body: JSON.stringify(requestPayload)
       });
 
@@ -360,9 +352,8 @@ export default function PoseEnhancerPage() {
         narrative_tone: 'neutral'
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/pose/refine`, {
+      const response = await apiRequest('/api/pose/refine', {
         method: 'POST',
-        headers,
         body: JSON.stringify({
           current_pose: getCurrentPose(), // Backend expects current_pose, not original_pose
           edit_suggestion: editSuggestion,
@@ -448,8 +439,8 @@ export default function PoseEnhancerPage() {
     if (!currentUserId) return;
     
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/usage-status?user_id=${currentUserId}`
+      const response = await apiRequest(
+        `/api/purchase/usage-status?user_id=${currentUserId}`
       );
       
       if (response.ok) {

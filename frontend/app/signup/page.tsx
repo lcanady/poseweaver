@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Icons } from "@/components/icons"
 import { Crown } from "lucide-react"
+import { getApiUrl } from '@/utils/api-utils';
 
 export default function SignupPage() {
   const { signup, isLoading, user } = useAuth()
@@ -82,7 +83,7 @@ export default function SignupPage() {
   const handlePaidPlanRedirect = async (plan: string) => {
     try {
       // Get current user info from API since auth context might not be fully updated
-      const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/auth/me`, {
+      const userResponse = await fetch(`${getApiUrl()}/api/auth/me`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +110,7 @@ export default function SignupPage() {
 
   const redirectToStripeCheckout = async (userId: string, plan: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/purchase/create-checkout-session`, {
+      const response = await fetch(`${getApiUrl()}/api/purchase/create-checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
