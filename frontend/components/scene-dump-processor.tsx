@@ -23,7 +23,6 @@ import {
   AlertCircle,
   RefreshCw,
   Sparkles,
-  Brain,
   Eye,
   EyeOff
 } from 'lucide-react'
@@ -80,8 +79,7 @@ export function SceneDumpProcessor({
   const [settings, setSettings] = useState({
     autoProcess: autoProcess,
     processingFormat: 'mush_output' as 'simple' | 'character_prefix' | 'mush_output' | 'discord',
-    includeEnhancement: false,
-    includeContinuityAnalysis: true
+    includeEnhancement: false
   })
 
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
@@ -101,8 +99,7 @@ export function SceneDumpProcessor({
 
     const result = await processSceneDump(sceneDumpText, sceneId, {
       processingFormat: settings.processingFormat,
-      includeEnhancement: settings.includeEnhancement,
-      includeContinuityAnalysis: settings.includeContinuityAnalysis
+      includeEnhancement: settings.includeEnhancement
     })
 
     if (onProcessingComplete) {
@@ -452,19 +449,7 @@ export function SceneDumpProcessor({
                     </Label>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="continuity"
-                      checked={settings.includeContinuityAnalysis}
-                      onCheckedChange={(checked) => 
-                        setSettings(prev => ({ ...prev, includeContinuityAnalysis: checked }))
-                      }
-                    />
-                    <Label htmlFor="continuity" className="text-xs flex items-center gap-1">
-                      <Brain className="h-3 w-3" />
-                      Continuity Analysis
-                    </Label>
-                  </div>
+
                 </div>
               </div>
             </div>
@@ -527,14 +512,7 @@ export function SceneDumpProcessor({
                   </div>
                 )}
 
-                {settings.includeContinuityAnalysis && lastResult.continuityAnalysis && (
-                  <div className="text-center p-2 bg-muted/50 rounded">
-                    <div className="text-lg font-semibold text-primary">
-                      <Brain className="h-5 w-5 mx-auto" />
-                    </div>
-                    <div className="text-xs text-muted-foreground">Analyzed</div>
-                  </div>
-                )}
+
               </div>
 
               {/* Character Statistics */}

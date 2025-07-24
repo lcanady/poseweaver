@@ -9,6 +9,7 @@ from app.services.character_service import CharacterProfile
 from app.services.context_service import PoseContext
 from app.services.scene_flow_service import SceneFlowService
 from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.usage_tracking_service import require_pose_generation_limit, get_usage_info
 
 pose_bp = Blueprint('pose', __name__)
 
@@ -44,6 +45,7 @@ def get_scene_flow_service():
 
 
 @pose_bp.route('/enhance', methods=['POST'])
+@require_pose_generation_limit
 def enhance_pose():
     """Enhance a basic pose into rich narrative.
     
@@ -113,11 +115,15 @@ def enhance_pose():
         
         # Get enhancement style
         enhancement_style = data.get('enhancement_style', 'balanced')
+        
+        # Map 'subtle' to 'minimal' for compatibility
+        if enhancement_style == 'subtle':
+            enhancement_style = 'minimal'
+        
         if enhancement_style not in ['minimal', 'balanced', 'elaborate']:
             return jsonify({
                 'success': False,
-                'error': 'enhancement_style must be minimal, balanced, or '
-                         'elaborate'
+                'error': 'enhancement_style must be minimal, balanced, elaborate, or subtle'
             }), 400
         
         # Get enhancement options
@@ -129,10 +135,20 @@ def enhance_pose():
             original_pose, character, context, enhancement_style, enhancement_options
         )
         
-        # Return enhanced pose with validation warnings
+        # Get usage info from request context (added by decorator)
+        usage_info = getattr(request, 'usage_info', {})
+        
+        # Return enhanced pose with validation warnings and usage info
         response_data = {
             'success': True,
-            'enhanced_pose': enhancement['enhanced_pose']
+            'enhanced_pose': enhancement['enhanced_pose'],
+            'usage_info': {
+                'available_generations': usage_info.get('available_generations', 0),
+                'monthly_limit': usage_info.get('monthly_limit', 0),
+                'current_usage': usage_info.get('current_usage', 0),
+                'extra_generations': usage_info.get('extra_generations', 0),
+                'subscription_status': usage_info.get('subscription_status', 'free')
+            }
         }
         
         # Include validation warnings if present
@@ -161,6 +177,7 @@ def enhance_pose():
 
 
 @pose_bp.route('/refine', methods=['POST'])
+@require_pose_generation_limit
 def refine_pose():
     """Refine an enhanced pose based on user suggestions.
     
@@ -252,6 +269,7 @@ def refine_pose():
 
 
 @pose_bp.route('/enhance-with-scene', methods=['POST'])
+@require_pose_generation_limit
 def enhance_pose_with_scene():
     """Enhance a pose using scene context from scene flow.
     
@@ -343,11 +361,20 @@ def enhance_pose_with_scene():
                 original_pose, character, None, enhancement_style
             )
         
-        # Return the enhanced pose
+        # Get usage info from request context (added by decorator)
+        usage_info = getattr(request, 'usage_info', {})
+        
         return jsonify({
             'success': True,
             'enhanced_pose': enhancement.enhanced_pose,
-            'scene_context_used': scene_context_used
+            'scene_context_used': scene_context_used,
+            'usage_info': {
+                'available_generations': usage_info.get('available_generations', 0),
+                'monthly_limit': usage_info.get('monthly_limit', 0),
+                'current_usage': usage_info.get('current_usage', 0),
+                'extra_generations': usage_info.get('extra_generations', 0),
+                'subscription_status': usage_info.get('subscription_status', 'free')
+            }
         })
         
     except VeniceAPIError as e:
@@ -370,6 +397,7 @@ def enhance_pose_with_scene():
 
 
 @pose_bp.route('/variations', methods=['POST'])
+@require_pose_generation_limit
 def generate_pose_variations():
     """Generate multiple enhancement variations of a pose.
     
@@ -464,6 +492,7 @@ def generate_pose_variations():
 
 
 @pose_bp.route('/analyze', methods=['POST'])
+@get_usage_info
 def analyze_pose_quality():
     """Analyze the quality and characteristics of a pose.
     

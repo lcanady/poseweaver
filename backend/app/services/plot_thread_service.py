@@ -9,7 +9,7 @@ from typing import List, Optional, Dict, Any, Tuple
 import logging
 from dataclasses import dataclass
 from ..models.scene_memory import (
-    PlotThread, Pose, PlotStatus, Severity
+    PlotThread, Pose, PlotStatus
 )
 from ..services.venice_client import VeniceClient, VeniceAPIError
 

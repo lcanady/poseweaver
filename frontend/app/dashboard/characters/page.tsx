@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button"
-import { PlusCircle, Loader2 } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { PlusCircle, Loader2, Crown, AlertTriangle } from "lucide-react"
 import { CharacterCard } from "@/components/character-card"
 import Link from "next/link"
 import { toast } from "@/components/ui/use-toast"
@@ -17,10 +19,17 @@ interface Character {
   created_at?: string;
 }
 
+interface SubscriptionMeta {
+  character_limit: number;
+  subscription_status: string;
+  needs_upgrade: boolean;
+}
+
 export default function CharactersPage() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [subscriptionMeta, setSubscriptionMeta] = useState<SubscriptionMeta | null>(null);
 
   // Function to fetch with token refresh capabilities
   const fetchWithRefresh = async (url: string, options: RequestInit = {}) => {
@@ -113,6 +122,15 @@ export default function CharactersPage() {
       throw new Error(data.message || 'Failed to fetch characters');
     }
     
+    // Extract subscription metadata
+    if (data.meta) {
+      setSubscriptionMeta({
+        character_limit: data.meta.character_limit,
+        subscription_status: data.meta.subscription_status,
+        needs_upgrade: data.meta.needs_upgrade
+      });
+    }
+    
     // Check if we have character data in the expected format
     const charactersData = data.data || data.characters || (Array.isArray(data) ? data : []);
     console.log('Characters data to process:', charactersData);
@@ -151,15 +169,59 @@ export default function CharactersPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Your Characters</h1>
-            <p className="text-muted-foreground mt-1">Manage your cast of characters for the AI to embody.</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-muted-foreground">Manage your cast of characters for the AI to embody.</p>
+              {subscriptionMeta && subscriptionMeta.character_limit !== -1 && (
+                <Badge variant="outline" className="text-xs">
+                  {characters.length}/{subscriptionMeta.character_limit} characters
+                </Badge>
+              )}
+            </div>
           </div>
-          <Button asChild>
+          <Button 
+            asChild 
+            disabled={subscriptionMeta?.needs_upgrade && characters.length >= (subscriptionMeta?.character_limit || 3)}
+          >
             <Link href="/dashboard/characters/create">
               <PlusCircle className="mr-2 h-4 w-4" />
               Add New Character
             </Link>
           </Button>
         </div>
+
+        {/* Upgrade Hero for Free/Expired Users */}
+        {subscriptionMeta?.needs_upgrade && (
+          <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Crown className="h-5 w-5 text-amber-600" />
+                <CardTitle className="text-amber-900">
+                  {subscriptionMeta.subscription_status === 'expired' 
+                    ? 'Premium Subscription Expired' 
+                    : 'Unlock Unlimited Characters'
+                  }
+                </CardTitle>
+              </div>
+              <CardDescription className="text-amber-700">
+                {subscriptionMeta.subscription_status === 'expired'
+                  ? `Your premium subscription has expired. You can only access your first ${subscriptionMeta.character_limit} characters.`
+                  : `You're currently limited to ${subscriptionMeta.character_limit} characters. Upgrade to premium for unlimited character creation and access.`
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <Button className="bg-amber-600 hover:bg-amber-700">
+                  <Crown className="mr-2 h-4 w-4" />
+                  Upgrade to Premium
+                </Button>
+                <div className="text-sm text-amber-700">
+                  <strong>Premium benefits:</strong> Unlimited characters, priority support, and more features
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         {isLoading ? (
           <div className="flex justify-center items-center py-12">
             <Loader2 className="h-8 w-8 animate-spin mr-2" />

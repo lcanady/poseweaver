@@ -21,14 +21,14 @@ export interface SceneDumpProcessingResult {
   importedCount: number
   error?: string
   sceneId?: string
-  continuityAnalysis?: any
+
   enhancedPoses?: any[]
 }
 
 interface UseSceneDumpProcessorOptions {
   autoProcess?: boolean
   includeEnhancement?: boolean
-  includeContinuityAnalysis?: boolean
+
   processingFormat?: 'simple' | 'character_prefix' | 'mush_output' | 'discord'
 }
 
@@ -210,7 +210,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
   ): Promise<SceneDumpProcessingResult> => {
     const {
       includeEnhancement = false,
-      includeContinuityAnalysis = false,
+
       processingFormat = 'mush_output'
     } = options
 
@@ -335,8 +335,8 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
         console.log(`Parsed ${discordPoses.length} poses from Discord format`)
       }
       
-      // If we have enhancement or continuity analysis enabled, use the advanced endpoint
-      if (includeEnhancement || includeContinuityAnalysis) {
+      // If we have enhancement enabled, use the advanced endpoint
+      if (includeEnhancement) {
         // Let the LLM handle the parsing unless we already parsed Discord content
         const yourCharacterName = extractCharacterName(sceneDumpText);
         
@@ -348,7 +348,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
           scene_id: sceneId,
           user_id: userId.toString(),
           store_all_poses: true,
-          analyze_continuity: includeContinuityAnalysis,
+
           enhancement_style: 'balanced',
           use_llm_parsing: (!isDiscordFormatted || discordPoses.length === 0), // Use LLM parsing if Discord parsing failed
           format: isDiscordFormatted ? 'discord' : processingFormat,
@@ -413,7 +413,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
             poses: data.parsed_scene?.poses || [],
             importedCount: data.parsed_scene?.poses?.length || 0,
             sceneId: sceneId, // Use the provided sceneId since the enhance endpoint doesn't return it
-            continuityAnalysis: data.continuity_analysis || null,
+
             enhancedPoses: data.enhanced_poses || []
           }
 
@@ -488,7 +488,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
           
           toast({
             title: "Scene Dump Processed Successfully",
-            description: `Imported ${result.importedCount} poses${result.continuityAnalysis ? ' with continuity analysis' : ''}.`
+            description: `Imported ${result.importedCount} poses.`
           })
 
           return result

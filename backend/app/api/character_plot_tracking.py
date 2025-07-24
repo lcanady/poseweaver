@@ -12,7 +12,7 @@ from typing import Dict, Any, List, Optional
 
 from app.services.character_state_service import CharacterStateService
 from app.services.plot_thread_service import PlotThreadService
-from app.services.continuity_service import ContinuityService
+
 from app.services.scene_service import SceneService
 from app.services.venice_client import VeniceClient
 from app.middleware.auth_middleware import require_auth
@@ -36,18 +36,17 @@ def get_venice_client():
 venice_client = None
 character_state_service = None
 plot_thread_service = None
-continuity_service = None
+
 
 
 def init_services():
     """Initialize services lazily."""
     global venice_client, character_state_service, plot_thread_service
-    global continuity_service
     if venice_client is None:
         venice_client = get_venice_client()
         character_state_service = CharacterStateService(venice_client)
         plot_thread_service = PlotThreadService(venice_client)
-        continuity_service = ContinuityService(venice_client)
+
 
 
 # Plot Thread Management Endpoints

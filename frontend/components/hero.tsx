@@ -40,18 +40,17 @@ export function Hero() {
       <div className="grid lg:grid-cols-2 gap-12 items-center">
         <div className="space-y-6">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tighter">
-            Elevate Your Storytelling in Seconds
+            AI-Powered Pose Enhancement for Roleplayers
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground">
-            Transform simple actions into rich, engaging narratives with our character-aware AI. Spend less time
-            writing, more time roleplaying.
+            Create and manage your characters, then transform simple poses into rich, engaging narratives with our character-aware AI. Start free (20/month), upgrade to Basic (200/month) or Pro (500/month).
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Button size="lg" className="w-full sm:w-auto">
-              Enhance Your First Post Free
+              Start Free - 20 Poses/Month
             </Button>
             <Button size="lg" variant="outline" className="w-full sm:w-auto bg-transparent">
-              See Examples
+              View All Plans
             </Button>
           </div>
         </div>

@@ -1,30 +1,30 @@
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { BrainCircuit, ScanText, Sparkles, Users } from "lucide-react"
+import { BrainCircuit, Users, Sparkles, Crown } from "lucide-react"
 
 const features = [
+  {
+    icon: <Users className="w-8 h-8 text-primary" />,
+    title: "Character Management",
+    description:
+      "Create and manage multiple characters with detailed profiles. Free (3), Basic (10), or Pro (unlimited) characters.",
+  },
   {
     icon: <BrainCircuit className="w-8 h-8 text-primary" />,
     title: "Character-Aware AI",
     description:
-      "Upload your character's background and personality. Our AI maintains their unique voice in every enhanced post.",
-  },
-  {
-    icon: <ScanText className="w-8 h-8 text-primary" />,
-    title: "Platform Agnostic",
-    description:
-      "Copy-paste text from Discord, forums, or any roleplay platform. We automatically identify your posts and preserve the scene's context.",
+      "Our AI understands your character's personality, background, and voice to generate authentic, in-character poses.",
   },
   {
     icon: <Sparkles className="w-8 h-8 text-primary" />,
-    title: "Intelligent Enhancement",
+    title: "Three Enhancement Styles",
     description:
-      "Choose from three styles: a quick polish, a balanced enrichment, or a full narrative expansion for any situation.",
+      "Choose minimal polish, balanced enrichment, or elaborate narrative expansion. Perfect for any roleplay situation.",
   },
   {
-    icon: <Users className="w-8 h-8 text-primary" />,
-    title: "Scene Context Analysis",
+    icon: <Crown className="w-8 h-8 text-primary" />,
+    title: "Tiered Pricing",
     description:
-      "Our AI analyzes the ongoing scene to identify response hooks, emotional tone, and suggest natural character reactions.",
+      "Start free (20/month), upgrade to Basic (200/month) or Pro (500/month). Buy recharge packs when you need more.",
   },
 ]
 
@@ -32,9 +32,9 @@ export function Features() {
   return (
     <section id="features" className="container py-12 lg:py-24 bg-muted/20 rounded-lg">
       <div className="text-center space-y-4 mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold">A Tool for Serious Roleplayers</h2>
+        <h2 className="text-3xl md:text-4xl font-bold">Everything You Need for Better Roleplay</h2>
         <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-          We built SceneForge to enhance your creativity, not replace it. Here's how we help you tell better stories.
+          From character creation to AI-powered pose enhancement, we provide the tools to elevate your storytelling without replacing your creativity.
         </p>
       </div>
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">

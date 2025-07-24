@@ -9,22 +9,18 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { formatDistanceToNow } from "date-fns"
 import { 
-  BookOpen, 
   Users, 
   Clock, 
   TrendingUp, 
   Zap,
   ArrowUpRight,
   Plus,
-  User,
-  Shield
+  User
 } from "lucide-react"
 
 interface DashboardStats {
-  totalScenes: number
   totalCharacters: number
   recentActivity: string
-  activeScenes: number
 }
 
 interface QuickAction {
@@ -38,10 +34,8 @@ interface QuickAction {
 export default function DashboardPage() {
   const { user } = useAuth()
   const [stats, setStats] = useState<DashboardStats>({
-    totalScenes: 0,
     totalCharacters: 0,
-    recentActivity: "Never",
-    activeScenes: 0
+    recentActivity: "Never"
   })
   const [isLoading, setIsLoading] = useState(true)
 
@@ -57,30 +51,7 @@ export default function DashboardPage() {
           headers['Authorization'] = `Bearer ${token}`
         }
 
-        // Fetch scenes data
-        const scenesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/scenes`, {
-          headers
-        })
-
-        if (scenesResponse.ok) {
-          const scenesData = await scenesResponse.json()
-          if (scenesData.success && scenesData.data) {
-            const scenes = scenesData.data
-            const activeScenes = scenes.filter((scene: any) => scene.status === "Ongoing" || !scene.status).length
-            const mostRecentUpdate = scenes.length > 0 
-              ? Math.max(...scenes.map((scene: any) => new Date(scene.updated_at || scene.created_at).getTime()))
-              : null
-
-            setStats(prev => ({
-              ...prev,
-              totalScenes: scenes.length,
-              activeScenes,
-              recentActivity: mostRecentUpdate 
-                ? formatDistanceToNow(new Date(mostRecentUpdate), { addSuffix: true })
-                : "Never"
-            }))
-          }
-        }
+        // Note: Scenes functionality has been removed from the product
 
         // Fetch characters data from character management API
         try {
@@ -125,35 +96,18 @@ export default function DashboardPage() {
 
   const quickActions: QuickAction[] = [
     {
-      title: "New Scene",
-      description: "Start a fresh storytelling session",
-      href: "/dashboard/scenes",
-      icon: <Plus className="h-4 w-4" />,
+      title: "Manage Characters",
+      description: "Create and edit your characters",
+      href: "/dashboard/characters",
+      icon: <Users className="h-4 w-4" />,
       variant: "default"
     },
     {
-      title: "Scene Weaver",
-      description: "Continue an existing scene",
-      href: "/dashboard/scene-weaver",
-      icon: <Zap className="h-4 w-4" />
-    },
-    {
-      title: "Characters",
-      description: "Manage your character profiles",
-      href: "/dashboard/characters",
-      icon: <Users className="h-4 w-4" />
-    },
-    {
-      title: "Browse Scenes",
-      description: "View all your scenes",
-      href: "/dashboard/scenes",
-      icon: <BookOpen className="h-4 w-4" />
-    },
-    {
-      title: "Continuity",
-      description: "Track story consistency",
-      href: "/dashboard/continuity",
-      icon: <Shield className="h-4 w-4" />
+      title: "Pose Enhancer",
+      description: "Enhance your roleplay poses with AI",
+      href: "/dashboard/pose-enhancer",
+      icon: <Zap className="h-4 w-4" />,
+      variant: "outline"
     }
   ]
 
@@ -178,95 +132,54 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Scenes</CardTitle>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{isLoading ? "..." : stats.totalScenes}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.activeScenes} active
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Characters</CardTitle>
-              <User className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Your Characters</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{isLoading ? "..." : stats.totalCharacters}</div>
               <p className="text-xs text-muted-foreground">
-                Ready for action
+                {stats.totalCharacters === 1 ? "Character ready" : "Characters ready"} for roleplay
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Pose Enhancer</CardTitle>
+              <Zap className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{isLoading ? "..." : stats.recentActivity}</div>
+              <div className="text-2xl font-bold">Ready</div>
               <p className="text-xs text-muted-foreground">
-                Last scene update
+                AI-powered pose enhancement
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Continuity</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Status</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{isLoading ? "..." : stats.totalScenes > 0 ? "Active" : "—"}</div>
+              <div className="text-2xl font-bold">{stats.totalCharacters > 0 ? "Active" : "Getting Started"}</div>
               <p className="text-xs text-muted-foreground">
-                Story tracking
+                {stats.totalCharacters > 0 ? "Ready for adventures" : "Create your first character"}
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Jump into your most common tasks</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-              {quickActions.map((action, index) => (
-                <Button
-                  key={index}
-                  asChild
-                  variant={action.variant || "outline"}
-                  className="h-auto p-4 flex flex-col items-start gap-2"
-                >
-                  <Link href={action.href}>
-                    <div className="flex items-center gap-2 w-full">
-                      {action.icon}
-                      <span className="font-medium">{action.title}</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground text-left">
-                      {action.description}
-                    </span>
-                  </Link>
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+
 
         {/* Getting Started / Tips */}
-        {stats.totalScenes === 0 && (
+        {stats.totalCharacters === 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Welcome to Your Storytelling Journey</CardTitle>
+              <CardTitle>Welcome to Your Roleplay Journey</CardTitle>
               <CardDescription>Here are some tips to get you started</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -282,85 +195,21 @@ export default function DashboardPage() {
               <div className="flex items-start gap-3">
                 <Badge variant="outline" className="mt-1">2</Badge>
                 <div>
-                  <p className="font-medium">Start a new scene</p>
+                  <p className="font-medium">Use Pose Enhancer</p>
                   <p className="text-sm text-muted-foreground">
-                    Create your first scene and begin crafting your narrative
+                    Let AI help enhance your roleplay poses and bring depth to your storytelling
                   </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <Badge variant="outline" className="mt-1">3</Badge>
-                <div>
-                  <p className="font-medium">Use Scene Weaver</p>
-                  <p className="text-sm text-muted-foreground">
-                    Let AI help enhance your poses and bring depth to your storytelling
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Badge variant="outline" className="mt-1">4</Badge>
-                <div>
-                  <p className="font-medium">Track continuity</p>
-                  <p className="text-sm text-muted-foreground">
-                    Monitor story consistency and character development across scenes
-                  </p>
-                </div>
-              </div>
+
             </CardContent>
           </Card>
         )}
 
         {/* Activity Overview - Only show if user has content */}
-        {(stats.totalScenes > 0 || stats.totalCharacters > 0) && (
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Show scenes section only if user has scenes */}
-            {stats.totalScenes > 0 && (
-              <Card>
-                <CardHeader className="flex flex-row items-center">
-                  <div className="grid gap-2">
-                    <CardTitle>Your Scenes</CardTitle>
-                    <CardDescription>
-                      {stats.activeScenes > 0 
-                        ? `${stats.activeScenes} active scene${stats.activeScenes > 1 ? 's' : ''} ready to continue`
-                        : "All scenes completed"
-                      }
-                    </CardDescription>
-                  </div>
-                  <Button asChild size="sm" className="ml-auto gap-1">
-                    <Link href="/dashboard/scenes">
-                      View All
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Active Scenes</span>
-                      <Badge variant="default">{stats.activeScenes}</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Total Scenes</span>
-                      <Badge variant="outline">{stats.totalScenes}</Badge>
-                    </div>
-                    <div className="pt-2 grid gap-2">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href="/dashboard/scene-weaver">
-                          <Zap className="h-4 w-4 mr-2" />
-                          Scene Weaver
-                        </Link>
-                      </Button>
-                      <Button asChild variant="outline" size="sm">
-                        <Link href="/dashboard/continuity">
-                          <Shield className="h-4 w-4 mr-2" />
-                          Check Continuity
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+        {stats.totalCharacters > 0 && (
+          <div className="grid gap-6 md:grid-cols-1">
+            {/* Character management section */}
 
             {stats.totalCharacters > 0 && (
               <Card>
@@ -401,46 +250,23 @@ export default function DashboardPage() {
               </Card>
             )}
 
-            {/* If user only has one type of content, show a suggestion for the other */}
-            {stats.totalScenes > 0 && stats.totalCharacters === 0 && (
+            {/* Suggestion for users with characters to try other features */}
+            {stats.totalCharacters > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Create Your First Character</CardTitle>
-                  <CardDescription>Bring your stories to life with detailed characters</CardDescription>
+                  <CardTitle>Enhance Your Roleplay</CardTitle>
+                  <CardDescription>Take your character interactions to the next level</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col items-center justify-center py-6 text-center">
-                    <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                    <Zap className="h-12 w-12 text-muted-foreground mb-4" />
                     <p className="text-sm text-muted-foreground mb-4">
-                      Characters help you craft more engaging and consistent stories
+                      Use the Pose Enhancer to improve your roleplay poses with AI assistance
                     </p>
                     <Button asChild>
-                      <Link href="/dashboard/characters">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Character
-                      </Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {stats.totalCharacters > 0 && stats.totalScenes === 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Start Your First Scene</CardTitle>
-                  <CardDescription>Put your characters into action</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col items-center justify-center py-6 text-center">
-                    <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Now that you have characters, create scenes to tell their stories
-                    </p>
-                    <Button asChild>
-                      <Link href="/dashboard/scenes">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Scene
+                      <Link href="/dashboard/pose-enhancer">
+                        <Zap className="h-4 w-4 mr-2" />
+                        Try Pose Enhancer
                       </Link>
                     </Button>
                   </div>

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Wand2, Users, Settings, Feather, LayoutGrid, BookOpen, CreditCard, Shield, Sparkles } from "lucide-react"
+import { Users, Settings, Feather, LayoutGrid, CreditCard, Sparkles, Eye } from "lucide-react"
 import { UserNav } from "./user-nav"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
@@ -20,11 +20,9 @@ export function DashboardSidebar() {
 
   const navItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
-    { href: "/dashboard/scene-weaver", label: "Scene Weaver", icon: Wand2 },
-    { href: "/dashboard/scenes", label: "Scenes", icon: BookOpen },
     { href: "/dashboard/characters", label: "Characters", icon: Users },
-    { href: "/dashboard/continuity", label: "Continuity", icon: Shield },
     { href: "/dashboard/pose-enhancer", label: "Pose Enhancer", icon: Sparkles },
+    { href: "/dashboard/description-writer", label: "Description Writer", icon: Eye },
   ]
 
   const bottomNavItems: NavItem[] = [

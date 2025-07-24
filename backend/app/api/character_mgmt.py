@@ -10,6 +10,7 @@ from http import HTTPStatus
 
 from app.services.character_mgmt_service import CharacterManagementService
 from app.models.character import Character
+from app.models.user_mongo import User
 from app.middleware.auth_middleware import require_auth
 
 # Create blueprint
@@ -75,8 +76,43 @@ def create_character():
             'success': False,
             'message': 'Authentication error: invalid user identity'
         }), HTTPStatus.UNAUTHORIZED
-    
+
     try:
+        # Get user to check subscription status and character limits
+        user = User.find_by_id(user_id)
+        if not user:
+            return jsonify({
+                'success': False,
+                'message': 'User not found'
+            }), HTTPStatus.UNAUTHORIZED
+        
+        # Get current character count for the user
+        current_characters = CharacterManagementService.list_characters(
+            user_id=user_id,
+            include_inactive=False
+        )
+        current_count = len(current_characters)
+        
+        # Check if user can create another character
+        if not user.can_create_character(current_count):
+            character_limit = user.get_character_limit()
+            effective_status = user.get_effective_subscription_status()
+            
+            # Provide different messages based on subscription status
+            if effective_status == 'expired':
+                message = f"Your premium subscription has expired. You can only access your first {character_limit} characters. Please upgrade to create more characters."
+            else:
+                message = f"You've reached the character limit ({character_limit} characters). Upgrade to premium for unlimited characters."
+            
+            return jsonify({
+                'success': False,
+                'message': message,
+                'character_limit': character_limit,
+                'current_count': current_count,
+                'needs_upgrade': user.needs_upgrade_for_characters(),
+                'subscription_status': effective_status
+            }), HTTPStatus.FORBIDDEN
+        
         # Create the character
         character = CharacterManagementService.create_character(
             user_id=user_id,
@@ -181,6 +217,14 @@ def list_characters():
         }), HTTPStatus.UNAUTHORIZED
     
     try:
+        # Get user to check subscription status
+        user = User.find_by_id(user_id)
+        if not user:
+            return jsonify({
+                'success': False,
+                'message': 'User not found'
+            }), HTTPStatus.UNAUTHORIZED
+        
         characters = CharacterManagementService.list_characters(
             user_id=user_id,
             include_inactive=include_inactive,
@@ -190,13 +234,26 @@ def list_characters():
             sort_direction=sort_direction
         )
         
+        # Apply character access limits based on subscription
+        effective_status = user.get_effective_subscription_status()
+        character_limit = user.get_character_limit()
+        
+        # For non-premium users (free/expired), limit access to first 3 characters
+        if character_limit != -1:  # Not unlimited
+            characters = characters[:character_limit]
+        
         return jsonify({
             'success': True,
             'data': [char.to_dict() for char in characters],
             'meta': {
                 'total': len(characters),
                 'limit': limit,
-                'skip': skip
+                'skip': skip,
+                'sort': sort_field,
+                'order': 'desc' if sort_direction == -1 else 'asc',
+                'character_limit': character_limit,
+                'subscription_status': effective_status,
+                'needs_upgrade': user.needs_upgrade_for_characters()
             }
         })
         

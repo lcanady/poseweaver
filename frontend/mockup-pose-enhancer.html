@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pose Enhancer - Mockup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: 'hsl(257, 100%, 4%)',
+                        foreground: 'hsl(210, 40%, 98%)',
+                        card: 'hsl(257, 20%, 13%)',
+                        'card-foreground': 'hsl(210, 40%, 96%)',
+                        primary: 'hsl(43, 96%, 56%)',
+                        'primary-foreground': 'hsl(257, 100%, 4%)',
+                        secondary: 'hsl(271, 91%, 65%)',
+                        'secondary-foreground': 'hsl(210, 40%, 98%)',
+                        muted: 'hsl(257, 10%, 25%)',
+                        'muted-foreground': 'hsl(240, 5%, 65%)',
+                        accent: 'hsl(152, 69%, 47%)',
+                        'accent-foreground': 'hsl(210, 40%, 98%)',
+                        border: 'hsl(257, 20%, 20%)',
+                        input: 'hsl(257, 20%, 20%)',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-background text-foreground min-h-screen">
+    <!-- Hero Section -->
+    <div class="relative overflow-hidden bg-gradient-to-br from-background via-card to-background border-b border-border">
+        <div class="absolute inset-0 bg-gradient-to-r from-primary/5 to-secondary/5"></div>
+        <div class="relative max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <div class="flex justify-center mb-6">
+                    <div class="p-4 bg-primary/10 rounded-full">
+                        <i class="fas fa-magic text-3xl text-primary"></i>
+                    </div>
+                </div>
+                <h1 class="text-4xl font-bold tracking-tight sm:text-5xl mb-4">
+                    <span class="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                        Pose Enhancer
+                    </span>
+                </h1>
+                <p class="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+                    Transform your roleplay poses into rich, immersive narratives with AI-powered enhancement
+                </p>
+                <div class="flex justify-center space-x-8 text-sm text-muted-foreground">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-accent mr-2"></i>
+                        Character-aware enhancement
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-accent mr-2"></i>
+                        Scene context integration
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-accent mr-2"></i>
+                        Version history tracking
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Left Panel - Character & Context -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- Character Selection Card -->
+                <div class="bg-card border border-border rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-user-circle text-secondary mr-3 text-lg"></i>
+                        <h3 class="text-lg font-semibold">Character</h3>
+                    </div>
+                    
+                    <!-- Character Selector -->
+                    <div class="space-y-4">
+                        <div class="relative">
+                            <select class="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option>Select Character...</option>
+                                <option selected>Aria Shadowmere</option>
+                                <option>Marcus Ironheart</option>
+                                <option>Luna Whisperwind</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Character Preview -->
+                        <div class="bg-muted/50 rounded-lg p-3 border border-border/50">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 bg-secondary rounded-full flex items-center justify-center mr-3">
+                                    <i class="fas fa-user text-xs text-secondary-foreground"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-sm">Aria Shadowmere</div>
+                                    <div class="text-xs text-muted-foreground">Elven Ranger</div>
+                                </div>
+                            </div>
+                            <p class="text-xs text-muted-foreground">
+                                A skilled elven ranger with keen senses and a mysterious past...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scene Context Card -->
+                <div class="bg-card border border-border rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-globe text-accent mr-3 text-lg"></i>
+                        <h3 class="text-lg font-semibold">Scene Context</h3>
+                    </div>
+                    <textarea 
+                        placeholder="Paste scene dump or describe the current situation..."
+                        class="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm h-32 resize-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    >The ancient forest clearing is bathed in moonlight. Strange whispers echo from the shadows as the party approaches the mysterious stone circle...</textarea>
+                    <div class="mt-2 text-xs text-muted-foreground">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Optional: Helps AI understand the scene better
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 rounded-xl p-4">
+                    <h4 class="font-medium mb-3 text-sm">Enhancement Stats</h4>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-muted-foreground">Poses Enhanced</span>
+                            <span class="font-medium">47</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-muted-foreground">This Session</span>
+                            <span class="font-medium">3</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-muted-foreground">Avg. Quality</span>
+                            <span class="font-medium text-accent">Excellent</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Panel - Main Input & Controls -->
+            <div class="lg:col-span-6 space-y-6">
+                <!-- Pose Input Card -->
+                <div class="bg-card border border-border rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-edit text-primary mr-3 text-lg"></i>
+                            <h3 class="text-lg font-semibold">Your Pose</h3>
+                        </div>
+                        <div class="text-sm text-muted-foreground">
+                            <span id="charCount">0</span>/2000 characters
+                        </div>
+                    </div>
+                    
+                    <textarea 
+                        placeholder="Enter the pose you want to enhance..."
+                        class="w-full bg-input border border-border rounded-lg px-4 py-3 text-sm h-40 resize-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        oninput="updateCharCount(this)"
+                    >Aria moves silently through the forest, her bow ready.</textarea>
+                    
+                    <!-- Enhancement Controls -->
+                    <div class="mt-6 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-sm">Enhancement Settings</h4>
+                            <button class="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                                <i class="fas fa-cog mr-1"></i>
+                                Advanced
+                            </button>
+                        </div>
+                        
+                        <!-- Quick Style Presets -->
+                        <div class="grid grid-cols-3 gap-2">
+                            <button class="bg-muted hover:bg-muted/80 border border-border rounded-lg px-3 py-2 text-xs font-medium transition-colors">
+                                <i class="fas fa-feather mr-1"></i>
+                                Subtle
+                            </button>
+                            <button class="bg-primary text-primary-foreground border border-primary rounded-lg px-3 py-2 text-xs font-medium">
+                                <i class="fas fa-balance-scale mr-1"></i>
+                                Balanced
+                            </button>
+                            <button class="bg-muted hover:bg-muted/80 border border-border rounded-lg px-3 py-2 text-xs font-medium transition-colors">
+                                <i class="fas fa-fire mr-1"></i>
+                                Dramatic
+                            </button>
+                        </div>
+
+                        <!-- Sliders (collapsed by default) -->
+                        <div class="hidden space-y-3 pt-2 border-t border-border" id="advancedControls">
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-xs">
+                                    <span>Detail Level</span>
+                                    <span class="text-muted-foreground">50%</span>
+                                </div>
+                                <div class="w-full bg-muted rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 50%"></div>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-xs">
+                                    <span>Creativity</span>
+                                    <span class="text-muted-foreground">60%</span>
+                                </div>
+                                <div class="w-full bg-muted rounded-full h-2">
+                                    <div class="bg-secondary h-2 rounded-full" style="width: 60%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Action Button -->
+                    <button class="w-full mt-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium py-3 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl">
+                        <i class="fas fa-magic mr-2"></i>
+                        Enhance Pose
+                    </button>
+                </div>
+
+                <!-- Loading State (hidden by default) -->
+                <div class="hidden bg-card border border-border rounded-xl p-8 shadow-lg text-center" id="loadingState">
+                    <div class="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <h3 class="font-medium mb-2">Enhancing Your Pose</h3>
+                    <p class="text-sm text-muted-foreground">
+                        Our AI is crafting a richer version of your pose...
+                    </p>
+                    <div class="mt-4 bg-muted/50 rounded-lg p-3">
+                        <div class="text-xs text-muted-foreground mb-2">Processing steps:</div>
+                        <div class="space-y-1 text-xs">
+                            <div class="flex items-center text-accent">
+                                <i class="fas fa-check mr-2"></i>
+                                Analyzing character context
+                            </div>
+                            <div class="flex items-center text-primary">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>
+                                Enhancing narrative details
+                            </div>
+                            <div class="flex items-center text-muted-foreground">
+                                <i class="fas fa-clock mr-2"></i>
+                                Applying style preferences
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Output & History -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- Enhanced Output Card -->
+                <div class="bg-card border border-border rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-sparkles text-accent mr-3 text-lg"></i>
+                            <h3 class="text-lg font-semibold">Enhanced Pose</h3>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button class="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors">
+                                <i class="fas fa-copy text-xs"></i>
+                            </button>
+                            <button class="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors">
+                                <i class="fas fa-download text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Enhanced Output -->
+                    <div class="bg-gradient-to-br from-accent/5 to-secondary/5 border border-accent/20 rounded-lg p-4 min-h-[200px]">
+                        <div class="prose prose-sm prose-invert max-w-none">
+                            <p class="text-sm leading-relaxed">
+                                Aria moves with the fluid grace of her elven heritage, each step calculated and silent as she navigates through the ancient forest. Her keen emerald eyes scan the shadows between the towering oaks, while her fingers maintain a steady grip on her longbow's polished yew. The moonlight filters through the canopy above, casting ethereal patterns across her leather armor as she remains poised and ready for whatever dangers might emerge from the darkness ahead.
+                            </p>
+                        </div>
+                        
+                        <!-- Quality Indicators -->
+                        <div class="flex items-center justify-between mt-4 pt-3 border-t border-accent/20">
+                            <div class="flex items-center space-x-4 text-xs">
+                                <div class="flex items-center text-accent">
+                                    <i class="fas fa-check-circle mr-1"></i>
+                                    Character-consistent
+                                </div>
+                                <div class="flex items-center text-secondary">
+                                    <i class="fas fa-palette mr-1"></i>
+                                    Rich details
+                                </div>
+                            </div>
+                            <div class="text-xs text-muted-foreground">
+                                v1.0 • Just now
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Copy Options -->
+                    <div class="mt-4 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm font-medium">Copy Format</label>
+                            <select class="bg-input border border-border rounded px-2 py-1 text-xs">
+                                <option>Standard</option>
+                                <option>MUSH (%r)</option>
+                                <option>MUX (%r)</option>
+                                <option>MOO (%n)</option>
+                            </select>
+                        </div>
+                        <button class="w-full bg-muted hover:bg-muted/80 text-foreground py-2 px-3 rounded-lg text-sm font-medium transition-colors">
+                            <i class="fas fa-clipboard mr-2"></i>
+                            Copy to Clipboard
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Version History Card -->
+                <div class="bg-card border border-border rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-history text-muted-foreground mr-3"></i>
+                            <h3 class="font-semibold">Version History</h3>
+                        </div>
+                        <span class="text-xs bg-muted px-2 py-1 rounded-full">3 versions</span>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <!-- Current Version -->
+                        <div class="bg-primary/10 border border-primary/20 rounded-lg p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center">
+                                    <div class="w-2 h-2 bg-primary rounded-full mr-2"></div>
+                                    <span class="text-sm font-medium">Current</span>
+                                </div>
+                                <span class="text-xs text-muted-foreground">Just now</span>
+                            </div>
+                            <p class="text-xs text-muted-foreground line-clamp-2">
+                                Enhanced with rich details and character consistency...
+                            </p>
+                        </div>
+
+                        <!-- Previous Versions -->
+                        <div class="bg-muted/30 border border-border/50 rounded-lg p-3 opacity-75">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center">
+                                    <div class="w-2 h-2 bg-muted-foreground rounded-full mr-2"></div>
+                                    <span class="text-sm">Version 2</span>
+                                </div>
+                                <span class="text-xs text-muted-foreground">5 min ago</span>
+                            </div>
+                            <p class="text-xs text-muted-foreground line-clamp-2">
+                                More dramatic tone with environmental details...
+                            </p>
+                        </div>
+
+                        <div class="bg-muted/30 border border-border/50 rounded-lg p-3 opacity-75">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center">
+                                    <div class="w-2 h-2 bg-muted-foreground rounded-full mr-2"></div>
+                                    <span class="text-sm">Original</span>
+                                </div>
+                                <span class="text-xs text-muted-foreground">10 min ago</span>
+                            </div>
+                            <p class="text-xs text-muted-foreground line-clamp-2">
+                                Aria moves silently through the forest...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Refinement Card -->
+                <div class="bg-card border border-border rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-wand-magic-sparkles text-secondary mr-3"></i>
+                        <h3 class="font-semibold">Refine Further</h3>
+                    </div>
+                    
+                    <textarea 
+                        placeholder="Suggest improvements or changes..."
+                        class="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm h-20 resize-none focus:ring-2 focus:ring-secondary focus:border-transparent mb-3"
+                    ></textarea>
+                    
+                    <button class="w-full bg-secondary hover:bg-secondary/80 text-secondary-foreground py-2 px-3 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-magic mr-2"></i>
+                        Refine Pose
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="mt-12 bg-gradient-to-r from-muted/50 to-muted/30 border border-border rounded-xl p-8">
+            <div class="max-w-4xl mx-auto">
+                <div class="text-center mb-8">
+                    <h3 class="text-2xl font-bold mb-2">How Pose Enhancement Works</h3>
+                    <p class="text-muted-foreground">Transform simple poses into rich, immersive narratives</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-user-plus text-primary"></i>
+                        </div>
+                        <h4 class="font-semibold mb-2">1. Select Character</h4>
+                        <p class="text-sm text-muted-foreground">Choose from your saved character profiles</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-edit text-accent"></i>
+                        </div>
+                        <h4 class="font-semibold mb-2">2. Enter Pose</h4>
+                        <p class="text-sm text-muted-foreground">Write your basic pose or action</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-sliders-h text-secondary"></i>
+                        </div>
+                        <h4 class="font-semibold mb-2">3. Customize Style</h4>
+                        <p class="text-sm text-muted-foreground">Adjust enhancement settings to your preference</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-sparkles text-primary"></i>
+                        </div>
+                        <h4 class="font-semibold mb-2">4. Get Enhanced</h4>
+                        <p class="text-sm text-muted-foreground">Receive a rich, detailed version of your pose</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateCharCount(textarea) {
+            const count = textarea.value.length;
+            document.getElementById('charCount').textContent = count;
+        }
+        
+        // Initialize character count
+        document.addEventListener('DOMContentLoaded', function() {
+            const textarea = document.querySelector('textarea[oninput]');
+            updateCharCount(textarea);
+        });
+    </script>
+</body>
+</html>

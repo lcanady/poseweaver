@@ -68,9 +68,11 @@ def create_app(config_name='development'):
     from app.api.scenes import scenes_bp
     from app.api.character_mgmt import character_mgmt_bp
     from app.api.uploads import uploads_bp, ensure_upload_dir
-    from app.api.continuity import continuity_bp
+
     from app.api.character_plot_tracking import character_plot_bp
     from app.api.search_summary import search_summary_bp
+    from app.api.purchase import purchase_bp
+    from app.api.description import description_bp
     
     app.register_blueprint(characters_bp, url_prefix='/api/characters')
     app.register_blueprint(context_bp, url_prefix='/api/context')
@@ -82,9 +84,11 @@ def create_app(config_name='development'):
     app.register_blueprint(scenes_bp, url_prefix='/api/scenes')
     app.register_blueprint(character_mgmt_bp, url_prefix='/api/characters/mgmt')
     app.register_blueprint(uploads_bp, url_prefix='/api/uploads')
-    app.register_blueprint(continuity_bp, url_prefix='/api/continuity')
+
     app.register_blueprint(character_plot_bp, url_prefix='/api/character-plot')
     app.register_blueprint(search_summary_bp, url_prefix='/api/search-summary')
+    app.register_blueprint(purchase_bp, url_prefix='/api/purchase')
+    app.register_blueprint(description_bp, url_prefix='/api/description')
     
     # Ensure upload directories exist at startup
     ensure_upload_dir()

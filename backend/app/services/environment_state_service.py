@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any, Tuple
 import logging
 import json
-from ..models.scene_memory import EnvironmentState, Pose, ContinuityFlag, FlagType, Severity
+from ..models.scene_memory import EnvironmentState, Pose
 from .venice_client import VeniceClient, VeniceAPIError
 
 logger = logging.getLogger(__name__)
@@ -520,57 +520,6 @@ Check for environmental consistency."""
             details="Basic keyword-based consistency check performed"
         )
     
-    def create_consistency_flags(
-        self,
-        pose: Pose,
-        consistency_check: EnvironmentConsistencyCheck
-    ) -> List[ContinuityFlag]:
-        """
-        Create continuity flags for environmental inconsistencies.
-        
-        Args:
-            pose: Pose that has consistency issues
-            consistency_check: Results of consistency checking
-            
-        Returns:
-            List of created ContinuityFlag instances
-            
-        Requirements: 3.3 - Flag environmental contradictions for user review
-        """
-        if consistency_check.is_consistent:
-            return []
-        
-        flags = []
-        
-        for conflict in consistency_check.conflicts:
-            # Map conflict severity to flag severity
-            severity_map = {
-                "low": Severity.LOW,
-                "medium": Severity.MEDIUM,
-                "high": Severity.HIGH
-            }
-            
-            flag_severity = severity_map.get(conflict.get("severity", "medium"), Severity.MEDIUM)
-            
-            # Create the flag
-            flag = ContinuityFlag(
-                pose_id=pose.id,
-                flag_type=FlagType.ENVIRONMENT_CONTRADICTION,
-                description=f"Environmental inconsistency: {conflict['description']}. "
-                           f"Established: {conflict['established']}, "
-                           f"Conflicting: {conflict['conflicting']}",
-                severity=flag_severity,
-                confidence_score=consistency_check.confidence_score
-            )
-            
-            # Save the flag
-            flag_id = flag.save()
-            flags.append(flag)
-            
-            self.logger.info(f"Created environmental consistency flag {flag_id} for pose {pose.id}")
-        
-        return flags
-    
     def get_scene_environments(self, scene_id: str) -> List[EnvironmentState]:
         """
         Get all environment states for a scene.
@@ -604,7 +553,7 @@ Check for environmental consistency."""
         self,
         pose: Pose,
         scene_id: str
-    ) -> Tuple[Optional[EnvironmentState], List[ContinuityFlag]]:
+    ) -> Optional[EnvironmentState]:
         """
         Process a pose for environmental tracking and consistency.
         
@@ -616,7 +565,7 @@ Check for environmental consistency."""
             scene_id: ID of the scene
             
         Returns:
-            Tuple of (updated/created EnvironmentState, list of ContinuityFlags)
+            Updated or created EnvironmentState
             
         Requirements: 3.1, 3.2, 3.3, 3.4, 3.5 - Complete environmental processing workflow
         """
@@ -641,19 +590,16 @@ Check for environmental consistency."""
                 }
             )
             
-            return current_environment, []
+            return current_environment
         
         # Check for environmental consistency
         consistency_check = self.check_environmental_consistency(pose, current_environment)
-        
-        # Create flags for any inconsistencies
-        flags = self.create_consistency_flags(pose, consistency_check)
         
         # Detect and apply environmental changes
         environment_update = self.detect_environment_changes(pose, current_environment)
         
         if environment_update.changes_detected:
             updated_environment = self.update_environment_state(scene_id, environment_update)
-            return updated_environment or current_environment, flags
+            return updated_environment or current_environment
         
-        return current_environment, flags
+        return current_environment

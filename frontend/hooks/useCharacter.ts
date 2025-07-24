@@ -11,6 +11,7 @@ export interface Character {
     personality?: string[];
     skills?: string[];
     goals?: string[];
+    relationships?: string;
     voice_notes?: string;
   };
   created_at?: string;

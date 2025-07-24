@@ -20,9 +20,7 @@ from app.services.data_extraction_service import DataExtractionService
 from app.services.scene_management_service import (
     SceneManagementService, PoseData
 )
-from app.services.continuity_service import (
-    ContinuityService, ContinuityAnalysis
-)
+
 from app.services.character_state_service import CharacterStateService
 from app.services.environment_state_service import EnvironmentStateService
 from app.models.scene_memory import PoseType
@@ -37,18 +35,14 @@ class PoseEnhancement:
     sensory_details: List[str]
     character_voice_elements: List[str]
     narrative_techniques: List[str]
-    # Continuity analysis results (optional)
-    continuity_analysis: Optional[ContinuityAnalysis] = None
-    continuity_flags_count: int = 0
+
     character_state_changes: Optional[List[Dict[str, Any]]] = None
     environment_changes: Optional[List[Dict[str, Any]]] = None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert pose enhancement to dictionary."""
         result = asdict(self)
-        # Convert continuity_analysis to dict if present
-        if self.continuity_analysis:
-            result['continuity_analysis'] = asdict(self.continuity_analysis)
+
         return result
 
 
@@ -62,7 +56,6 @@ class PoseService:
         self.mush_parser = MushParserService(self.data_extraction_service)
         # Initialize continuity services
         self.scene_management_service = SceneManagementService()
-        self.continuity_service = ContinuityService(venice_client)
         self.character_state_service = CharacterStateService(venice_client)
         self.environment_state_service = EnvironmentStateService(venice_client)
     
@@ -1568,120 +1561,9 @@ Please refine the pose according to the user's suggestion while maintaining qual
             "structured_context": structured_context if isinstance(structured_context, dict) else None
         }
     
-    def enhance_pose_with_continuity(
-        self,
-        original_pose: str,
-        scene_id: str,
-        character_name: str,
-        character: Optional[CharacterProfile] = None,
-        context: Optional[PoseContext] = None,
-        enhancement_style: str = "balanced",
-        analyze_continuity: bool = True
-    ) -> PoseEnhancement:
-        """
-        Enhance a pose with integrated continuity analysis.
-        
-        This method combines pose enhancement with continuity checking,
-        providing both enhanced pose content and continuity validation.
-        
-        Args:
-            original_pose: The original pose text to enhance
-            scene_id: ID of the scene for continuity context
-            character_name: Name of the character making the pose
-            character: Optional character profile for voice consistency
-            context: Optional scene context for integration
-            enhancement_style: Style of enhancement (minimal, balanced, elaborate)
-            analyze_continuity: Whether to perform continuity analysis
-            
-        Returns:
-            PoseEnhancement with continuity analysis results
-            
-        Requirements: 6.1, 6.2 - Pose submission with continuity analysis
-        """
-        try:
-            # First perform the basic pose enhancement
-            base_enhancement = self.enhance_pose(
-                original_pose, character, context, enhancement_style
-            )
-            
-            # Create enhanced pose with continuity data
-            enhancement = PoseEnhancement(
-                original_pose=base_enhancement.original_pose,
-                enhanced_pose=base_enhancement.enhanced_pose,
-                enhancement_notes=base_enhancement.enhancement_notes,
-                sensory_details=base_enhancement.sensory_details,
-                character_voice_elements=base_enhancement.character_voice_elements,
-                narrative_techniques=base_enhancement.narrative_techniques
-            )
-            
-            # Add continuity analysis if requested
-            if analyze_continuity and scene_id:
-                continuity_analysis = self._perform_continuity_analysis(
-                    original_pose, scene_id, character_name
-                )
-                
-                if continuity_analysis:
-                    enhancement.continuity_analysis = continuity_analysis
-                    enhancement.continuity_flags_count = len(continuity_analysis.flags)
-                    enhancement.character_state_changes = continuity_analysis.character_state_changes
-                    enhancement.environment_changes = continuity_analysis.environment_changes
-            
-            return enhancement
-            
-        except VeniceAPIError:
-            # Re-raise Venice API errors
-            raise
-        except Exception as e:
-            raise ValueError(f"Error in pose enhancement with continuity: {str(e)}")
+
     
-    def _perform_continuity_analysis(
-        self, 
-        pose_text: str, 
-        scene_id: str, 
-        character_name: str
-    ) -> Optional[ContinuityAnalysis]:
-        """
-        Perform continuity analysis for a pose.
-        
-        Args:
-            pose_text: The pose text to analyze
-            scene_id: ID of the scene
-            character_name: Name of the character
-            
-        Returns:
-            ContinuityAnalysis or None if analysis fails
-        """
-        try:
-            from datetime import datetime
-            from app.models.scene_memory import Pose, PoseType
-            from app.services.continuity_service import SceneContext
-            
-            # Create a temporary Pose object for analysis
-            # Note: This pose is not saved to database during enhancement
-            temp_pose = Pose(
-                scene_id=scene_id,
-                character_name=character_name,
-                content=pose_text,
-                pose_type=PoseType.MIXED,  # Default type for analysis
-                timestamp=datetime.utcnow(),
-                is_ooc=False
-            )
-            
-            # Build scene context for continuity analysis
-            scene_context = self._build_scene_context_for_analysis(scene_id)
-            
-            if scene_context:
-                # Perform continuity analysis
-                return self.continuity_service.analyze_pose_continuity(
-                    temp_pose, scene_context
-                )
-            else:
-                # If we can't build scene context, return a basic analysis
-                return self._create_basic_continuity_analysis(pose_text, character_name)
-                
-        except Exception as e:
-            self.logger.warning(f"Continuity analysis failed: {e}")
-            return result
+
         
     def enhance_pose_directly(self, character_name, character_context, scene_context, pose_input, enhancement_style="natural"):
         """
@@ -1938,131 +1820,6 @@ Please refine the pose according to the user's suggestion while maintaining qual
             self.logger.warning(f"Failed to build scene context: {e}")
             return None
     
-    def _create_basic_continuity_analysis(
-        self, 
-        pose_text: str, 
-        character_name: str
-    ) -> ContinuityAnalysis:
-        """
-        Create a basic continuity analysis when full analysis fails.
-        
-        Args:
-            pose_text: The pose text
-            character_name: Name of the character
-            
-        Returns:
-            Basic ContinuityAnalysis instance
-        """
-        return ContinuityAnalysis(
-            pose_id="temp_analysis",
-            character_consistency_score=0.8,  # Neutral score
-            environment_consistency_score=0.8,
-            plot_consistency_score=0.8,
-            timeline_consistency_score=0.8,
-            overall_confidence=0.5,  # Low confidence for basic analysis
-            flags=[],
-            extracted_plot_elements=[],
-            character_state_changes=[],
-            environment_changes=[],
-            analysis_notes="Basic analysis - full scene context unavailable"
-        )
+
     
-    def enhance_pose_with_pre_check(
-        self,
-        original_pose: str,
-        scene_id: str,
-        character_name: str,
-        character: Optional[CharacterProfile] = None,
-        context: Optional[PoseContext] = None,
-        enhancement_style: str = "balanced",
-        continuity_threshold: float = 0.6
-    ) -> Tuple[PoseEnhancement, List[str]]:
-        """
-        Enhance a pose with pre-enhancement continuity checking.
-        
-        This method performs continuity analysis BEFORE enhancement and
-        provides warnings if potential issues are detected. This allows
-        users to modify their pose before enhancement if needed.
-        
-        Args:
-            original_pose: The original pose text to enhance
-            scene_id: ID of the scene for continuity context
-            character_name: Name of the character making the pose
-            character: Optional character profile for voice consistency
-            context: Optional scene context for integration
-            enhancement_style: Style of enhancement (minimal, balanced, elaborate)
-            continuity_threshold: Minimum score threshold for warnings
-            
-        Returns:
-            Tuple of (PoseEnhancement, List of warning messages)
-            
-        Requirements: 6.1, 6.2 - Pre-enhancement continuity checking
-        """
-        warnings = []
-        
-        try:
-            # Step 1: Perform pre-enhancement continuity check
-            pre_analysis = self._perform_continuity_analysis(
-                original_pose, scene_id, character_name
-            )
-            
-            # Step 2: Check for continuity issues and generate warnings
-            if pre_analysis:
-                if pre_analysis.character_consistency_score < continuity_threshold:
-                    warnings.append(
-                        f"Character consistency concern (score: {pre_analysis.character_consistency_score:.2f}). "
-                        "This pose may not match established character behavior."
-                    )
-                
-                if pre_analysis.environment_consistency_score < continuity_threshold:
-                    warnings.append(
-                        f"Environment consistency concern (score: {pre_analysis.environment_consistency_score:.2f}). "
-                        "This pose may contradict established environmental details."
-                    )
-                
-                if pre_analysis.plot_consistency_score < continuity_threshold:
-                    warnings.append(
-                        f"Plot consistency concern (score: {pre_analysis.plot_consistency_score:.2f}). "
-                        "This pose may conflict with ongoing story elements."
-                    )
-                
-                if pre_analysis.timeline_consistency_score < continuity_threshold:
-                    warnings.append(
-                        f"Timeline consistency concern (score: {pre_analysis.timeline_consistency_score:.2f}). "
-                        "This pose may have timeline inconsistencies."
-                    )
-                
-                # Add specific flag warnings
-                for flag in pre_analysis.flags:
-                    warnings.append(f"{flag.flag_type.value}: {flag.description}")
-            
-            # Step 3: Proceed with enhancement (regardless of warnings)
-            enhancement = self.enhance_pose_with_continuity(
-                original_pose=original_pose,
-                scene_id=scene_id,
-                character_name=character_name,
-                character=character,
-                context=context,
-                enhancement_style=enhancement_style,
-                analyze_continuity=True
-            )
-            
-            return enhancement, warnings
-            
-        except Exception as e:
-            # If continuity checking fails, proceed with basic enhancement
-            self.logger.warning(f"Pre-check continuity analysis failed: {e}")
-            basic_enhancement = self.enhance_pose(original_pose, character, context, enhancement_style)
-            
-            # Convert to PoseEnhancement with continuity fields
-            enhanced = PoseEnhancement(
-                original_pose=basic_enhancement.original_pose,
-                enhanced_pose=basic_enhancement.enhanced_pose,
-                enhancement_notes=basic_enhancement.enhancement_notes,
-                sensory_details=basic_enhancement.sensory_details,
-                character_voice_elements=basic_enhancement.character_voice_elements,
-                narrative_techniques=basic_enhancement.narrative_techniques
-            )
-            
-            warnings.append("Continuity checking unavailable - proceeding with basic enhancement")
-            return enhanced, warnings 
+ 

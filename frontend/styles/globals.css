@@ -88,7 +88,89 @@ body {
   * {
     @apply border-border;
   }
+
+  .dark {
+    @apply bg-background text-foreground;
+  }
+  
   body {
     @apply bg-background text-foreground;
   }
+}
+
+
+/* Subscription Modal Text Overrides - Target Dialog Components Specifically */
+[data-radix-dialog-content] .subscription-title,
+.subscription-title {
+  color: #1f2937 !important;
+  font-weight: 600 !important;
+}
+
+[data-radix-dialog-content] .subscription-price,
+.subscription-price {
+  color: #1f2937 !important;
+  font-weight: 700 !important;
+}
+
+[data-radix-dialog-content] .subscription-price-period,
+.subscription-price-period {
+  color: #1f2937 !important;
+  font-weight: 500 !important;
+}
+
+[data-radix-dialog-content] .subscription-feature,
+.subscription-feature {
+  color: #1f2937 !important;
+  font-weight: 500 !important;
+}
+
+[data-radix-dialog-content] .subscription-description,
+.subscription-description {
+  color: #374151 !important;
+  font-weight: 500 !important;
+}
+
+[data-radix-dialog-content] .dialog-title-dark,
+.dialog-title-dark {
+  color: #111827 !important;
+  font-weight: 600 !important;
+}
+
+[data-radix-dialog-content] .dialog-description-dark,
+.dialog-description-dark {
+  color: #374151 !important;
+}
+
+/* Override Radix Dialog's muted-foreground specifically */
+[data-radix-dialog-content] [data-radix-dialog-description].dialog-description-dark {
+  color: #374151 !important;
+}
+
+/* Force override any text-muted-foreground in dialog */
+[data-radix-dialog-content] .text-muted-foreground.dialog-description-dark {
+  color: #374151 !important;
+}
+
+/* Additional overrides for Card components within Dialog */
+[data-radix-dialog-content] .bg-blue-50 .subscription-title,
+[data-radix-dialog-content] .bg-blue-50 .subscription-price,
+[data-radix-dialog-content] .bg-blue-50 .subscription-price-period,
+[data-radix-dialog-content] .bg-blue-50 .subscription-feature {
+  color: #1f2937 !important;
+}
+
+[data-radix-dialog-content] .bg-gradient-to-r .subscription-title,
+[data-radix-dialog-content] .bg-gradient-to-r .subscription-price,
+[data-radix-dialog-content] .bg-gradient-to-r .subscription-price-period,
+[data-radix-dialog-content] .bg-gradient-to-r .subscription-feature {
+  color: #1f2937 !important;
+}
+
+/* Nuclear option - force all text in subscription cards to be dark */
+[data-radix-dialog-content] .border-blue-200 * {
+  color: #1f2937 !important;
+}
+
+[data-radix-dialog-content] .border-purple-200 * {
+  color: #1f2937 !important;
 }

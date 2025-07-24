@@ -34,7 +34,7 @@ def init_extensions(app):
             from app.models.scene import Scene
             from app.models.scene_memory import (
                 SceneMemory, Pose, CharacterState, 
-                EnvironmentState, PlotThread, ContinuityFlag
+                EnvironmentState, PlotThread
             )
             
             # Initialize indexes for all models
@@ -53,7 +53,7 @@ def init_extensions(app):
                 CharacterState.initialize_indexes()
                 EnvironmentState.initialize_indexes()
                 PlotThread.initialize_indexes()
-                ContinuityFlag.initialize_indexes()
+
             
             app.logger.info("MongoDB service and models initialized successfully")
         except Exception as e:

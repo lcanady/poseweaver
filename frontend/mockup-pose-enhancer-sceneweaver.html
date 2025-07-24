@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pose Enhancer - Scene Weaver Style</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: 'hsl(257, 100%, 4%)',
+                        foreground: 'hsl(210, 40%, 98%)',
+                        card: 'hsl(257, 20%, 13%)',
+                        'card-foreground': 'hsl(210, 40%, 96%)',
+                        primary: 'hsl(43, 96%, 56%)',
+                        'primary-foreground': 'hsl(257, 100%, 4%)',
+                        secondary: 'hsl(271, 91%, 65%)',
+                        'secondary-foreground': 'hsl(210, 40%, 98%)',
+                        muted: 'hsl(257, 10%, 25%)',
+                        'muted-foreground': 'hsl(240, 5%, 65%)',
+                        accent: 'hsl(152, 69%, 47%)',
+                        'accent-foreground': 'hsl(210, 40%, 98%)',
+                        border: 'hsl(257, 20%, 20%)',
+                        input: 'hsl(257, 20%, 20%)',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-background text-foreground min-h-screen">
+    <!-- Main Container - Scene Weaver Style -->
+    <div class="flex-1 p-4 md:p-8">
+        <div class="mx-auto grid w-full max-w-7xl items-start gap-8 xl:grid-cols-[1fr_350px]">
+            
+            <!-- Main Content Area (Left) -->
+            <div class="grid auto-rows-max items-start gap-8">
+                
+                <!-- Character Selection Card -->
+                <div class="bg-card border border-border rounded-lg">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-lg font-semibold">Character Selection</h3>
+                                <p class="text-sm text-muted-foreground">Choose your character for pose enhancement</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="space-y-2">
+                                <label class="text-sm font-medium">Character</label>
+                                <select class="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option>Select Character...</option>
+                                    <option selected>Aria Shadowmere</option>
+                                    <option>Marcus Ironheart</option>
+                                    <option>Luna Whisperwind</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Character Preview -->
+                            <div class="bg-muted/50 rounded-lg p-4 border border-border/50">
+                                <div class="flex items-center mb-3">
+                                    <div class="w-10 h-10 bg-secondary rounded-full flex items-center justify-center mr-3">
+                                        <i class="fas fa-user text-secondary-foreground"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium">Aria Shadowmere</div>
+                                        <div class="text-sm text-muted-foreground">Elven Ranger</div>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-muted-foreground">
+                                    A skilled elven ranger with keen senses and a mysterious past. Known for her silent movement through forests and deadly accuracy with a bow.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scene Context Card -->
+                <div class="bg-card border border-border rounded-lg">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-lg font-semibold">Scene Context</h3>
+                                <p class="text-sm text-muted-foreground">Provide context to enhance pose accuracy</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium">Scene Description</label>
+                            <textarea 
+                                placeholder="Paste scene dump or describe the current situation..."
+                                class="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm h-32 resize-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                            >The ancient forest clearing is bathed in moonlight. Strange whispers echo from the shadows as the party approaches the mysterious stone circle. The air is thick with magical energy, and ancient runes glow faintly on weathered stones.</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pose Input Card -->
+                <div class="bg-card border border-border rounded-lg">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-lg font-semibold">Your Pose</h3>
+                                <p class="text-sm text-muted-foreground">Enter the pose you want to enhance</p>
+                            </div>
+                            <div class="text-sm text-muted-foreground">
+                                <span id="charCount">42</span>/2000 characters
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <textarea 
+                                placeholder="Enter the pose you want to enhance..."
+                                class="w-full bg-input border border-border rounded-lg px-4 py-3 text-sm h-40 resize-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                oninput="updateCharCount(this)"
+                            >Aria moves silently through the forest, her bow ready.</textarea>
+                            
+                            <!-- Enhancement Controls -->
+                            <div class="space-y-6">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-medium text-sm">Enhancement Settings</h4>
+                                    <button class="text-xs text-muted-foreground hover:text-foreground transition-colors" onclick="toggleAdvancedSettings()">
+                                        <i class="fas fa-cog mr-1"></i>
+                                        <span id="settingsToggleText">Show Advanced</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Style Presets -->
+                                <div>
+                                    <label class="text-sm font-medium mb-2 block">Enhancement Style</label>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <button class="bg-muted hover:bg-muted/80 border border-border rounded-lg px-3 py-2 text-xs font-medium transition-colors" onclick="selectStyle(this, 'subtle')">
+                                            Subtle
+                                        </button>
+                                        <button class="bg-primary text-primary-foreground border border-primary rounded-lg px-3 py-2 text-xs font-medium" onclick="selectStyle(this, 'balanced')">
+                                            Balanced
+                                        </button>
+                                        <button class="bg-muted hover:bg-muted/80 border border-border rounded-lg px-3 py-2 text-xs font-medium transition-colors" onclick="selectStyle(this, 'dramatic')">
+                                            Dramatic
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Advanced Settings (Initially Hidden) -->
+                                <div id="advancedSettings" class="hidden space-y-4 pt-4 border-t border-border">
+                                    
+                                    <!-- Sliders Section -->
+                                    <div class="space-y-4">
+                                        <h5 class="text-sm font-medium text-muted-foreground">Enhancement Levels</h5>
+                                        
+                                        <!-- Detail Level Slider -->
+                                        <div class="space-y-2">
+                                            <div class="flex justify-between text-xs">
+                                                <span>Detail Level</span>
+                                                <span class="text-muted-foreground" id="detailValue">50%</span>
+                                            </div>
+                                            <div class="relative">
+                                                <input type="range" min="0" max="100" value="50" class="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider" id="detailSlider" oninput="updateSlider('detail', this.value)">
+                                                <div class="absolute top-0 left-0 h-2 bg-primary rounded-lg transition-all duration-200" style="width: 50%" id="detailFill"></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Creativity Level Slider -->
+                                        <div class="space-y-2">
+                                            <div class="flex justify-between text-xs">
+                                                <span>Creativity</span>
+                                                <span class="text-muted-foreground" id="creativityValue">60%</span>
+                                            </div>
+                                            <div class="relative">
+                                                <input type="range" min="0" max="100" value="60" class="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider" id="creativitySlider" oninput="updateSlider('creativity', this.value)">
+                                                <div class="absolute top-0 left-0 h-2 bg-secondary rounded-lg transition-all duration-200" style="width: 60%" id="creativityFill"></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Sensory Focus Slider -->
+                                        <div class="space-y-2">
+                                            <div class="flex justify-between text-xs">
+                                                <span>Sensory Details</span>
+                                                <span class="text-muted-foreground" id="sensoryValue">40%</span>
+                                            </div>
+                                            <div class="relative">
+                                                <input type="range" min="0" max="100" value="40" class="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider" id="sensorySlider" oninput="updateSlider('sensory', this.value)">
+                                                <div class="absolute top-0 left-0 h-2 bg-accent rounded-lg transition-all duration-200" style="width: 40%" id="sensoryFill"></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Emotional Depth Slider -->
+                                        <div class="space-y-2">
+                                            <div class="flex justify-between text-xs">
+                                                <span>Emotional Depth</span>
+                                                <span class="text-muted-foreground" id="emotionalValue">45%</span>
+                                            </div>
+                                            <div class="relative">
+                                                <input type="range" min="0" max="100" value="45" class="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider" id="emotionalSlider" oninput="updateSlider('emotional', this.value)">
+                                                <div class="absolute top-0 left-0 h-2 bg-gradient-to-r from-primary to-secondary rounded-lg transition-all duration-200" style="width: 45%" id="emotionalFill"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Switches Section -->
+                                    <div class="space-y-4">
+                                        <h5 class="text-sm font-medium text-muted-foreground">Enhancement Options</h5>
+                                        
+                                        <!-- Include Internal Thoughts Switch -->
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="text-sm font-medium">Internal Thoughts</label>
+                                                <p class="text-xs text-muted-foreground">Add character's inner dialogue</p>
+                                            </div>
+                                            <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                                                <input type="checkbox" id="internalThoughts" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-200" onchange="toggleSwitch('internalThoughts')">
+                                                <label for="internalThoughts" class="toggle-label block overflow-hidden h-6 rounded-full bg-muted cursor-pointer transition-all duration-200"></label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Emphasize Actions Switch -->
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="text-sm font-medium">Emphasize Actions</label>
+                                                <p class="text-xs text-muted-foreground">Focus on physical movements</p>
+                                            </div>
+                                            <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                                                <input type="checkbox" id="emphasizeActions" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-200" onchange="toggleSwitch('emphasizeActions')">
+                                                <label for="emphasizeActions" class="toggle-label block overflow-hidden h-6 rounded-full bg-primary cursor-pointer transition-all duration-200"></label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Preserve Original Tone Switch -->
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="text-sm font-medium">Preserve Tone</label>
+                                                <p class="text-xs text-muted-foreground">Keep original writing style</p>
+                                            </div>
+                                            <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                                                <input type="checkbox" id="preserveTone" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-200" onchange="toggleSwitch('preserveTone')">
+                                                <label for="preserveTone" class="toggle-label block overflow-hidden h-6 rounded-full bg-primary cursor-pointer transition-all duration-200"></label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Add Environmental Details Switch -->
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="text-sm font-medium">Environmental Details</label>
+                                                <p class="text-xs text-muted-foreground">Include scene atmosphere</p>
+                                            </div>
+                                            <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                                                <input type="checkbox" id="environmentalDetails" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-200" onchange="toggleSwitch('environmentalDetails')">
+                                                <label for="environmentalDetails" class="toggle-label block overflow-hidden h-6 rounded-full bg-muted cursor-pointer transition-all duration-200"></label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Character Control Validation Switch -->
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="text-sm font-medium">Character Control Check</label>
+                                                <p class="text-xs text-muted-foreground">Prevent controlling other characters</p>
+                                            </div>
+                                            <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                                                <input type="checkbox" id="characterControl" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-200" onchange="toggleSwitch('characterControl')">
+                                                <label for="characterControl" class="toggle-label block overflow-hidden h-6 rounded-full bg-primary cursor-pointer transition-all duration-200"></label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Narrative Tone Selector -->
+                                    <div class="space-y-2">
+                                        <label class="text-sm font-medium">Narrative Tone</label>
+                                        <select class="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                                            <option value="neutral" selected>Neutral</option>
+                                            <option value="dramatic">Dramatic</option>
+                                            <option value="mysterious">Mysterious</option>
+                                            <option value="heroic">Heroic</option>
+                                            <option value="dark">Dark</option>
+                                            <option value="whimsical">Whimsical</option>
+                                            <option value="intense">Intense</option>
+                                            <option value="romantic">Romantic</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Main Action Button -->
+                            <button class="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-4 rounded-lg transition-colors">
+                                <i class="fas fa-magic mr-2"></i>
+                                Enhance Pose
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Output Card -->
+                <div class="bg-card border border-border rounded-lg">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-lg font-semibold">Enhanced Pose</h3>
+                                <p class="text-sm text-muted-foreground">Your AI-enhanced result, ready to copy</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button class="p-2 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors">
+                                    <i class="fas fa-copy text-sm"></i>
+                                </button>
+                                <button class="p-2 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors">
+                                    <i class="fas fa-cog text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-muted/50 rounded-lg p-4 min-h-[200px]">
+                            <pre class="font-serif text-sm leading-relaxed whitespace-pre-wrap text-foreground">Aria moves with the fluid grace of her elven heritage, each step calculated and silent as she navigates through the ancient forest. Her keen emerald eyes scan the shadows between the towering oaks, while her fingers maintain a steady grip on her longbow's polished yew. 
+
+The moonlight filters through the canopy above, casting ethereal patterns across her leather armor as she remains poised and ready for whatever dangers might emerge from the darkness ahead. Her pointed ears twitch slightly at the faint whispers echoing from the mysterious stone circle, every sense heightened and alert.</pre>
+                        </div>
+
+                        <!-- Copy Options -->
+                        <div class="mt-4 flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <label class="text-sm font-medium">Format:</label>
+                                <select class="bg-input border border-border rounded px-2 py-1 text-xs">
+                                    <option>Standard</option>
+                                    <option>MUSH (%r)</option>
+                                    <option>MUX (%r)</option>
+                                    <option>MOO (%n)</option>
+                                </select>
+                            </div>
+                            <button class="bg-muted hover:bg-muted/80 text-foreground py-2 px-3 rounded-lg text-sm font-medium transition-colors">
+                                <i class="fas fa-clipboard mr-2"></i>
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar (Right) - Scene Weaver Style -->
+            <div class="hidden xl:grid auto-rows-max items-start gap-8 sticky top-4 h-fit">
+                
+                <!-- Enhancement Analysis -->
+                <div class="bg-card border border-border rounded-lg">
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold">Enhancement Analysis</h3>
+                            <div class="text-xs bg-accent/20 text-accent px-2 py-1 rounded-full">Active</div>
+                        </div>
+                        
+                        <!-- Character Consistency -->
+                        <div class="space-y-3 text-sm">
+                            <div>
+                                <h4 class="font-medium text-muted-foreground mb-1">Character Traits</h4>
+                                <div class="flex flex-wrap gap-1">
+                                    <span class="text-xs bg-muted px-2 py-1 rounded">Silent movement</span>
+                                    <span class="text-xs bg-muted px-2 py-1 rounded">Keen senses</span>
+                                    <span class="text-xs bg-muted px-2 py-1 rounded">Bow expertise</span>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-medium text-muted-foreground mb-1">Scene Elements</h4>
+                                <div class="space-y-1 text-xs">
+                                    <div class="text-foreground">• Ancient forest setting</div>
+                                    <div class="text-foreground">• Moonlight atmosphere</div>
+                                    <div class="text-foreground">• Mysterious stone circle</div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-medium text-muted-foreground mb-1">Enhancement Quality</h4>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs">Character Consistency</span>
+                                    <span class="text-xs text-accent">Excellent</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs">Scene Integration</span>
+                                    <span class="text-xs text-accent">Very Good</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs">Narrative Flow</span>
+                                    <span class="text-xs text-accent">Excellent</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Version History -->
+                <div class="bg-card border border-border rounded-lg">
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold">Version History</h3>
+                            <span class="text-xs bg-muted px-2 py-1 rounded-full">3 versions</span>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <!-- Current Version -->
+                            <div class="bg-primary/10 border border-primary/20 rounded-lg p-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center">
+                                        <div class="w-2 h-2 bg-primary rounded-full mr-2"></div>
+                                        <span class="text-sm font-medium">Current</span>
+                                    </div>
+                                    <span class="text-xs text-muted-foreground">Just now</span>
+                                </div>
+                                <p class="text-xs text-muted-foreground line-clamp-2">
+                                    Enhanced with rich details and character consistency...
+                                </p>
+                            </div>
+
+                            <!-- Previous Versions -->
+                            <div class="bg-muted/30 border border-border/50 rounded-lg p-3 opacity-75 cursor-pointer hover:opacity-100 transition-opacity">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center">
+                                        <div class="w-2 h-2 bg-muted-foreground rounded-full mr-2"></div>
+                                        <span class="text-sm">Version 2</span>
+                                    </div>
+                                    <span class="text-xs text-muted-foreground">5 min ago</span>
+                                </div>
+                                <p class="text-xs text-muted-foreground line-clamp-2">
+                                    More dramatic tone with environmental details...
+                                </p>
+                            </div>
+
+                            <div class="bg-muted/30 border border-border/50 rounded-lg p-3 opacity-75 cursor-pointer hover:opacity-100 transition-opacity">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center">
+                                        <div class="w-2 h-2 bg-muted-foreground rounded-full mr-2"></div>
+                                        <span class="text-sm">Original</span>
+                                    </div>
+                                    <span class="text-xs text-muted-foreground">10 min ago</span>
+                                </div>
+                                <p class="text-xs text-muted-foreground line-clamp-2">
+                                    Aria moves silently through the forest...
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Refinement -->
+                <div class="bg-card border border-border rounded-lg">
+                    <div class="p-4">
+                        <div class="flex items-center mb-4">
+                            <h3 class="font-semibold">Refine Further</h3>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <textarea 
+                                placeholder="Suggest improvements or changes..."
+                                class="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm h-20 resize-none focus:ring-2 focus:ring-secondary focus:border-transparent"
+                            ></textarea>
+                            
+                            <button class="w-full bg-secondary hover:bg-secondary/80 text-secondary-foreground py-2 px-3 rounded-lg text-sm font-medium transition-colors">
+                                <i class="fas fa-magic mr-2"></i>
+                                Refine Pose
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Custom slider styles */
+        .slider {
+            -webkit-appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: hsl(210, 40%, 98%);
+            cursor: pointer;
+            border: 2px solid hsl(43, 96%, 56%);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .slider::-moz-range-thumb {
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: hsl(210, 40%, 98%);
+            cursor: pointer;
+            border: 2px solid hsl(43, 96%, 56%);
+        }
+        
+        /* Custom toggle switch styles */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: hsl(43, 96%, 56%);
+        }
+        
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: hsl(43, 96%, 56%);
+        }
+    </style>
+    
+    <script>
+        let advancedSettingsVisible = false;
+        
+        function updateCharCount(textarea) {
+            const count = textarea.value.length;
+            document.getElementById('charCount').textContent = count;
+        }
+        
+        function toggleAdvancedSettings() {
+            const settings = document.getElementById('advancedSettings');
+            const toggleText = document.getElementById('settingsToggleText');
+            
+            advancedSettingsVisible = !advancedSettingsVisible;
+            
+            if (advancedSettingsVisible) {
+                settings.classList.remove('hidden');
+                toggleText.textContent = 'Hide Advanced';
+            } else {
+                settings.classList.add('hidden');
+                toggleText.textContent = 'Show Advanced';
+            }
+        }
+        
+        function selectStyle(button, style) {
+            // Remove active state from all buttons
+            const buttons = button.parentElement.querySelectorAll('button');
+            buttons.forEach(btn => {
+                btn.classList.remove('bg-primary', 'text-primary-foreground', 'border-primary');
+                btn.classList.add('bg-muted', 'hover:bg-muted/80', 'border-border');
+            });
+            
+            // Add active state to clicked button
+            button.classList.remove('bg-muted', 'hover:bg-muted/80', 'border-border');
+            button.classList.add('bg-primary', 'text-primary-foreground', 'border-primary');
+            
+            // Update slider values based on style preset
+            switch(style) {
+                case 'subtle':
+                    updateSlider('detail', 30);
+                    updateSlider('creativity', 40);
+                    updateSlider('sensory', 20);
+                    updateSlider('emotional', 25);
+                    break;
+                case 'balanced':
+                    updateSlider('detail', 50);
+                    updateSlider('creativity', 60);
+                    updateSlider('sensory', 40);
+                    updateSlider('emotional', 45);
+                    break;
+                case 'dramatic':
+                    updateSlider('detail', 80);
+                    updateSlider('creativity', 85);
+                    updateSlider('sensory', 70);
+                    updateSlider('emotional', 75);
+                    break;
+            }
+        }
+        
+        function updateSlider(type, value) {
+            const slider = document.getElementById(type + 'Slider');
+            const valueDisplay = document.getElementById(type + 'Value');
+            const fill = document.getElementById(type + 'Fill');
+            
+            if (slider) slider.value = value;
+            if (valueDisplay) valueDisplay.textContent = value + '%';
+            if (fill) fill.style.width = value + '%';
+        }
+        
+        function toggleSwitch(switchId) {
+            const checkbox = document.getElementById(switchId);
+            const label = checkbox.nextElementSibling;
+            
+            if (checkbox.checked) {
+                label.style.backgroundColor = 'hsl(43, 96%, 56%)';
+                checkbox.style.right = '0';
+            } else {
+                label.style.backgroundColor = 'hsl(257, 10%, 25%)';
+                checkbox.style.right = 'auto';
+                checkbox.style.left = '0';
+            }
+        }
+        
+        // Initialize everything when DOM loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const textarea = document.querySelector('textarea[oninput]');
+            updateCharCount(textarea);
+            
+            // Initialize switch states
+            const switches = ['emphasizeActions', 'preserveTone', 'characterControl'];
+            switches.forEach(switchId => {
+                const checkbox = document.getElementById(switchId);
+                if (checkbox && checkbox.checked) {
+                    toggleSwitch(switchId);
+                }
+            });
+            
+            // Initialize slider fills
+            updateSlider('detail', 50);
+            updateSlider('creativity', 60);
+            updateSlider('sensory', 40);
+            updateSlider('emotional', 45);
+        });
+    </script>
+</body>
+</html>

@@ -9,7 +9,7 @@ from typing import List, Optional, Dict, Any, Tuple
 import logging
 from ..models.scene_memory import (
     SceneMemory, Pose, CharacterState, EnvironmentState, 
-    PlotThread, ContinuityFlag, SceneStatus, PoseType
+    PlotThread, SceneStatus, PoseType
 )
 
 logger = logging.getLogger(__name__)
