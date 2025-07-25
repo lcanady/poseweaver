@@ -29,6 +29,7 @@ interface AuthContextType {
   logout: () => void
   refreshToken: () => Promise<boolean>
   refreshUser: () => Promise<void>
+  getToken: () => string | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -333,6 +334,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const getToken = () => {
+    return localStorage.getItem('access_token')
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -345,6 +350,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         refreshToken,
         refreshUser,
+        getToken,
       }}
     >
       {children}

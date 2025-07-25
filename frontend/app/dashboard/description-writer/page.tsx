@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/auth-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { useWebSocket } from '@/hooks/use-websocket'
+import { Loader2, Wifi, WifiOff } from 'lucide-react'
 
 // Import modular components
 import { ImageUpload } from '@/components/description-writer/image-upload'
@@ -37,6 +39,20 @@ export default function DescriptionWriterPage() {
   const { user } = useAuth()
   const currentUserId = user?._id || null
   
+  // WebSocket connection
+  const {
+    isConnected,
+    isConnecting,
+    connectionError,
+    generateDescription: wsGenerateDescription,
+    isGenerating: wsIsGenerating,
+    progress: wsProgress,
+    result: wsResult,
+    error: wsError,
+    clearResult,
+    clearError
+  } = useWebSocket()
+  
   // Image state
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -54,8 +70,8 @@ export default function DescriptionWriterPage() {
   const [includeTechnicalDetails, setIncludeTechnicalDetails] = useState(false)
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
   
-  // Generation state
-  const [isGenerating, setIsGenerating] = useState(false)
+  // Generation state (using WebSocket status)
+  const isGenerating = wsIsGenerating
   const [currentDescription, setCurrentDescription] = useState('')
   const [descriptionVersions, setDescriptionVersions] = useState<DescriptionVersion[]>([])
   const [currentVersionIndex, setCurrentVersionIndex] = useState(-1)
@@ -104,6 +120,58 @@ export default function DescriptionWriterPage() {
     fetchUsageInfo()
   }, [fetchUsageInfo])
   
+  // Handle WebSocket results
+  useEffect(() => {
+    if (wsResult) {
+      // Create new version from WebSocket result
+      const metadata: DescriptionMetadata = {
+        style: wsResult.style,
+        word_count: wsResult.word_count,
+        processing_time_ms: wsResult.processing_time_ms,
+        model_used: wsResult.model_used,
+        timestamp: wsResult.timestamp
+      }
+      
+      const newVersion: DescriptionVersion = {
+        id: Date.now().toString(),
+        description: wsResult.description,
+        timestamp: new Date(),
+        style: wsResult.style,
+        focusArea,
+        metadata
+      }
+      
+      setCurrentDescription(wsResult.description)
+      setDescriptionVersions(prev => [newVersion, ...prev])
+      setCurrentVersionIndex(0)
+      
+      // Update usage info (decrement available generations)
+      setUsageInfo((prev: any) => ({
+        ...prev,
+        available_generations: Math.max(0, prev.available_generations - 1),
+        current_usage: prev.current_usage + 1
+      }))
+      
+      toast.success('Description generated successfully!')
+      clearResult()
+    }
+  }, [wsResult, focusArea, clearResult])
+  
+  // Handle WebSocket errors
+  useEffect(() => {
+    if (wsError) {
+      toast.error(wsError)
+      clearError()
+    }
+  }, [wsError, clearError])
+  
+  // Handle connection errors
+  useEffect(() => {
+    if (connectionError) {
+      toast.error(`Connection error: ${connectionError}`)
+    }
+  }, [connectionError])
+  
   // Handle image selection
   const handleImageSelect = useCallback((file: File) => {
     setSelectedImage(file)
@@ -119,10 +187,15 @@ export default function DescriptionWriterPage() {
     setImagePreview(null)
   }, [])
   
-  // Generate description
+  // Generate description using WebSocket
   const generateDescription = useCallback(async () => {
     if (!selectedImage || !prompt.trim()) {
       toast.error('Please select an image and enter instructions')
+      return
+    }
+    
+    if (!isConnected) {
+      toast.error('WebSocket not connected. Please wait and try again.')
       return
     }
     
@@ -131,100 +204,60 @@ export default function DescriptionWriterPage() {
       return
     }
     
-    setIsGenerating(true)
-    
     try {
-      const formData = new FormData()
-      formData.append('image', selectedImage)
-      formData.append('prompt', prompt)
-      formData.append('style', style)
-      
-      // Map focus area to backend expected format
-      let focusAreas = ''
-      switch (focusArea) {
-        case 'people':
-          focusAreas = 'people,characters,faces'
-          break
-        case 'objects':
-          focusAreas = 'objects,items,details'
-          break
-        case 'environment':
-          focusAreas = 'environment,background,setting'
-          break
-        case 'mood':
-          focusAreas = 'mood,atmosphere,lighting'
-          break
-        default:
-          focusAreas = 'overall,general'
-      }
-      formData.append('focus_areas', focusAreas)
-      
-      const apiUrl = getApiUrl()
-      const accessToken = localStorage.getItem('access_token')
-      
-      const headers: Record<string, string> = {}
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`
-      }
-      
-      const response = await fetch(`${apiUrl}/api/description/generate`, {
-        method: 'POST',
-        body: formData,
-        headers,
+      // Convert image to base64
+      const imageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const result = reader.result as string
+          // Remove data URL prefix to get just the base64 data
+          const base64Data = result.split(',')[1]
+          resolve(base64Data)
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(selectedImage)
       })
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      // Map focus area to backend expected format
+      let focusAreas: string[] = []
+      switch (focusArea) {
+        case 'people':
+          focusAreas = ['people', 'characters', 'faces']
+          break
+        case 'objects':
+          focusAreas = ['objects', 'items', 'details']
+          break
+        case 'environment':
+          focusAreas = ['environment', 'background', 'setting']
+          break
+        case 'mood':
+          focusAreas = ['mood', 'atmosphere', 'lighting']
+          break
+        default:
+          focusAreas = ['overall', 'general']
       }
       
-      const data = await response.json()
-      const description = data.description
+      // Get image format from file type
+      const imageFormat = selectedImage.type.split('/')[1] || 'jpeg'
       
-      // Calculate metadata
-      const wordCount = description.split(' ').length
+      // Clear previous results
+      clearResult()
+      clearError()
       
-      const metadata: DescriptionMetadata = {
-        style,
-        word_count: wordCount,
-        processing_time_ms: 0, // Will be updated from backend response if available
-        model_used: 'qwen-2.5-vl',
-        timestamp: new Date().toISOString()
-      }
+      // Send WebSocket request
+      await wsGenerateDescription({
+        image_data: imageBase64,
+        image_format: imageFormat,
+        user_prompt: prompt,
+        description_style: style as 'minimal' | 'balanced' | 'elaborate',
+        focus_areas: focusAreas
+      })
       
-      // Create new version
-      const newVersion: DescriptionVersion = {
-        id: Date.now().toString(),
-        description,
-        timestamp: new Date(),
-        style,
-        focusArea,
-        metadata
-      }
-      
-      setCurrentDescription(description)
-      setDescriptionVersions(prev => [newVersion, ...prev])
-      setCurrentVersionIndex(0)
-      
-      // Update usage info from response if available
-      if (data.usage_info) {
-        setUsageInfo(data.usage_info)
-      } else {
-        // Fallback: manually update usage
-        setUsageInfo((prev: any) => ({
-          ...prev,
-          available_generations: Math.max(0, prev.available_generations - 1),
-          current_usage: prev.current_usage + 1
-        }))
-      }
-      
-      toast.success('Description generated successfully!')
     } catch (error) {
-      console.error('Error generating description:', error)
-      toast.error('Failed to generate description. Please try again.')
-    } finally {
-      setIsGenerating(false)
+      console.error('Error preparing description request:', error)
+      toast.error('Failed to prepare request. Please try again.')
     }
-  }, [selectedImage, prompt, style, focusArea, detailLevel, creativity, formality, includeEmotions, includeTechnicalDetails, usageInfo, currentUserId])
+  }, [selectedImage, prompt, style, focusArea, usageInfo, isConnected, wsGenerateDescription, clearResult, clearError])
   
   // Handle refinement
   const handleRefineDescription = useCallback(async () => {
@@ -435,6 +468,40 @@ export default function DescriptionWriterPage() {
             imagePreview={imagePreview}
             disabled={isGenerating || isRefining}
           />
+          
+          {/* WebSocket Connection Status */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {isConnecting ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-yellow-500" />
+                  ) : isConnected ? (
+                    <Wifi className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <WifiOff className="h-4 w-4 text-red-500" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : 'Disconnected'}
+                  </span>
+                </div>
+                
+                {/* Progress Display */}
+                {wsProgress && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>{wsProgress.message}</span>
+                  </div>
+                )}
+              </div>
+              
+              {connectionError && (
+                <div className="mt-2 text-sm text-red-600">
+                  {connectionError}
+                </div>
+              )}
+            </CardContent>
+          </Card>
           
           {/* Description Input */}
           <DescriptionInput
