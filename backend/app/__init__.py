@@ -40,11 +40,6 @@ def create_app(config_name='development'):
         "http://192.168.12.123:3000",  # Network access
     ]
     
-    # Add production frontend URL if specified
-    frontend_url = os.getenv('FRONTEND_URL')
-    if frontend_url:
-        allowed_origins.append(frontend_url)
-    
     CORS(app, 
          origins=allowed_origins,  # Specific origins required for credentials
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
