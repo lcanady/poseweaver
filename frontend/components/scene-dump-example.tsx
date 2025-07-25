@@ -1,7 +1,7 @@
 "use client"
 
 import { StandaloneSceneDumpProcessor } from './standalone-scene-dump-processor'
-import { type ProcessedPose } from '@/lib/venice-client'
+import { type ProcessedPose } from '../lib/venice-client'
 
 interface SceneDumpExampleProps {
   // Pass these props from your parent component/page

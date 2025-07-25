@@ -23,7 +23,7 @@ import {
 import { DeleteCharacterDialog } from "./delete-character-dialog"
 import { CharacterShareModal } from "./character-share-modal"
 import { CharacterSettingsModal } from "./character-settings-modal"
-import type { Character } from "@/lib/types"
+import type { Character } from "../lib/types"
 import Link from "next/link"
 
 interface CharacterCardProps {

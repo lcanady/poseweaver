@@ -2,7 +2,7 @@ import { Card, CardTitle, CardDescription, CardContent, CardFooter } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import type { Scene } from "@/lib/types"
+import type { Scene } from "../lib/types"
 
 interface SceneCardProps {
   scene: Scene
