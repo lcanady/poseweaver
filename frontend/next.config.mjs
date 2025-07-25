@@ -1,4 +1,11 @@
 /** @type {import('next').NextConfig} */
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const nextConfig = {
   allowedDevOrigins: [
     'http://localhost:3000',
@@ -19,6 +26,19 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+  },
+  webpack: (config) => {
+    // Add path aliases for more robust module resolution using absolute paths
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname),
+      '@/lib': path.resolve(__dirname, 'lib'),
+      '@/components': path.resolve(__dirname, 'components'),
+      '@/utils': path.resolve(__dirname, 'utils'),
+      '@/contexts': path.resolve(__dirname, 'contexts'),
+      '@/hooks': path.resolve(__dirname, 'hooks')
+    };
+    return config;
   },
 }
 
