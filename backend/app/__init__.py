@@ -38,11 +38,13 @@ def create_app(config_name='development'):
         "http://localhost:3000",  # Frontend dev server
         "http://127.0.0.1:3000",  # Alternative localhost
         "http://192.168.12.123:3000",  # Network access
+        "https://www.poseweaver.com",  # Production frontend
+        "https://poseweaver.com",  # Production frontend (without www)
     ]
     
-    # Add production frontend URL if specified
+    # Add additional frontend URL if specified in environment
     frontend_url = os.getenv('FRONTEND_URL')
-    if frontend_url:
+    if frontend_url and frontend_url not in allowed_origins:
         allowed_origins.append(frontend_url)
     
     CORS(app, 
