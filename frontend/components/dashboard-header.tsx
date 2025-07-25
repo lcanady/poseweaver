@@ -4,10 +4,10 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { Menu, Wand2, Users, Settings, Feather, LayoutGrid, BookOpen, CreditCard } from "lucide-react"
+import { Menu, Wand2, Users, Feather, LayoutGrid, BookOpen } from "lucide-react"
 import { UserNav } from "./user-nav"
 import { NotificationCenter } from "@/components/notifications"
-import { cn } from "@/lib/utils"
+import { cn } from "../lib/utils"
 import { useState } from "react"
 
 export function DashboardHeader() {
