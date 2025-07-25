@@ -7,8 +7,7 @@ import { useAuth } from '@/contexts/auth-context';
 import websocketService, { 
   DescriptionRequest, 
   DescriptionResult, 
-  ProgressUpdate, 
-  ErrorResponse 
+  ProgressUpdate
 } from '@/utils/websocket-service';
 
 export interface UseWebSocketReturn {
