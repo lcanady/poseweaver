@@ -33,7 +33,7 @@ export function DashboardHeader() {
         <SheetContent side="left" className="sm:max-w-xs">
           <SheetHeader>
             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-          </SheetHeader>
+          </SheetHeader> 
           <nav className="grid gap-6 text-lg font-medium">
             <Link
               href="/"
