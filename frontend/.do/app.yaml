@@ -1,0 +1,31 @@
+name: poseweaver-frontend
+services:
+- name: frontend
+  source_dir: /
+  github:
+    repo: your-username/your-repo-name
+    branch: main
+  run_command: node server.js
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  http_port: 3000
+  routes:
+  - path: /
+  health_check:
+    http_path: /
+  envs:
+  - key: NODE_ENV
+    value: production
+  - key: NEXT_TELEMETRY_DISABLED
+    value: "1"
+  - key: PORT
+    value: "3000"
+  - key: HOSTNAME
+    value: "0.0.0.0"
+  - key: NEXT_PUBLIC_API_URL
+    value: "https://your-backend-api-url.com"
+    # Update this with your actual backend API URL
+  - key: NEXT_PUBLIC_GOOGLE_CLIENT_ID
+    value: "your-google-client-id"
+    # Update this with your actual Google OAuth client ID
