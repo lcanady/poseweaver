@@ -12,7 +12,7 @@ import {
   AlertCircle,
   FileImage
 } from 'lucide-react'
-import { cn } from "../lib"
+import { cn } from "@/lib/utils"
 
 interface ImageUploadProps {
   onImageSelect: (file: File) => void

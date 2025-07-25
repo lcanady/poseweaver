@@ -12,7 +12,7 @@ import {
   AlertTriangle,
   Info
 } from 'lucide-react'
-import { cn } from '../lib'
+import { cn } from '@/lib/utils'
 import type { Notification } from '@/hooks/useNotifications'
 
 interface NotificationItemProps {
