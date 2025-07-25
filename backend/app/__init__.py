@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
+from flask_socketio import SocketIO
 import os
 from app.extensions import init_extensions
 from app.utils.json_encoder import MongoJSONEncoder
@@ -118,5 +119,21 @@ def create_app(config_name='development'):
     with app.app_context():
         # MongoDB indexes are initialized in init_extensions
         pass
+    
+    # Initialize SocketIO for WebSocket support
+    socketio = SocketIO(
+        app,
+        cors_allowed_origins=allowed_origins,
+        async_mode='threading',
+        logger=True,
+        engineio_logger=True
+    )
+    
+    # Initialize WebSocket service
+    from app.services.websocket_service import WebSocketService
+    websocket_service = WebSocketService(socketio)
+    
+    # Store socketio instance on app for access in other modules
+    app.socketio = socketio
     
     return app 

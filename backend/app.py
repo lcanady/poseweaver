@@ -21,4 +21,5 @@ print(f"Debug mode: {debug_mode}")
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(debug=debug_mode, host='0.0.0.0', port=port) 
+    # Use SocketIO run method for WebSocket support
+    app.socketio.run(app, debug=debug_mode, host='0.0.0.0', port=port) 
