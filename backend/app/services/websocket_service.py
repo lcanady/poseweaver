@@ -24,8 +24,15 @@ class WebSocketService:
     
     def __init__(self, socketio: SocketIO):
         """Initialize WebSocket service with SocketIO instance."""
+        import os
         self.socketio = socketio
-        self.venice_client = VeniceClient()
+        
+        # Get Venice API key from environment
+        venice_api_key = os.getenv('VENICE_API_KEY')
+        if not venice_api_key:
+            raise ValueError("VENICE_API_KEY environment variable is required")
+            
+        self.venice_client = VeniceClient(venice_api_key)
         self.description_service = DescriptionService(self.venice_client)
         self.usage_service = UsageTrackingService()
         self.auth_service = AuthService()

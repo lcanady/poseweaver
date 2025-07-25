@@ -22,4 +22,14 @@ app = create_app()
 
 if __name__ == '__main__':
     # Use SocketIO run method for WebSocket support
-    app.socketio.run(app, debug=debug_mode, host='0.0.0.0', port=port) 
+    # For production, use eventlet as the async mode
+    if flask_env == 'production':
+        # Production mode with eventlet
+        app.socketio.run(app, 
+                        debug=debug_mode, 
+                        host='0.0.0.0', 
+                        port=port,
+                        allow_unsafe_werkzeug=True)  # Allow for production deployment
+    else:
+        # Development mode
+        app.socketio.run(app, debug=debug_mode, host='0.0.0.0', port=port) 
