@@ -40,6 +40,11 @@ def create_app(config_name='development'):
         "http://192.168.12.123:3000",  # Network access
     ]
     
+    # Add production frontend URL if specified
+    frontend_url = os.getenv('FRONTEND_URL')
+    if frontend_url:
+        allowed_origins.append(frontend_url)
+    
     CORS(app, 
          origins=allowed_origins,  # Specific origins required for credentials
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -103,9 +108,9 @@ def create_app(config_name='development'):
     # Ensure upload directories exist at startup
     ensure_upload_dir()
     
-    @app.route('/health')
+    @app.route('/api/health')
     def health_check():
-        return {'status': 'healthy', 'service': 'mush-pose-editor'}, 200
+        return {'status': 'healthy', 'service': 'poseweaver-backend'}, 200
     
     # Initialize MongoDB indexes
     with app.app_context():
