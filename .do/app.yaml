@@ -6,18 +6,18 @@ services:
     repo: lcanady/edit
     branch: main
     deploy_on_push: true
-  run_command: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 app:app
+  run_command: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 300 --keep-alive 300 --max-requests 1000 --max-requests-jitter 100 app:app
   environment_slug: python
   instance_count: 1
-  instance_size_slug: basic-xxs
+  instance_size_slug: basic-xs
   http_port: 8080
   health_check:
     http_path: /api/health
-    initial_delay_seconds: 30
-    period_seconds: 10
-    timeout_seconds: 5
+    initial_delay_seconds: 60
+    period_seconds: 30
+    timeout_seconds: 10
     success_threshold: 1
-    failure_threshold: 3
+    failure_threshold: 5
   envs:
   - key: FLASK_ENV
     value: production
@@ -42,7 +42,7 @@ services:
     scope: RUN_TIME
     type: SECRET
   - key: VENICE_TIMEOUT
-    value: "120"
+    value: "300"
   - key: STRIPE_SECRET_KEY
     scope: RUN_TIME
     type: SECRET

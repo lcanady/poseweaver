@@ -4,24 +4,33 @@
 
 /**
  * Get the API base URL dynamically based on the current environment
- * This works for both localhost and network access
+ * This works for both localhost and production deployment
  */
 export function getApiUrl(): string {
-  // If NEXT_PUBLIC_API is set, use it (for production or explicit configuration)
-  if (process.env.NEXT_PUBLIC_API) {
-    console.log('[getApiUrl] Using NEXT_PUBLIC_API:', process.env.NEXT_PUBLIC_API);
-    return process.env.NEXT_PUBLIC_API;
+  // If NEXT_PUBLIC_API_URL is set, use it (for production or explicit configuration)
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    console.log('[getApiUrl] Using NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
+    return process.env.NEXT_PUBLIC_API_URL;
   }
   
-  // For client-side, dynamically detect the hostname
+  // For client-side development, use localhost:5001
   if (typeof window !== 'undefined') {
+    // Check if we're on localhost for development
     const hostname = window.location.hostname;
-    const apiUrl = `http://${hostname}:5001`;
-    console.log('[getApiUrl] Client-side detection - hostname:', hostname, 'apiUrl:', apiUrl);
-    return apiUrl;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      const apiUrl = 'http://localhost:5001';
+      console.log('[getApiUrl] Development mode - using:', apiUrl);
+      return apiUrl;
+    }
+    
+    // For production, we should have NEXT_PUBLIC_API_URL set
+    // If not, this is an error condition
+    console.error('[getApiUrl] Production environment detected but NEXT_PUBLIC_API_URL not set!');
+    console.error('[getApiUrl] Current hostname:', hostname);
+    throw new Error('NEXT_PUBLIC_API_URL environment variable must be set for production deployment');
   }
   
-  // Fallback for server-side rendering
+  // Fallback for server-side rendering in development
   console.log('[getApiUrl] Using server-side fallback: http://localhost:5001');
   return 'http://localhost:5001';
 }
