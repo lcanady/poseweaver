@@ -27,7 +27,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '../lib/utils'
 import { VeniceClient, type ProcessedPose, type VeniceProcessingResult } from '@/lib/venice-client'
 
 interface StandaloneSceneDumpProcessorProps {

@@ -48,7 +48,7 @@ import {
   Zap,
   Sparkles
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '../../lib/utils'
 import { format, formatDistanceToNow } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 

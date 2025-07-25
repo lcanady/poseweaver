@@ -1,7 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter, Lora, Inconsolata } from "next/font/google"
-import { cn } from "@/lib/utils"
+import { cn } from "../lib/utils"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"

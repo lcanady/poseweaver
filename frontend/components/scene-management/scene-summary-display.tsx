@@ -38,7 +38,7 @@ import {
   Plus,
   Sparkles
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '../../lib/utils'
 import { format } from 'date-fns'
 import type { 
   SceneSummary, 
@@ -104,7 +104,7 @@ export function SceneSummaryDisplay({
   const [previewMode, setPreviewMode] = useState(false)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const autosaveTimeoutRef = useRef<NodeJS.Timeout>()
+  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Auto-save functionality
   useEffect(() => {

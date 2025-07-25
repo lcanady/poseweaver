@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/dialog'
 import { scenePosesService } from '@/services/scene-poses-service'
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
+import { cn } from '../../lib/utils'
 
 interface ScenePose {
   id: string;

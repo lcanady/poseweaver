@@ -16,7 +16,7 @@ import {
   Loader2,
   Settings
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '../../lib/utils'
 import { useNotifications } from '@/hooks/useNotifications'
 import { NotificationItem } from './notification-item'
 import { useToast } from '@/hooks/use-toast'

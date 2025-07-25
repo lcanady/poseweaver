@@ -26,7 +26,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '../lib/utils'
 import { useSceneDumpProcessor } from '@/hooks/useSceneDumpProcessor'
 import { useAuth } from '@/contexts/auth-context'
 import type { ProcessedPose, SceneDumpProcessingResult } from '@/hooks/useSceneDumpProcessor'

@@ -53,7 +53,7 @@ import {
   Star,
   TrendingUp
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '../../lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 

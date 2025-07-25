@@ -30,7 +30,7 @@ import {
   TrendingUp,
   Filter
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '../../lib/utils'
 
 // Import scene management components
 import { SceneCreationForm } from './scene-creation-form'
@@ -677,7 +677,7 @@ export function SceneManagementDashboard({
             onSubmit={handleSceneCreate}
             onCancel={() => setDashboardState(prev => ({ ...prev, showCreateDialog: false }))}
             loading={dashboardState.loading}
-            error={dashboardState.error}
+            error={dashboardState.error||undefined}
           />
         </DialogContent>
       </Dialog>
@@ -703,7 +703,7 @@ export function SceneManagementDashboard({
               }}
               isEditing={true}
               loading={dashboardState.loading}
-              error={dashboardState.error}
+              error={dashboardState.error || undefined}
             />
           )}
         </DialogContent>

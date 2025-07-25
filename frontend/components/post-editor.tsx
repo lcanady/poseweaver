@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { SceneAnalysis } from "@/components/scene-analysis"
 import { SceneSelector } from "@/components/scene-selector"
 import { SceneDumpProcessor } from "@/components/scene-dump-processor"
-import { cn } from "@/lib/utils"
+import { cn } from "../lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { SceneDumpProcessingResult } from "@/hooks/useSceneDumpProcessor"
 import { getApiUrl } from '@/utils/api-utils';
@@ -394,7 +394,15 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
               
               // Update the scene context with the new poses
               const updatedContext = {
-                ...sceneContext,
+                // Ensure all required array properties have default empty arrays
+                actions: sceneContext?.actions || [],
+                character_interactions: sceneContext?.character_interactions || [],
+                emotions: sceneContext?.emotions || [],
+                environmental_details: sceneContext?.environmental_details || [],
+                responseHooks: sceneContext?.responseHooks || [],
+                // Include all other properties from the existing context
+                ...(sceneContext || {}),
+                // Override with the new poses
                 poses: updatedPoses
               };
               
@@ -838,13 +846,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
         description: `Added ${result.importedCount} poses to your scene context.`
       })
 
-      // If we have continuity analysis results, show them
-      if (result.continuityAnalysis) {
-        toast({
-          title: "Continuity Analysis Complete",
-          description: "Scene continuity has been analyzed for potential issues."
-        })
-      }
+
     }
   }
 
