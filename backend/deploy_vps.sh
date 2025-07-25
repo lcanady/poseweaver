@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 # Configuration
 APP_USER="poseweaver"
 APP_DIR="/home/$APP_USER/poseweaver"
-REPO_URL="https://github.com/lcanady/edit.git"  # Update this to your actual repository URL
+REPO_URL="https://github.com/lcanady/poseweaver.git"  # Update this to your actual repository URL
 DOMAIN="your_domain.com"  # Update this
 
 echo -e "${GREEN}🚀 Starting PoseWeaver Backend Deployment${NC}"
