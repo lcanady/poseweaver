@@ -371,6 +371,82 @@ def delete_character(character_id):
             'message': 'An error occurred while deleting the character'
         }), HTTPStatus.INTERNAL_SERVER_ERROR
 
+@character_mgmt_bp.route('/featured', methods=['GET'])
+def get_featured_characters():
+    """Get featured characters for the homepage carousel.
+    
+    Returns characters that have profile images and complete descriptions.
+    No authentication required for public display.
+    
+    Query parameters:
+        limit (int): Maximum number of characters to return (default: 6, max: 12)
+    
+    Returns:
+        200 OK: List of featured characters
+    """
+    limit = min(int(request.args.get('limit', 6)), 12)  # Max 12 for performance
+    
+    try:
+        # Find characters with profile images and descriptions
+        from app.models.character import Character
+        from app.services.mongodb_service import get_mongodb_service
+        
+        mongodb = get_mongodb_service()
+        
+        # Query for characters with profile images and descriptions
+        # Only include active characters with both profile_image and description
+        query = {
+            'is_active': True,
+            'profile_image': {'$exists': True, '$ne': None, '$ne': ''},
+            'description': {'$exists': True, '$ne': None, '$ne': ''}
+        }
+        
+        # Get characters from database with random sampling
+        pipeline = [
+            {'$match': query},
+            {'$sample': {'size': limit * 3}},  # Get more than needed for better randomization
+            {'$limit': limit}
+        ]
+        
+        results = list(mongodb.db[Character.COLLECTION_NAME].aggregate(pipeline))
+        
+        # Convert to Character objects and then to dicts
+        featured_characters = []
+        for doc in results:
+            try:
+                # Convert ObjectId to string for user_id if needed
+                if '_id' in doc:
+                    doc['_id'] = str(doc['_id'])
+                if 'user_id' in doc and hasattr(doc['user_id'], 'binary'):
+                    doc['user_id'] = str(doc['user_id'])
+                
+                character = Character.from_dict(doc)
+                if character:
+                    char_dict = character.to_dict()
+                    # Remove sensitive user information for public display
+                    char_dict.pop('user_id', None)
+                    featured_characters.append(char_dict)
+            except Exception as e:
+                current_app.logger.warning(f"Error processing featured character: {str(e)}")
+                continue
+        
+        return jsonify({
+            'success': True,
+            'data': featured_characters,
+            'meta': {
+                'total': len(featured_characters),
+                'limit': limit
+            }
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error fetching featured characters: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while fetching featured characters'
+        }), HTTPStatus.INTERNAL_SERVER_ERROR
+
+
 @character_mgmt_bp.route('/search', methods=['GET'])
 @require_auth
 def search_characters():

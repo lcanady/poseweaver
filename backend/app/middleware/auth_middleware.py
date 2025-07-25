@@ -18,6 +18,7 @@ def require_auth(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        from flask import request
         current_app.logger.debug("Entered require_auth.decorated_function for protected endpoint")
         # JWT authentication
         try:
@@ -26,6 +27,8 @@ def require_auth(f):
             if current_identity:
                 current_user = AuthService.get_current_user()
                 if current_user:
+                    # Set current_user on request object for endpoint access
+                    request.current_user = current_user
                     return f(*args, **kwargs)
                 else:
                     current_app.logger.warning(f"User not found for JWT identity: {current_identity}")

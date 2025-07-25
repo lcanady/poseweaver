@@ -17,15 +17,20 @@ user_bp = Blueprint('user', __name__)
 def get_user_settings():
     """Get user settings."""
     try:
+        print(f"[DEBUG] get_user_settings called")
         current_user = request.current_user
+        print(f"[DEBUG] current_user: {current_user}")
         
         if not current_user:
+            print(f"[DEBUG] No current user found")
             return jsonify({
                 'success': False,
                 'error': 'User not found'
             }), 404
         
+        print(f"[DEBUG] About to call get_settings()")
         settings = current_user.get_settings()
+        print(f"[DEBUG] Settings retrieved: {settings}")
         
         return jsonify({
             'success': True,
@@ -33,6 +38,9 @@ def get_user_settings():
         })
         
     except Exception as e:
+        print(f"[DEBUG] Exception in get_user_settings: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)
@@ -43,15 +51,19 @@ def get_user_settings():
 def update_user_settings():
     """Update user settings."""
     try:
+        print(f"[DEBUG] update_user_settings called")
         current_user = request.current_user
+        print(f"[DEBUG] current_user: {current_user}")
         
         if not current_user:
+            print(f"[DEBUG] No current user found")
             return jsonify({
                 'success': False,
                 'error': 'User not found'
             }), 404
         
         data = request.get_json()
+        print(f"[DEBUG] Request data: {data}")
         if not data:
             return jsonify({
                 'success': False,
@@ -66,6 +78,7 @@ def update_user_settings():
             if key in valid_keys:
                 settings_to_update[key] = value
         
+        print(f"[DEBUG] Settings to update: {settings_to_update}")
         if not settings_to_update:
             return jsonify({
                 'success': False,
@@ -73,7 +86,9 @@ def update_user_settings():
             }), 400
         
         # Update user settings
+        print(f"[DEBUG] About to call update_settings")
         current_user.update_settings(settings_to_update)
+        print(f"[DEBUG] Settings updated successfully")
         
         return jsonify({
             'success': True,
@@ -82,6 +97,9 @@ def update_user_settings():
         })
         
     except Exception as e:
+        print(f"[DEBUG] Exception in update_user_settings: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)

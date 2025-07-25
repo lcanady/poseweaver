@@ -33,13 +33,24 @@ def create_app(config_name='development'):
 
     
     # Configure CORS for frontend communication with JWT support
-    # Allow all origins in development for network access
+    # Specify allowed origins for credentials support
+    allowed_origins = [
+        "http://localhost:3000",  # Frontend dev server
+        "http://127.0.0.1:3000",  # Alternative localhost
+        "http://192.168.12.123:3000",  # Network access
+    ]
+    
+    # Add production frontend URL if specified
+    frontend_url = os.getenv('FRONTEND_URL')
+    if frontend_url:
+        allowed_origins.append(frontend_url)
+    
     CORS(app, 
-         origins="*",  # Allow all origins in development
+         origins=allowed_origins,  # Specific origins required for credentials
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
          allow_headers=["Content-Type", "Authorization", "X-Requested-With", 
                        "Access-Control-Allow-Origin", "Origin"],
-         supports_credentials=False)  # Must be False when using origins="*"
+         supports_credentials=True)  # Enable credentials support
     
     # Initialize extensions
     init_extensions(app)
@@ -72,6 +83,7 @@ def create_app(config_name='development'):
     from app.api.admin import admin_bp
     from app.api.setup import setup_bp
     from app.api.user import user_bp
+    from app.api.notifications import notifications_bp
     
     app.register_blueprint(characters_bp, url_prefix='/api/characters')
     app.register_blueprint(context_bp, url_prefix='/api/context')
@@ -91,6 +103,7 @@ def create_app(config_name='development'):
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(setup_bp, url_prefix='/api/setup')
     app.register_blueprint(user_bp, url_prefix='/api/user')
+    app.register_blueprint(notifications_bp, url_prefix='/api')
     
     # Ensure upload directories exist at startup
     ensure_upload_dir()

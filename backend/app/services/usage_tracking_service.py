@@ -125,6 +125,33 @@ class UsageTrackingService:
             return True
         
         return user.use_pose_generation()
+    
+    @staticmethod
+    def _check_and_send_usage_alerts(user):
+        """Check if user should receive usage alerts and send them."""
+        try:
+            # Import here to avoid circular imports
+            from app.services.notification_service import NotificationService
+            
+            # Skip alerts for demo users
+            if hasattr(user, '__dict__') and not hasattr(user, 'get_effective_subscription_status'):
+                return
+            
+            # Get current usage info
+            current_usage = user.pose_generations_used
+            limit = user.get_pose_generation_limit()
+            
+            if limit > 0:
+                percentage = int((current_usage / limit) * 100)
+                
+                # Send alerts at 80%, 90%, and 100% thresholds
+                if percentage in [80, 90, 100]:
+                    NotificationService.create_pose_generation_alert(
+                        user.id, current_usage, limit
+                    )
+                    
+        except Exception as e:
+            print(f"Error checking usage alerts: {e}")
 
 
 def require_pose_generation_limit(f):
@@ -176,6 +203,9 @@ def require_pose_generation_limit(f):
                 'error': 'Failed to process generation usage',
                 'error_code': 'USAGE_PROCESSING_ERROR'
             }), 500
+        
+        # Check if we should send usage alerts after using generation
+        UsageTrackingService._check_and_send_usage_alerts(user)
         
         # Add user and usage info to request context for the endpoint
         request.current_user = user

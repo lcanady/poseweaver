@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Button } from "@/components/ui/button"
 import { Menu, Wand2, Users, Settings, Feather, LayoutGrid, BookOpen, CreditCard } from "lucide-react"
 import { UserNav } from "./user-nav"
+import { NotificationCenter } from "@/components/notifications"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
 
@@ -62,7 +63,10 @@ export function DashboardHeader() {
         </SheetContent>
       </Sheet>
 
-      <UserNav />
+      <div className="flex items-center gap-2">
+        <NotificationCenter />
+        <UserNav />
+      </div>
     </header>
   )
 }

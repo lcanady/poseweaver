@@ -16,6 +16,7 @@ import { EnhancementAnalysis } from "@/components/pose-enhancer/enhancement-anal
 import { UsageDisplay } from "@/components/pose-enhancer/usage-display";
 import { InlinePaywall } from "@/components/pose-enhancer/inline-paywall";
 import { getApiUrl, apiRequest } from "@/utils/api-utils";
+import { useCharacterSettings } from "@/hooks/useCharacterSettings";
 
 interface PoseVersion {
   id: string;
@@ -71,6 +72,31 @@ export default function PoseEnhancerPage() {
   const currentUserId = user?._id || null;
   
   const { toast } = useToast();
+  
+  // Character settings integration
+  const { settings: characterSettings, getSettingsForEnhancement } = useCharacterSettings(selectedCharacterId);
+  
+  // Apply character settings when character is selected
+  useEffect(() => {
+    if (selectedCharacterId && characterSettings) {
+      const enhancementSettings = getSettingsForEnhancement();
+      
+      // Apply character-specific settings to pose enhancer state
+      setEnhancementStyle(enhancementSettings.enhancementStyle);
+      setNarrativeTone(enhancementSettings.narrativeTone);
+      setDetailLevel(enhancementSettings.detailLevel);
+      setCreativityLevel(enhancementSettings.creativityLevel);
+      setSensoryFocus(enhancementSettings.sensoryFocus);
+      setEmotionalDepth(enhancementSettings.emotionalDepth);
+      setIncludeInternalThoughts(enhancementSettings.includeInternalThoughts);
+      setEmphasizeActions(enhancementSettings.emphasizeActions);
+      setPreserveOriginalTone(enhancementSettings.preserveOriginalTone);
+      setAddEnvironmentalDetails(enhancementSettings.addEnvironmentalDetails);
+      setCharacterControlCheck(enhancementSettings.characterControlCheck);
+      
+      console.log(`Applied settings for character ${selectedCharacterId}:`, enhancementSettings);
+    }
+  }, [selectedCharacterId, characterSettings, getSettingsForEnhancement]);
 
   // Get current user ID from token
 
@@ -196,6 +222,12 @@ export default function PoseEnhancerPage() {
           emphasize_actions: emphasizeActions,
           preserve_original_tone: preserveOriginalTone,
           character_control_check: characterControlCheck
+        },
+        character_settings: {
+          enhancement_notes: characterSettings.enhancement_notes,
+          preferred_writing_style: characterSettings.preferred_writing_style,
+          voice_emphasis: characterSettings.voice_emphasis,
+          personality_emphasis: characterSettings.personality_emphasis
         },
         user_id: currentUserId // Add user ID for usage tracking
       };

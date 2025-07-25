@@ -1,7 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Settings } from "lucide-react";
 import { Character } from "@/hooks/useCharacter";
+import { useCharacterSettings } from "@/hooks/useCharacterSettings";
 
 interface CharacterSelectionProps {
   characters: Character[];
@@ -17,6 +20,17 @@ export const CharacterSelection = ({
   isLoadingCharacters
 }: CharacterSelectionProps) => {
   const selectedCharacter = characters.find(char => char.id === selectedCharacterId);
+  const { settings: characterSettings } = useCharacterSettings(selectedCharacterId);
+  
+  // Check if character has custom settings (different from defaults)
+  const hasCustomSettings = selectedCharacterId && (
+    characterSettings.default_enhancement_style !== 'balanced' ||
+    characterSettings.default_narrative_tone !== 'neutral' ||
+    characterSettings.default_detail_level !== 50 ||
+    characterSettings.default_creativity_level !== 60 ||
+    characterSettings.enhancement_notes.trim() !== '' ||
+    characterSettings.preferred_writing_style.trim() !== ''
+  );
 
   return (
     <Card>
@@ -73,9 +87,23 @@ export const CharacterSelection = ({
                   </span>
                 )}
               </div>
-              <div>
-                <div className="font-medium">{selectedCharacter.name}</div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="font-medium">{selectedCharacter.name}</div>
+                  {hasCustomSettings && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Settings className="h-3 w-3 mr-1" />
+                      Custom Settings
+                    </Badge>
+                  )}
+                </div>
                 <div className="text-sm text-muted-foreground">Selected for pose enhancement</div>
+                {hasCustomSettings && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Style: {characterSettings.default_enhancement_style} • 
+                    Tone: {characterSettings.default_narrative_tone}
+                  </div>
+                )}
               </div>
             </div>
             <p className="text-sm text-muted-foreground">

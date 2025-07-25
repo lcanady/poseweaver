@@ -7,10 +7,10 @@
  * This works for both localhost and network access
  */
 export function getApiUrl(): string {
-  // If NEXT_PUBLIC_API_URL is set, use it (for production or explicit configuration)
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    console.log('[getApiUrl] Using NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
-    return process.env.NEXT_PUBLIC_API_URL;
+  // If NEXT_PUBLIC_API is set, use it (for production or explicit configuration)
+  if (process.env.NEXT_PUBLIC_API) {
+    console.log('[getApiUrl] Using NEXT_PUBLIC_API:', process.env.NEXT_PUBLIC_API);
+    return process.env.NEXT_PUBLIC_API;
   }
   
   // For client-side, dynamically detect the hostname

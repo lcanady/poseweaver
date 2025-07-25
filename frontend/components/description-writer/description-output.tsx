@@ -79,6 +79,7 @@ export function DescriptionOutput({
                   <SelectItem value="markdown">Markdown</SelectItem>
                   <SelectItem value="plain">Plain</SelectItem>
                   <SelectItem value="quoted">Quoted</SelectItem>
+                  <SelectItem value="mush">MUSH (%r for returns)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

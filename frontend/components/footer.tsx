@@ -11,13 +11,13 @@ export function Footer() {
           </p>
         </div>
         <nav className="flex items-center gap-4 text-sm text-muted-foreground">
-          <a href="#" className="hover:text-foreground">
+          <a href="/terms" className="hover:text-foreground">
             Terms of Service
           </a>
-          <a href="#" className="hover:text-foreground">
+          <a href="/privacy" className="hover:text-foreground">
             Privacy Policy
           </a>
-          <a href="#" className="hover:text-foreground">
+          <a href="mailto:support@poseweaver.com" className="hover:text-foreground">
             Contact
           </a>
         </nav>

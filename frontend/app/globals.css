@@ -4,6 +4,44 @@
 
 @layer base {
   :root {
+    /* Light mode colors (default) */
+    --background: 0 0% 100%; /* White */
+    --foreground: 240 10% 3.9%; /* Dark text */
+
+    --card: 0 0% 100%; /* White cards */
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --primary: 43 96% 56%; /* Amber/Gold for CTAs */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 271 91% 65%; /* Purple for accents */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --accent: 152 69% 47%; /* Soft Green for success */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 43 96% 56%;
+
+    --radius: 0.75rem;
+
+    --font-sans: "Inter", sans-serif;
+    --font-serif: "Lora", serif;
+    --font-mono: "Inconsolata", monospace;
+  }
+
+  .dark {
+    /* Dark mode colors */
     --background: 257 100% 4%; /* Deep Purple/Blue */
     --foreground: 210 40% 98%; /* White */
 
@@ -31,16 +69,6 @@
     --border: 257 20% 20%;
     --input: 257 20% 20%;
     --ring: 43 96% 56%;
-
-    --radius: 0.75rem;
-
-    --font-sans: "Inter", sans-serif;
-    --font-serif: "Lora", serif;
-    --font-mono: "Inconsolata", monospace;
-  }
-
-  .dark {
-    /* You can define dark mode colors here if they differ from the default */
   }
 }
 

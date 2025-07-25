@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getApiUrl } from '@/utils/api-utils'
+import { GoogleAuthService, GoogleUser } from '@/utils/google-auth'
 
 interface User {
   id?: number
@@ -23,6 +24,7 @@ interface AuthContextType {
   isLoading: boolean
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
+  googleLogin: () => Promise<void>
   signup: (email: string, password: string, displayName: string) => Promise<void>
   logout: () => void
   refreshToken: () => Promise<boolean>
@@ -273,6 +275,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const googleLogin = async () => {
+    setIsLoading(true)
+    try {
+      // Sign in with Google
+      const googleUser: GoogleUser = await GoogleAuthService.signInWithPopup()
+      
+      // Send Google user data to backend for authentication
+      const response = await fetch(`${getApiUrl()}/api/auth/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: googleUser.email,
+          name: googleUser.name,
+          picture: googleUser.picture,
+          google_id: googleUser.sub,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Google login failed')
+      }
+
+      const data = await response.json()
+      
+      // Store tokens in localStorage for API auth
+      if (data.access_token) {
+        localStorage.setItem('access_token', data.access_token)
+      }
+      
+      if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token)
+      }
+      
+      // Set user from response
+      setUser(data.user)
+      
+      // Redirect to dashboard
+      router.push('/dashboard')
+    } catch (error) {
+      console.error('Google login error:', error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const refreshUser = async () => {
     try {
       await getCurrentUser()
@@ -289,6 +340,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAuthenticated,
         login,
+        googleLogin,
         signup,
         logout,
         refreshToken,

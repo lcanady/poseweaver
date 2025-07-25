@@ -11,7 +11,7 @@ import Link from "next/link"
 import { Icons } from "@/components/icons"
 
 export default function LoginPage() {
-  const { login, isLoading } = useAuth()
+  const { login, googleLogin, isLoading } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -29,6 +29,15 @@ export default function LoginPage() {
       await login(email, password)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    setError("")
+    try {
+      await googleLogin()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Google login failed")
     }
   }
 
@@ -85,9 +94,15 @@ export default function LoginPage() {
                 <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
               </div>
             </div>
-            <Button variant="outline" className="w-full bg-transparent" type="button" disabled={isLoading}>
+            <Button 
+              variant="outline" 
+              className="w-full bg-transparent" 
+              type="button" 
+              disabled={isLoading}
+              onClick={handleGoogleLogin}
+            >
               <Icons.google className="mr-2 h-4 w-4" />
-              Sign in with Google
+              {isLoading ? "Signing in..." : "Sign in with Google"}
             </Button>
           </CardContent>
         </form>

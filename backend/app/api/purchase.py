@@ -181,18 +181,63 @@ def create_checkout_session_endpoint():
 @purchase_bp.route('/webhook', methods=['POST'])
 def stripe_webhook():
     """Handle Stripe webhook events (supports both regular and thin payloads)."""
-    payload = request.get_data(as_text=True)
-    sig_header = request.headers.get('Stripe-Signature')
-    endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
+    print(f"[WEBHOOK DEBUG] Received webhook request")
+    print(f"[WEBHOOK DEBUG] Request method: {request.method}")
+    print(f"[WEBHOOK DEBUG] Content-Type: {request.headers.get('Content-Type')}")
+    print(f"[WEBHOOK DEBUG] Headers: {dict(request.headers)}")
     
+    # Get raw payload
+    payload = request.get_data(as_text=True)
+    print(f"[WEBHOOK DEBUG] Payload length: {len(payload) if payload else 0}")
+    print(f"[WEBHOOK DEBUG] Payload preview: {payload[:200] if payload else 'None'}...")
+    
+    # Get signature header
+    sig_header = request.headers.get('Stripe-Signature')
+    print(f"[WEBHOOK DEBUG] Stripe-Signature header: {sig_header}")
+    
+    # Get webhook secret
+    endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
+    print(f"[WEBHOOK DEBUG] Webhook secret configured: {bool(endpoint_secret)}")
+    print(f"[WEBHOOK DEBUG] Webhook secret preview: {endpoint_secret[:10] if endpoint_secret else 'None'}...")
+    
+    # Check for missing requirements
+    if not payload:
+        print(f"[WEBHOOK ERROR] No payload received")
+        return jsonify({'error': 'No payload received'}), 400
+    
+    if not sig_header:
+        print(f"[WEBHOOK ERROR] No Stripe-Signature header")
+        return jsonify({'error': 'No Stripe-Signature header'}), 400
+    
+    if not endpoint_secret:
+        print(f"[WEBHOOK ERROR] STRIPE_WEBHOOK_SECRET not configured")
+        return jsonify({'error': 'Webhook secret not configured'}), 400
+    
+    # Initialize Stripe
     try:
+        from ..config.stripe_config import _ensure_stripe_initialized
+        _ensure_stripe_initialized()
+        print(f"[WEBHOOK DEBUG] Stripe initialized successfully")
+    except Exception as e:
+        print(f"[WEBHOOK ERROR] Failed to initialize Stripe: {e}")
+        return jsonify({'error': f'Stripe initialization failed: {str(e)}'}), 400
+    
+    # Verify webhook signature
+    try:
+        print(f"[WEBHOOK DEBUG] Attempting to construct event from webhook")
         event = stripe.Webhook.construct_event(
             payload, sig_header, endpoint_secret
         )
-    except ValueError:
-        return jsonify({'error': 'Invalid payload'}), 400
-    except stripe.error.SignatureVerificationError:
-        return jsonify({'error': 'Invalid signature'}), 400
+        print(f"[WEBHOOK DEBUG] Event constructed successfully: {event.get('type')}")
+    except ValueError as e:
+        print(f"[WEBHOOK ERROR] Invalid payload: {e}")
+        return jsonify({'error': f'Invalid payload: {str(e)}'}), 400
+    except stripe.error.SignatureVerificationError as e:
+        print(f"[WEBHOOK ERROR] Invalid signature: {e}")
+        return jsonify({'error': f'Invalid signature: {str(e)}'}), 400
+    except Exception as e:
+        print(f"[WEBHOOK ERROR] Unexpected error during event construction: {e}")
+        return jsonify({'error': f'Webhook processing error: {str(e)}'}), 400
     
     # Check if this is a thin payload (minimal data)
     is_thin_payload = _is_thin_payload(event)
@@ -1061,6 +1106,50 @@ def create_customer_portal_session():
             'success': False,
             'error': f'Internal server error: {str(e)}'
         }), 500
+
+
+@purchase_bp.route('/webhook/test', methods=['GET', 'POST'])
+def webhook_test():
+    """Test webhook endpoint configuration."""
+    print(f"[WEBHOOK TEST] Received {request.method} request")
+    
+    # Check environment variables
+    stripe_key = os.getenv('STRIPE_SECRET_KEY')
+    webhook_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
+    
+    config_status = {
+        'stripe_secret_key_configured': bool(stripe_key and stripe_key != 'sk_test_your_stripe_secret_key_here'),
+        'webhook_secret_configured': bool(webhook_secret),
+        'stripe_key_preview': stripe_key[:10] if stripe_key else None,
+        'webhook_secret_preview': webhook_secret[:10] if webhook_secret else None
+    }
+    
+    # Test Stripe initialization
+    try:
+        from ..config.stripe_config import _ensure_stripe_initialized
+        _ensure_stripe_initialized()
+        config_status['stripe_initialization'] = 'success'
+    except Exception as e:
+        config_status['stripe_initialization'] = f'failed: {str(e)}'
+    
+    if request.method == 'POST':
+        # Test webhook payload processing
+        payload = request.get_data(as_text=True)
+        sig_header = request.headers.get('Stripe-Signature')
+        
+        config_status.update({
+            'payload_received': bool(payload),
+            'payload_length': len(payload) if payload else 0,
+            'signature_header_present': bool(sig_header),
+            'content_type': request.headers.get('Content-Type')
+        })
+    
+    return jsonify({
+        'success': True,
+        'message': 'Webhook test endpoint',
+        'method': request.method,
+        'configuration': config_status
+    })
 
 
 @purchase_bp.errorhandler(404)

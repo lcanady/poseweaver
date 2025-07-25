@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
+import { useTheme } from "next-themes"
 import { 
   Settings, 
   Bell, 
@@ -48,6 +49,7 @@ interface UserSettings {
 export default function SettingsPage() {
   const { user } = useAuth()
   const { toast } = useToast()
+  const { theme, setTheme } = useTheme()
   
   const [settings, setSettings] = useState<UserSettings>({
     theme: 'system',
@@ -77,6 +79,16 @@ export default function SettingsPage() {
   useEffect(() => {
     loadSettings()
   }, [user?._id])
+
+  // Sync theme state with next-themes provider
+  useEffect(() => {
+    if (theme) {
+      setSettings(prev => ({
+        ...prev,
+        theme: theme as 'light' | 'dark' | 'system'
+      }))
+    }
+  }, [theme])
 
   const loadSettings = async () => {
     if (!user?._id) return
@@ -218,7 +230,10 @@ export default function SettingsPage() {
               <Label htmlFor="theme">Theme</Label>
               <Select 
                 value={settings.theme} 
-                onValueChange={(value: 'light' | 'dark' | 'system') => updateSetting('theme', value)}
+                onValueChange={(value: 'light' | 'dark' | 'system') => {
+                  setTheme(value)
+                  updateSetting('theme', value)
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select theme" />

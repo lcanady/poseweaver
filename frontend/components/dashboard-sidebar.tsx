@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Users, Settings, Feather, LayoutGrid, CreditCard, Sparkles, Eye, Shield } from "lucide-react"
 import { UserNav } from "./user-nav"
+import { NotificationCenter } from "@/components/notifications"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 
@@ -66,6 +67,9 @@ export function DashboardSidebar() {
           ))}
         </nav>
         <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
+          <div className="flex items-center justify-center">
+            <NotificationCenter />
+          </div>
           {bottomNavItems.map((item) => (
             <Tooltip key={item.href}>
               <TooltipTrigger asChild>

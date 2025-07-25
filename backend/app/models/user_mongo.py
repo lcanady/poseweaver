@@ -336,6 +336,7 @@ class User:
     
     def update_settings(self, new_settings: Dict[str, Any]) -> None:
         """Update user settings with new values."""
+        from datetime import datetime
         if new_settings:
             # Deep merge settings to preserve existing values not being updated
             for key, value in new_settings.items():
@@ -411,7 +412,7 @@ class User:
         return None
     
     @classmethod
-    def create_user(cls, email: str, password: str, display_name: str = None) -> 'User':
+    def create_user(cls, email: str, password: str, display_name: str = None, avatar_url: str = None) -> 'User':
         """Create a new user with validation."""
         # Validate email
         try:
@@ -429,7 +430,8 @@ class User:
         user = cls(
             email=email,
             password=password,
-            display_name=display_name
+            display_name=display_name,
+            avatar_url=avatar_url
         )
         user.save()
         return user

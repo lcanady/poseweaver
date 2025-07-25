@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
 // Import modular components
@@ -74,6 +75,9 @@ export default function DescriptionWriterPage() {
     extra_generations: 0,
     subscription_status: 'free'
   })
+  
+  // Check if user has access to description writer (paid users only)
+  const hasAccess = usageInfo?.subscription_status && ['basic', 'pro', 'premium', 'admin'].includes(usageInfo.subscription_status)
   
   // Fetch current usage info
   const fetchUsageInfo = useCallback(async () => {
@@ -343,6 +347,9 @@ export default function DescriptionWriterPage() {
       case 'quoted':
         textToCopy = `"${currentDescription}"`
         break
+      case 'mush':
+        textToCopy = currentDescription.replace(/\n/g, '%r')
+        break
     }
     
     try {
@@ -378,11 +385,32 @@ export default function DescriptionWriterPage() {
   
   const currentMetadata = descriptionVersions[currentVersionIndex]?.metadata
   
+  // If user doesn't have access, show paywall
+  if (!hasAccess) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Description Writer</h1>
+          <p className="text-muted-foreground mt-1">
+            Generate detailed descriptions of your images using AI
+          </p>
+        </div>
+        
+        {/* Paywall */}
+        <InlinePaywall
+          subscriptionStatus={usageInfo?.subscription_status || 'free'}
+          onPurchaseComplete={() => fetchUsageInfo()}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-8">
-        <div className="lg:col-span-3">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-6">
+        <div className="lg:col-span-3 flex flex-col justify-center">
           <h1 className="text-3xl font-bold">Description Writer</h1>
           <p className="text-muted-foreground mt-1">
             Generate detailed descriptions of your images using AI
@@ -449,7 +477,16 @@ export default function DescriptionWriterPage() {
         </div>
         
         {/* Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-6 sticky top-0">
+          {/* Version History */}
+          {descriptionVersions.length > 0 && (
+            <DescriptionVersionHistory
+              versions={descriptionVersions}
+              currentVersionIndex={currentVersionIndex}
+              onVersionSelect={handleVersionSelect}
+            />
+          )}
+          
           {/* Refinement */}
           {currentDescription && (
             <DescriptionRefinement
@@ -459,15 +496,6 @@ export default function DescriptionWriterPage() {
               onRefineDescription={handleRefineDescription}
               hasDescription={!!currentDescription}
               disabled={isGenerating || isRefining}
-            />
-          )}
-          
-          {/* Version History */}
-          {descriptionVersions.length > 0 && (
-            <DescriptionVersionHistory
-              versions={descriptionVersions}
-              currentVersionIndex={currentVersionIndex}
-              onVersionSelect={handleVersionSelect}
             />
           )}
           

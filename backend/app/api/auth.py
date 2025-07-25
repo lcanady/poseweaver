@@ -123,6 +123,68 @@ def login():
         return jsonify({'error': 'Login failed'}), 500
 
 
+@auth_bp.route('/google', methods=['POST'])
+def google_login():
+    """Google OAuth login endpoint.
+    
+    Request body:
+    {
+        "email": "user@example.com",
+        "name": "User Name",
+        "picture": "https://example.com/avatar.jpg",
+        "google_id": "google_user_id"
+    }
+    
+    Returns:
+        JSON response with user data and tokens
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'JSON body required'}), 400
+        
+        email = data.get('email')
+        name = data.get('name')
+        picture = data.get('picture')
+        google_id = data.get('google_id')
+        
+        if not email or not name or not google_id:
+            return jsonify({
+                'error': 'Email, name, and google_id are required'
+            }), 400
+        
+        # Authenticate or create user with Google
+        user = AuthService.authenticate_or_create_google_user(
+            email=email,
+            display_name=name,
+            avatar_url=picture,
+            google_id=google_id
+        )
+        
+        if not user:
+            return jsonify({'error': 'Google authentication failed'}), 401
+        
+        # Generate tokens
+        tokens = AuthService.generate_tokens(user)
+        
+        # Store user info and tokens in session
+        session['user_id'] = user.id
+        session['access_token'] = tokens['access_token']
+        session['refresh_token'] = tokens['refresh_token']
+        
+        return jsonify({
+            'success': True,
+            'user': user.to_dict(),
+            'access_token': tokens['access_token'],
+            'refresh_token': tokens['refresh_token']
+        }), 200
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Google login failed: {str(e)}'}), 500
+
+
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh():

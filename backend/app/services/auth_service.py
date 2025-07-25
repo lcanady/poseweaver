@@ -242,6 +242,72 @@ class AuthService:
             raise ValueError(f"Profile update failed: {str(e)}")
     
     @staticmethod
+    def authenticate_or_create_google_user(email: str, display_name: str, 
+                                         avatar_url: Optional[str] = None,
+                                         google_id: Optional[str] = None) -> Optional[User]:
+        """Authenticate or create user with Google OAuth.
+        
+        Args:
+            email: User's email address from Google
+            display_name: User's display name from Google
+            avatar_url: User's avatar URL from Google (optional)
+            google_id: Google user ID (optional)
+            
+        Returns:
+            User instance if successful, None otherwise
+            
+        Raises:
+            ValueError: If user creation/update fails
+        """
+        try:
+            # Try to find existing user by email
+            user = User.find_by_email(email)
+            
+            if user:
+                # Update existing user with Google info if needed
+                updated = False
+                
+                # Update avatar if provided and user doesn't have one
+                if avatar_url and not user.avatar_url:
+                    user.avatar_url = avatar_url
+                    updated = True
+                
+                # Update display name if user's current name is just email prefix
+                if user.display_name == email.split('@')[0] and display_name != email.split('@')[0]:
+                    user.display_name = display_name
+                    updated = True
+                
+                # Save updates if any
+                if updated:
+                    user.save()
+                
+                # Ensure user is active
+                if not user.is_active:
+                    return None
+                    
+                return user
+            else:
+                # Create new user for Google OAuth
+                # Generate a random password since Google users don't need it
+                import secrets
+                import string
+                random_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(16))
+                
+                user = User.create_user(
+                    email=email,
+                    password=random_password,  # Random password, won't be used
+                    display_name=display_name,
+                    avatar_url=avatar_url
+                )
+                
+                return user
+                
+        except Exception as e:
+            from flask import current_app
+            current_app.logger.error(f"Google OAuth user creation/authentication failed: {str(e)}")
+            return None
+    
+    @staticmethod
     def change_password(user: User, current_password: str, 
                        new_password: str) -> bool:
         """Change user's password.

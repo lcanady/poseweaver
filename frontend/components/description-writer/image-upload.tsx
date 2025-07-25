@@ -95,7 +95,7 @@ export function ImageUpload({
           <img
             src={imagePreview}
             alt="Selected image"
-            className="w-full h-64 object-cover rounded-lg"
+            className="w-full h-96 object-cover rounded-lg"
           />
           <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
             <Button
@@ -132,7 +132,7 @@ export function ImageUpload({
       <Card
         {...getRootProps()}
         className={cn(
-          "border-2 border-dashed transition-colors cursor-pointer",
+          "border-2 border-dashed transition-colors cursor-pointer h-96 flex items-center justify-center ",
           isDragActive && "border-primary bg-primary/5",
           dragError && "border-destructive bg-destructive/5",
           disabled && "opacity-50 cursor-not-allowed"

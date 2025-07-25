@@ -4,7 +4,20 @@ import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { PlusCircle, Loader2, Crown, AlertTriangle } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { 
+  PlusCircle, 
+  Loader2, 
+  Crown, 
+  AlertTriangle, 
+  Search, 
+  Filter,
+  Users,
+  Calendar,
+  TrendingUp
+} from "lucide-react"
 import { CharacterCard } from "@/components/character-card"
 import Link from "next/link"
 import { toast } from "@/components/ui/use-toast"
@@ -28,9 +41,12 @@ interface SubscriptionMeta {
 
 export default function CharactersPage() {
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [filteredCharacters, setFilteredCharacters] = useState<Character[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [subscriptionMeta, setSubscriptionMeta] = useState<SubscriptionMeta | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('recent');
 
   // Function to fetch with token refresh capabilities
   const fetchWithRefresh = async (url: string, options: RequestInit = {}) => {
@@ -97,6 +113,38 @@ export default function CharactersPage() {
     return response;
   };
 
+  // Filter and sort characters based on search and sort criteria
+  useEffect(() => {
+    let filtered = characters.filter(character => 
+      character.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      character.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // Sort characters
+    switch (sortBy) {
+      case 'name':
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'oldest':
+        filtered.sort((a, b) => {
+          const aDate = (a as any).created_at ? new Date((a as any).created_at).getTime() : 0;
+          const bDate = (b as any).created_at ? new Date((b as any).created_at).getTime() : 0;
+          return aDate - bDate;
+        });
+        break;
+      case 'recent':
+      default:
+        filtered.sort((a, b) => {
+          const aDate = (a as any).created_at ? new Date((a as any).created_at).getTime() : 0;
+          const bDate = (b as any).created_at ? new Date((b as any).created_at).getTime() : 0;
+          return bDate - aDate;
+        });
+        break;
+    }
+
+    setFilteredCharacters(filtered);
+  }, [characters, searchQuery, sortBy]);
+
   useEffect(() => {
     const fetchCharacters = async () => {
       setIsLoading(true);
@@ -121,15 +169,6 @@ export default function CharactersPage() {
     if (data.success === false) {
       console.error('API response indicates failure:', data);
       throw new Error(data.message || 'Failed to fetch characters');
-    }
-    
-    // Extract subscription metadata
-    if (data.meta) {
-      setSubscriptionMeta({
-        character_limit: data.meta.character_limit,
-        subscription_status: data.meta.subscription_status,
-        needs_upgrade: data.meta.needs_upgrade
-      });
     }
     
     // Check if we have character data in the expected format
@@ -167,27 +206,102 @@ export default function CharactersPage() {
   return (
     <div className="flex-1 p-4 md:p-8">
       <div className="mx-auto grid w-full max-w-7xl gap-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Your Characters</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <p className="text-muted-foreground">Manage your cast of characters for the AI to embody.</p>
-              {subscriptionMeta && subscriptionMeta.character_limit !== -1 && (
-                <Badge variant="outline" className="text-xs">
-                  {characters.length}/{subscriptionMeta.character_limit} characters
-                </Badge>
-              )}
+        {/* Header Section */}
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Your Characters</h1>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-muted-foreground">Manage your cast of characters for the AI to embody.</p>
+                {subscriptionMeta && subscriptionMeta.character_limit !== -1 && (
+                  <Badge variant="outline" className="text-xs">
+                    {characters.length}/{subscriptionMeta.character_limit} characters
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <Button 
+              asChild 
+              disabled={subscriptionMeta?.needs_upgrade && characters.length >= (subscriptionMeta?.character_limit || 3)}
+            >
+              <Link href="/dashboard/characters/create">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add New Character
+              </Link>
+            </Button>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Characters</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{characters.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {filteredCharacters.length !== characters.length && `${filteredCharacters.length} shown`}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Recently Active</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {characters.filter(c => c.lastUsed !== 'Never used').length}
+                </div>
+                <p className="text-xs text-muted-foreground">Characters with usage</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">This Month</CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {characters.filter(c => {
+                    const created = (c as any).created_at;
+                    if (!created) return false;
+                    const createdDate = new Date(created);
+                    const now = new Date();
+                    return createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear();
+                  }).length}
+                </div>
+                <p className="text-xs text-muted-foreground">Characters created</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search characters by name or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Recently Created</SelectItem>
+                  <SelectItem value="oldest">Oldest First</SelectItem>
+                  <SelectItem value="name">Name (A-Z)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <Button 
-            asChild 
-            disabled={subscriptionMeta?.needs_upgrade && characters.length >= (subscriptionMeta?.character_limit || 3)}
-          >
-            <Link href="/dashboard/characters/create">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add New Character
-            </Link>
-          </Button>
         </div>
 
         {/* Upgrade Hero for Free/Expired Users */}
@@ -243,9 +357,28 @@ export default function CharactersPage() {
               </Link>
             </Button>
           </div>
+        ) : filteredCharacters.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+              <Search className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">No characters found</h2>
+            <p className="text-muted-foreground mb-4">
+              No characters match your search criteria. Try adjusting your search terms.
+            </p>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSearchQuery('');
+                setSortBy('recent');
+              }}
+            >
+              Clear Search
+            </Button>
+          </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {characters.map((character) => (
+            {filteredCharacters.map((character) => (
               <CharacterCard key={character.id} character={character} />
             ))}
           </div>
