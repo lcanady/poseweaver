@@ -29,7 +29,7 @@ class VeniceClient:
         }
         # Make timeout configurable via environment variable
         import os
-        self.timeout = int(os.getenv('VENICE_TIMEOUT', '120'))  # seconds - configurable timeout
+        self.timeout = int(os.getenv('VENICE_TIMEOUT', '60'))  # seconds - reduced timeout to prevent 504 errors
     
     def generate_completion(
         self,

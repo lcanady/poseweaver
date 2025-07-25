@@ -108,7 +108,7 @@ class DescriptionService:
                 ],
                 model=model,
                 temperature=self._get_temperature_for_style(description_style),
-                max_tokens=2000
+                max_tokens=1000  # Reduced from 2000 to prevent timeouts
             )
             
             # Post-process the description
