@@ -91,7 +91,7 @@ fi
 print_status "Creating Supervisor configuration..."
 cat > /etc/supervisor/conf.d/poseweaver.conf << EOF
 [program:poseweaver]
-command=$APP_DIR/backend/venv/bin/gunicorn --worker-class eventlet -w 1 --bind 127.0.0.1:5001 app:app
+command=$APP_DIR/backend/venv/bin/python app.py
 directory=$APP_DIR/backend
 user=$APP_USER
 autostart=true
