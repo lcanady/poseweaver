@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, User, Sparkles } from "lucide-react"
-import { cn } from "../lib/utils"
+import { cn } from "@/lib/utils"
 
 interface FeaturedCharacter {
   _id: string

@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Users, Settings, Feather, LayoutGrid, CreditCard, Sparkles, Eye, Shield } from "lucide-react"
 import { UserNav } from "./user-nav"
 import { NotificationCenter } from "@/components/notifications"
-import { cn } from "../lib/utils"
+import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 
 interface NavItem {
