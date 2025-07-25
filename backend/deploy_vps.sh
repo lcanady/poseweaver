@@ -108,31 +108,18 @@ server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN;
 
-    # Handle preflight requests first
-    if (\$request_method = 'OPTIONS') {
-        add_header Access-Control-Allow-Origin "https://poseweaver.com";
-        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-        add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization";
-        add_header Access-Control-Allow-Credentials "true";
-        add_header Content-Length 0;
-        add_header Content-Type text/plain;
-        return 204;
-    }
-
     # Proxy to Flask application
     location / {
-        # Security headers
-        add_header X-Frame-Options "SAMEORIGIN" always;
-        add_header X-XSS-Protection "1; mode=block" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header Referrer-Policy "no-referrer-when-downgrade" always;
-        add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
-
         # CORS headers for API
         add_header Access-Control-Allow-Origin "https://poseweaver.com" always;
         add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
         add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization" always;
         add_header Access-Control-Allow-Credentials "true" always;
+
+        # Security headers
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header X-Content-Type-Options "nosniff" always;
 
         proxy_pass http://127.0.0.1:5001;
         proxy_set_header Host \$host;
