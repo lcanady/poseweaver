@@ -17,14 +17,18 @@ Your AI co-writer for immersive roleplay. PoseWeaver transforms simple poses int
 ### Backend
 - **Flask** - Python web framework
 - **Venice.ai API** - AI model integration (Dolphin uncensored thinking)
+- **MongoDB Atlas** - Cloud database for user and character data
 - **pytest** - Testing framework
 
 ### Frontend
-- **React 18** - User interface framework
+- **Next.js 15** - React framework with App Router
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling framework
-- **Vite** - Build tool and development server
-- **Vitest** - Testing framework
+- **React 18** - User interface library
+
+### Process Management
+- **PM2** - Production process manager for Node.js and Python applications
+- **Concurrently** - Development tool for running multiple processes
 
 ## Quick Start
 
@@ -32,33 +36,89 @@ Your AI co-writer for immersive roleplay. PoseWeaver transforms simple poses int
 - Node.js 18+
 - Python 3.11+
 - Venice.ai API key
+- MongoDB Atlas account (or local MongoDB installation)
+- PM2 (for production deployment)
 
 ### Development Setup
 
-1. **Backend Setup**
+1. **Clone and Install Dependencies**
    ```bash
+   git clone <repository-url>
+   cd poseweaver
+   
+   # Install root dependencies (includes PM2 and concurrently)
+   npm install
+   
+   # Install backend dependencies
    cd backend
    pip install -r requirements.txt
-   cp env.example .env
-   # Edit .env with your Venice.ai API key
-   python app.py
+   
+   # Install frontend dependencies
+   cd ../frontend
+   npm install
+   cd ..
    ```
 
-2. **Frontend Setup**
+2. **Environment Configuration**
    ```bash
-   cd frontend
-   npm install
-   npm run dev
+   # Copy environment template
+   cp backend/.env.example backend/.env
+   
+   # Edit backend/.env with your configuration:
+   # - VENICE_API_KEY=your_venice_api_key
+   # - MONGODB_URI=your_mongodb_atlas_connection_string
+   # - STRIPE_SECRET_KEY=your_stripe_key (optional)
    ```
+
+3. **Start Development Servers**
+   ```bash
+   # Option 1: Use PM2 (recommended)
+   pm2 start ecosystem.config.js --env development
+   
+   # Option 2: Use npm script with concurrently
+   npm run dev
+   
+   # Option 3: Manual start (separate terminals)
+   # Terminal 1 - Backend
+   cd backend && python app.py
+   
+   # Terminal 2 - Frontend
+   cd frontend && npm run dev
+   ```
+
+4. **Access Your Application**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:5001
 
 ## Development Commands
 
+### PM2 Process Management
+```bash
+# View running processes
+pm2 status
+
+# View logs
+pm2 logs                    # All processes
+pm2 logs poseweaver-backend # Backend only
+pm2 logs poseweaver-frontend # Frontend only
+
+# Restart services
+pm2 restart all
+pm2 restart poseweaver-backend
+pm2 restart poseweaver-frontend
+
+# Stop services
+pm2 stop all
+pm2 delete all              # Stop and remove from PM2
+```
+
+### Make Commands
 The project includes a Makefile with convenient development commands:
 
 ```bash
 make help      # Show all available commands
 make install   # Install dependencies
-make dev       # Start development servers
+make dev       # Start development servers (shows manual commands)
 make test      # Run all tests
 make clean     # Clean up build artifacts
 ```
@@ -103,10 +163,57 @@ cd frontend && npm run test:coverage
 npm run test:e2e
 ```
 
+## MongoDB Setup
+
+### MongoDB Atlas (Recommended)
+1. Create a free account at [MongoDB Atlas](https://www.mongodb.com/atlas)
+2. Create a new cluster
+3. Create a database user with read/write permissions
+4. Get your connection string from the "Connect" button
+5. Add the connection string to your `backend/.env` file:
+   ```
+   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/poseweaver?retryWrites=true&w=majority
+   ```
+
+### Local MongoDB (Alternative)
+If you prefer to run MongoDB locally:
+```bash
+# Install MongoDB (macOS)
+brew install mongodb-community
+
+# Start MongoDB
+brew services start mongodb-community
+
+# Use local connection string in .env
+MONGODB_URI=mongodb://localhost:27017/poseweaver
+```
+
+## Production Deployment
+
+### Using PM2 (Recommended)
+```bash
+# Start in production mode
+pm2 start ecosystem.config.js --env production
+
+# Save PM2 configuration
+pm2 save
+
+# Setup PM2 to start on system boot
+pm2 startup
+```
+
+### Environment Variables for Production
+Ensure these are set in your production environment:
+- `MONGODB_URI` - Your MongoDB connection string
+- `VENICE_API_KEY` - Your Venice.ai API key
+- `SECRET_KEY` - Flask secret key for sessions
+- `FLASK_ENV=production`
+- `NODE_ENV=production`
+
 ## Project Structure
 
 ```
-mush-pose-editor/
+poseweaver/
 ├── backend/                 # Flask backend
 │   ├── app/
 │   │   ├── __init__.py     # Flask app factory
@@ -115,17 +222,47 @@ mush-pose-editor/
 │   │   ├── models/         # Data models
 │   │   └── utils/          # Utility functions
 │   ├── tests/              # Backend tests
-│   └── requirements.txt    # Python dependencies
-├── frontend/               # React frontend
-│   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── services/       # API services
-│   │   ├── types/          # TypeScript types
-│   │   └── utils/          # Utility functions
-│   ├── tests/              # Frontend tests
+│   ├── requirements.txt    # Python dependencies
+│   └── .env.example        # Environment template
+├── frontend/               # Next.js frontend
+│   ├── app/                # App Router pages
+│   ├── components/         # React components
+│   ├── lib/                # Utility libraries
+│   ├── public/             # Static assets
 │   └── package.json        # Node.js dependencies
+├── ecosystem.config.js     # PM2 configuration
+├── package.json            # Root dependencies (PM2, concurrently)
 ├── Makefile               # Development commands
 └── README.md              # This file
+```
+
+## Recent Changes: Docker to PM2 Migration
+
+**🚀 We've migrated from Docker to PM2 for better development experience!**
+
+### What Changed:
+- ✅ **Removed Docker**: No more Docker containers, Dockerfiles, or docker-compose files
+- ✅ **Added PM2**: Production-ready process manager for both Node.js and Python
+- ✅ **Simplified Setup**: Direct native development without virtualization overhead
+- ✅ **Better Performance**: Faster startup times and easier debugging
+- ✅ **MongoDB Atlas**: Cloud database instead of local Docker containers
+
+### Migration Benefits:
+- **Faster Development**: No container build times
+- **Easier Debugging**: Direct access to processes and logs
+- **Better Resource Usage**: No Docker overhead
+- **Simplified Deployment**: PM2 handles process management natively
+- **Cross-Platform**: Works consistently across macOS, Linux, and Windows
+
+### If You Had Docker Setup Before:
+```bash
+# Remove old Docker artifacts (if any)
+docker-compose down
+docker system prune -f
+
+# Follow the new setup instructions above
+npm install
+pm2 start ecosystem.config.js --env development
 ```
 
 ## Configuration

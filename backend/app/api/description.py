@@ -38,6 +38,11 @@ def generate_description():
     - prompt: User prompt describing what to focus on (required)
     - style: Description style - minimal, balanced, elaborate (optional, default: balanced)
     - focus_areas: Comma-separated list of areas to focus on (optional)
+    - detail_level: Detail level 0-100 (optional, default: 70)
+    - creativity_level: Creativity level 0-100 (optional, default: 50)
+    - formality_level: Formality level 0-100 (optional, default: 60)
+    - include_emotional_context: Include emotional context true/false (optional, default: false)
+    - include_sensory_details: Include sensory details true/false (optional, default: false)
     
     Returns:
     {
@@ -94,6 +99,32 @@ def generate_description():
         if focus_areas_str:
             focus_areas = [area.strip() for area in focus_areas_str.split(',') if area.strip()]
         
+        # Parse advanced settings with validation
+        try:
+            detail_level = int(request.form.get('detail_level', 70))
+            if not 0 <= detail_level <= 100:
+                raise ValueError("Detail level must be between 0 and 100")
+        except (ValueError, TypeError):
+            detail_level = 70
+            
+        try:
+            creativity_level = int(request.form.get('creativity_level', 50))
+            if not 0 <= creativity_level <= 100:
+                raise ValueError("Creativity level must be between 0 and 100")
+        except (ValueError, TypeError):
+            creativity_level = 50
+            
+        try:
+            formality_level = int(request.form.get('formality_level', 60))
+            if not 0 <= formality_level <= 100:
+                raise ValueError("Formality level must be between 0 and 100")
+        except (ValueError, TypeError):
+            formality_level = 60
+            
+        # Parse boolean settings
+        include_emotional_context = request.form.get('include_emotional_context', 'false').lower() == 'true'
+        include_sensory_details = request.form.get('include_sensory_details', 'false').lower() == 'true'
+        
         # Validate image file
         filename = secure_filename(image_file.filename)
         if not filename:
@@ -125,13 +156,18 @@ def generate_description():
                 'error': f'Image file too large. Maximum size: {service.get_max_image_size() // (1024*1024)}MB'
             }), 400
         
-        # Generate description
+        # Generate description with all settings
         result = service.generate_description(
             image_data=image_data,
             image_format=file_ext,
             user_prompt=prompt,
             description_style=style,
-            focus_areas=focus_areas
+            focus_areas=focus_areas,
+            detail_level=detail_level,
+            creativity_level=creativity_level,
+            formality_level=formality_level,
+            include_emotional_context=include_emotional_context,
+            include_sensory_details=include_sensory_details
         )
         
         # Get usage information for response

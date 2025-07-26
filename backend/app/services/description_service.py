@@ -44,7 +44,12 @@ class DescriptionService:
         image_format: str,
         user_prompt: str,
         description_style: str = "balanced",
-        focus_areas: Optional[List[str]] = None
+        focus_areas: Optional[List[str]] = None,
+        detail_level: int = 70,
+        creativity_level: int = 50,
+        formality_level: int = 60,
+        include_emotional_context: bool = False,
+        include_sensory_details: bool = False
     ) -> DescriptionResult:
         """Generate a detailed physical description from an image.
         
@@ -54,6 +59,11 @@ class DescriptionService:
             user_prompt: User's specific prompt for what to describe
             description_style: Style of description (minimal, balanced, elaborate)
             focus_areas: Optional list of specific areas to focus on
+            detail_level: Level of detail (0-100, default 70)
+            creativity_level: Level of creative language (0-100, default 50)
+            formality_level: Level of formality (0-100, default 60)
+            include_emotional_context: Whether to include emotional/mood descriptions
+            include_sensory_details: Whether to include sensory descriptions (textures, etc.)
             
         Returns:
             DescriptionResult with the generated description and metadata
@@ -76,8 +86,16 @@ class DescriptionService:
         image_base64 = base64.b64encode(image_data).decode('utf-8')
         image_url = f"data:image/{image_format};base64,{image_base64}"
         
-        # Build system message with quality standards
-        system_message = self._create_system_message(description_style, focus_areas)
+        # Build system message with quality standards and all settings
+        system_message = self._create_system_message(
+            description_style, 
+            focus_areas,
+            detail_level,
+            creativity_level,
+            formality_level,
+            include_emotional_context,
+            include_sensory_details
+        )
         
         # Create user message with image and prompt
         user_message = {
@@ -107,8 +125,8 @@ class DescriptionService:
                     user_message
                 ],
                 model=model,
-                temperature=self._get_temperature_for_style(description_style),
-                max_tokens=2000
+                temperature=self._get_temperature_for_settings(description_style, creativity_level),
+                max_tokens=self._get_max_tokens_for_detail_level(detail_level)
             )
             
             # Post-process the description
@@ -136,10 +154,29 @@ class DescriptionService:
         except Exception as e:
             raise VeniceAPIError(f"Failed to generate description: {str(e)}")
     
-    def _create_system_message(self, style: str, focus_areas: Optional[List[str]] = None) -> str:
-        """Create system message with quality standards and style guidelines."""
+    def _create_system_message(
+        self, 
+        style: str, 
+        focus_areas: Optional[List[str]] = None,
+        detail_level: int = 70,
+        creativity_level: int = 50,
+        formality_level: int = 60,
+        include_emotional_context: bool = False,
+        include_sensory_details: bool = False
+    ) -> str:
+        """Create system message with quality standards and style guidelines.
         
-        # Base quality requirements (same as pose enhancer)
+        Args:
+            style: Description style (minimal, balanced, elaborate)
+            focus_areas: Optional list of specific areas to focus on
+            detail_level: Level of detail (0-100)
+            creativity_level: Level of creative language (0-100)
+            formality_level: Level of formality (0-100)
+            include_emotional_context: Whether to include emotional/mood descriptions
+            include_sensory_details: Whether to include sensory descriptions
+        """
+        
+        # Base quality requirements
         base_requirements = """You are a professional description writer specializing in detailed physical descriptions. Your writing must follow these strict quality standards:
 
 BURSTINESS REQUIREMENTS:
@@ -165,54 +202,174 @@ DESCRIPTION FOCUS:
 - Describe what you can actually see, not assumptions about personality or emotions
 - Use precise, concrete language rather than abstract concepts"""
 
-        # Style-specific guidelines
-        style_guidelines = {
-            "minimal": """
-MINIMAL STYLE:
-- Keep descriptions concise but vivid
-- Focus on the most striking visual elements
-- Use 2-4 sentences maximum
-- Emphasize key details that define the subject""",
-            
-            "balanced": """
-BALANCED STYLE:
-- Provide comprehensive but not overwhelming detail
-- Balance physical features with clothing and posture
-- Use 4-8 sentences typically
-- Include both obvious and subtle visual elements""",
-            
-            "elaborate": """
-ELABORATE STYLE:
-- Provide rich, detailed descriptions with extensive visual information
-- Include fine details about textures, colors, lighting, and composition
-- Use 8-15 sentences or more as needed
-- Layer multiple levels of visual information"""
-        }
+        # Build dynamic style guidelines based on settings
+        style_section = self._build_style_guidelines(style, detail_level)
+        
+        # Build formality guidelines
+        formality_section = self._build_formality_guidelines(formality_level)
+        
+        # Build creativity guidelines
+        creativity_section = self._build_creativity_guidelines(creativity_level)
+        
+        # Build optional content sections
+        optional_sections = self._build_optional_content_sections(
+            include_emotional_context, include_sensory_details
+        )
         
         # Focus areas if specified
         focus_section = ""
         if focus_areas:
             focus_list = ", ".join(focus_areas)
             focus_section = f"""
+
 SPECIFIC FOCUS AREAS:
 Pay particular attention to: {focus_list}
 Ensure these areas receive detailed coverage in your description."""
         
-        return f"{base_requirements}\n{style_guidelines[style]}{focus_section}"
+        # Combine all sections
+        return f"{base_requirements}\n{style_section}\n{formality_section}\n{creativity_section}\n{optional_sections}{focus_section}"
+    
+    def _build_style_guidelines(self, style: str, detail_level: int) -> str:
+        """Build style guidelines that incorporate both style and detail level."""
+        base_styles = {
+            "minimal": {
+                "name": "MINIMAL STYLE",
+                "base_sentences": "2-4 sentences",
+                "focus": "most striking visual elements",
+                "approach": "concise but vivid"
+            },
+            "balanced": {
+                "name": "BALANCED STYLE", 
+                "base_sentences": "4-8 sentences",
+                "focus": "comprehensive balance of features, clothing, and posture",
+                "approach": "moderate detail, well-rounded"
+            },
+            "elaborate": {
+                "name": "ELABORATE STYLE",
+                "base_sentences": "8-15+ sentences",
+                "focus": "rich, extensive visual information with fine details",
+                "approach": "comprehensive and layered descriptions"
+            }
+        }
+        
+        style_info = base_styles[style]
+        
+        # Adjust sentence count based on detail level
+        if detail_level <= 30:
+            length_modifier = "Keep descriptions shorter and more focused."
+        elif detail_level <= 70:
+            length_modifier = f"Use approximately {style_info['base_sentences']} typically."
+        else:
+            length_modifier = "Expand beyond typical length with additional layers of detail."
+            
+        return f"""
+{style_info['name']}:
+- {style_info['approach'].capitalize()}
+- Focus on {style_info['focus']}
+- {length_modifier}
+- Detail intensity: {detail_level}% - {'minimal' if detail_level <= 30 else 'moderate' if detail_level <= 70 else 'maximum'} visual information"""
+    
+    def _build_formality_guidelines(self, formality_level: int) -> str:
+        """Build formality guidelines based on formality level."""
+        if formality_level <= 30:
+            tone = "casual and conversational"
+            language = "Use everyday language, contractions, and informal phrasing"
+            structure = "Write as if describing to a friend"
+        elif formality_level <= 70:
+            tone = "professional but approachable"
+            language = "Use clear, direct language without being overly casual or formal"
+            structure = "Maintain professional clarity while being accessible"
+        else:
+            tone = "formal and sophisticated"
+            language = "Use elevated vocabulary, complete sentences, and precise terminology"
+            structure = "Write with academic or professional precision"
+            
+        return f"""
+FORMALITY LEVEL ({formality_level}%):
+- Tone: {tone}
+- Language: {language}
+- Structure: {structure}"""
+    
+    def _build_creativity_guidelines(self, creativity_level: int) -> str:
+        """Build creativity guidelines based on creativity level."""
+        if creativity_level <= 30:
+            approach = "straightforward and literal"
+            language = "Use direct, conventional descriptions"
+            metaphors = "Avoid metaphors and creative comparisons"
+        elif creativity_level <= 70:
+            approach = "balanced creativity"
+            language = "Mix conventional descriptions with occasional creative phrasing"
+            metaphors = "Use subtle creative elements when they enhance clarity"
+        else:
+            approach = "highly creative and expressive"
+            language = "Use vivid, imaginative language and unexpected word combinations"
+            metaphors = "Employ creative metaphors, analogies, and artistic descriptions"
+            
+        return f"""
+CREATIVITY LEVEL ({creativity_level}%):
+- Approach: {approach}
+- Language style: {language}
+- Creative elements: {metaphors}"""
+    
+    def _build_optional_content_sections(self, include_emotional_context: bool, include_sensory_details: bool) -> str:
+        """Build optional content sections based on boolean settings."""
+        sections = []
+        
+        if include_emotional_context:
+            sections.append("""
+EMOTIONAL CONTEXT ENABLED:
+- Include descriptions of apparent mood, expression, and emotional atmosphere
+- Describe facial expressions, body language, and overall demeanor
+- Note the emotional tone conveyed by posture and positioning""")
+            
+        if include_sensory_details:
+            sections.append("""
+SENSORY DETAILS ENABLED:
+- Include tactile descriptions of textures, materials, and surfaces
+- Describe how things might feel, sound, or even smell when relevant
+- Add sensory richness to clothing, hair, skin, and environmental elements""")
+            
+        return "".join(sections)
     
     def _get_vision_model(self) -> str:
         """Get a vision-capable model from Venice AI."""
         # Use qwen-2.5-vl which actually supports vision according to Venice AI API
         return "qwen-2.5-vl"  # Qwen 2.5 VL 72B - specifically designed for vision tasks
     
-    def _get_temperature_for_style(self, style: str) -> float:
-        """Get appropriate temperature setting for description style."""
-        temperature_map = {
+    def _get_temperature_for_settings(self, style: str, creativity_level: int) -> float:
+        """Get appropriate temperature setting based on style and creativity level."""
+        # Base temperature from style
+        base_temps = {
             "minimal": 0.6,    # More focused and precise
             "balanced": 0.7,   # Balanced creativity
             "elaborate": 0.8   # More creative and varied
         }
-        return temperature_map.get(style, 0.7)
+        
+        base_temp = base_temps.get(style, 0.7)
+        
+        # Adjust based on creativity level (0-100)
+        # Low creativity (0-30): reduce temperature by up to 0.2
+        # High creativity (70-100): increase temperature by up to 0.2
+        creativity_adjustment = (creativity_level - 50) * 0.004  # Maps 0-100 to -0.2 to +0.2
+        
+        final_temp = base_temp + creativity_adjustment
+        
+        # Clamp between 0.3 and 1.0 for safety
+        return max(0.3, min(1.0, final_temp))
+    
+    def _get_max_tokens_for_detail_level(self, detail_level: int) -> int:
+        """Get appropriate max tokens based on detail level."""
+        # Map detail level (0-100) to token count
+        # Low detail: 800-1200 tokens
+        # Medium detail: 1200-2000 tokens  
+        # High detail: 2000-3000 tokens
+        
+        if detail_level <= 30:
+            return 1200  # Shorter descriptions
+        elif detail_level <= 70:
+            return 2000  # Standard length
+        else:
+            return 3000  # Extended descriptions
     
     def _post_process_description(self, description: str) -> str:
         """Post-process description to ensure quality standards."""
