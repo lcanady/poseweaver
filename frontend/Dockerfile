@@ -16,6 +16,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Verify public directory exists and list contents for debugging
+RUN ls -la /app/public || echo "Public directory not found"
+
 # Build the application
 RUN npm run build
 
@@ -30,7 +33,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy the public folder
+# Copy public directory from builder stage
 COPY --from=builder /app/public ./public
 
 # Set the correct permission for prerender cache
