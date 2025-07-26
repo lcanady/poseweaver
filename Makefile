@@ -1,41 +1,13 @@
-.PHONY: help start stop test clean install build logs
+.PHONY: help start stop test clean install dev
 
 # Default target
 help:
-	@echo "MUSH Pose Editor - Development Commands"
-	@echo "======================================"
-	@echo "start    - Start development environment"
-	@echo "stop     - Stop development environment"
-	@echo "test     - Run all tests"
-	@echo "clean    - Clean up containers and volumes"
+	@echo "PoseWeaver - Development Commands"
+	@echo "================================"
 	@echo "install  - Install dependencies"
-	@echo "build    - Build Docker images"
-	@echo "logs     - Show application logs"
-	@echo "migrate  - Run database migrations (if needed)"
-
-# Start development environment
-start:
-	docker-compose up -d
-	@echo "Development environment started!"
-	@echo "Frontend: http://localhost:3000"
-	@echo "Backend: http://localhost:5001"
-
-# Stop development environment
-stop:
-	docker-compose down
-
-# Run tests
-test:
-	@echo "Running backend tests..."
-	docker-compose exec backend pytest --cov=app --cov-report=term-missing
-	@echo "Running frontend tests..."
-	docker-compose exec frontend npm run test:coverage
-
-# Clean up containers and volumes
-clean:
-	docker-compose down -v
-	docker system prune -f
-	@echo "Cleaned up containers and volumes"
+	@echo "dev      - Start development servers"
+	@echo "test     - Run all tests"
+	@echo "clean    - Clean up build artifacts"
 
 # Install dependencies
 install:
@@ -44,13 +16,28 @@ install:
 	@echo "Installing frontend dependencies..."
 	cd frontend && npm install
 
-# Build Docker images
-build:
-	docker-compose build --no-cache
+# Start development environment
+dev:
+	@echo "Starting development servers..."
+	@echo "Backend will run on: http://localhost:5001"
+	@echo "Frontend will run on: http://localhost:3000"
+	@echo "Start backend: cd backend && python -m uvicorn main:app --reload --port 5001"
+	@echo "Start frontend: cd frontend && npm run dev"
 
-# Show application logs
-logs:
-	docker-compose logs -f
+# Run tests
+test:
+	@echo "Running backend tests..."
+	cd backend && python -m pytest --cov=app --cov-report=term-missing
+	@echo "Running frontend tests..."
+	cd frontend && npm run test
+
+# Clean up build artifacts
+clean:
+	@echo "Cleaning up build artifacts..."
+	cd backend && find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	cd backend && find . -name "*.pyc" -delete 2>/dev/null || true
+	cd frontend && rm -rf .next node_modules/.cache 2>/dev/null || true
+	@echo "Cleaned up build artifacts"
 
 # Placeholder for migrations (not needed for current setup)
 migrate:

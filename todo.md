@@ -13,7 +13,7 @@ Building a MUSH Pose Editor using TDD principles with Venice.ai (Dolphin uncenso
 ### Environment Setup
 - [ ] **setup-project-structure** - Set up project structure with backend (Flask) and frontend (React + TypeScript) directories
 - [ ] **setup-testing-infrastructure** - Configure testing frameworks - pytest for backend, Vitest + React Testing Library for frontend
-- [ ] **setup-environment-config** - Create environment configuration files and Docker setup for development
+- [ ] **setup-environment-config** - Create environment configuration files for development
 
 ### Dependencies
 ```
@@ -195,7 +195,6 @@ frontend/
 - OpenAI-compatible API format
 
 ### Development Tools
-- Docker for containerization
 - GitHub Actions for CI/CD
 - Playwright for E2E testing
 - ESLint/Prettier for code quality

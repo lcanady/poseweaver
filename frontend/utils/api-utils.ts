@@ -4,7 +4,7 @@
 
 /**
  * Get the API base URL dynamically based on the current environment
- * This works for both localhost development and Docker Compose deployment
+ * This works for both localhost development and production deployment
  */
 export function getApiUrl(): string {
   // If NEXT_PUBLIC_API_URL is set, use it (for production or explicit configuration)
@@ -21,7 +21,7 @@ export function getApiUrl(): string {
     // If we're accessing through port 80 (nginx proxy), use relative URLs
     if (port === '80' || port === '') {
       const apiUrl = `http://${hostname}`;
-      console.log('[getApiUrl] Docker Compose mode - using nginx proxy:', apiUrl);
+      console.log('[getApiUrl] Production mode - using nginx proxy:', apiUrl);
       return apiUrl;
     }
     

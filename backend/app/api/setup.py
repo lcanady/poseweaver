@@ -15,6 +15,17 @@ def check_setup_status():
     try:
         mongodb_service = get_mongodb_service()
         
+        # Check if MongoDB is connected
+        if mongodb_service.db is None:
+            logger.warning("MongoDB not connected - assuming setup is needed")
+            return jsonify({
+                'success': True,
+                'needs_setup': True,
+                'admin_count': 0,
+                'mongodb_connected': False,
+                'message': 'MongoDB not connected - running in development mode'
+            })
+        
         # Check if any admin users exist
         admin_count = mongodb_service.count_documents(
             User.COLLECTION_NAME,
@@ -26,12 +37,19 @@ def check_setup_status():
         return jsonify({
             'success': True,
             'needs_setup': needs_setup,
-            'admin_count': admin_count
+            'admin_count': admin_count,
+            'mongodb_connected': True
         })
         
     except Exception as e:
         logger.error(f"Error checking setup status: {e}")
-        return jsonify({'error': 'Failed to check setup status'}), 500
+        # Return a more informative error response
+        return jsonify({
+            'success': False,
+            'error': 'Failed to check setup status',
+            'details': str(e),
+            'needs_setup': True  # Default to needing setup if we can't check
+        }), 200  # Return 200 instead of 500 so frontend can handle it
 
 @setup_bp.route('/create-admin', methods=['POST'])
 def create_first_admin():

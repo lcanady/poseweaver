@@ -18,7 +18,6 @@ Your AI co-writer for immersive roleplay. PoseWeaver transforms simple poses int
 - **Flask** - Python web framework
 - **Venice.ai API** - AI model integration (Dolphin uncensored thinking)
 - **pytest** - Testing framework
-- **Docker** - Containerization
 
 ### Frontend
 - **React 18** - User interface framework
@@ -30,35 +29,11 @@ Your AI co-writer for immersive roleplay. PoseWeaver transforms simple poses int
 ## Quick Start
 
 ### Prerequisites
-- Docker and Docker Compose
-- Node.js 18+ (for local development)
-- Python 3.11+ (for local development)
+- Node.js 18+
+- Python 3.11+
 - Venice.ai API key
 
-### Using Docker (Recommended)
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd poseweaver
-   ```
-
-2. **Set up environment variables**
-   ```bash
-   cp backend/env.example backend/.env
-   # Edit backend/.env with your Venice.ai API key
-   ```
-
-3. **Start the development environment**
-   ```bash
-   make start
-   ```
-
-4. **Access the application**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:5000
-
-### Local Development
+### Development Setup
 
 1. **Backend Setup**
    ```bash
@@ -82,14 +57,10 @@ The project includes a Makefile with convenient development commands:
 
 ```bash
 make help      # Show all available commands
-make start     # Start development environment
-make stop      # Stop development environment
+make install   # Install dependencies
+make dev       # Start development servers
 make test      # Run all tests
-make clean     # Clean up containers and volumes
-make build     # Build Docker images
-make logs      # Show application logs
-make lint      # Run linting
-make format    # Format code
+make clean     # Clean up build artifacts
 ```
 
 ## API Endpoints
@@ -144,8 +115,7 @@ mush-pose-editor/
 │   │   ├── models/         # Data models
 │   │   └── utils/          # Utility functions
 │   ├── tests/              # Backend tests
-│   ├── requirements.txt    # Python dependencies
-│   └── Dockerfile         # Backend container
+│   └── requirements.txt    # Python dependencies
 ├── frontend/               # React frontend
 │   ├── src/
 │   │   ├── components/     # React components
@@ -153,9 +123,7 @@ mush-pose-editor/
 │   │   ├── types/          # TypeScript types
 │   │   └── utils/          # Utility functions
 │   ├── tests/              # Frontend tests
-│   ├── package.json        # Node.js dependencies
-│   └── Dockerfile         # Frontend container
-├── docker-compose.yml      # Development environment
+│   └── package.json        # Node.js dependencies
 ├── Makefile               # Development commands
 └── README.md              # This file
 ```

@@ -15,7 +15,6 @@ This guide covers deploying the PoseWeaver frontend as a DigitalOcean App.
 #### 1. Prepare Your Repository
 
 Ensure your repository contains:
-- ✅ `Dockerfile` (production-ready, multi-stage build)
 - ✅ `next.config.mjs` (with `output: 'standalone'`)
 - ✅ `.do/app.yaml` (DigitalOcean App specification)
 - ✅ `env.template` (environment variables template)
@@ -56,11 +55,10 @@ NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id
 
 #### 4. Build Configuration
 
-The app will automatically use the provided `Dockerfile` which:
-- Uses multi-stage build for optimization
-- Installs dependencies with pnpm
-- Builds the Next.js application
-- Runs in production mode with `node server.js`
+The app will automatically:
+- Install dependencies with npm/pnpm
+- Build the Next.js application
+- Run in production mode
 
 #### 5. Domain Configuration
 
@@ -128,21 +126,6 @@ Before deploying to production:
 ---
 
 ## Alternative Deployment Methods
-
-### Docker Deployment
-
-If you prefer to deploy using Docker directly:
-
-```bash
-# Build the image
-docker build -t poseweaver-frontend .
-
-# Run the container
-docker run -p 3000:3000 \
-  -e NODE_ENV=production \
-  -e NEXT_PUBLIC_API_URL=https://your-api-url.com \
-  poseweaver-frontend
-```
 
 ### Manual Deployment
 

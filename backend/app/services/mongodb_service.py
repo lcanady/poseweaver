@@ -61,14 +61,16 @@ class MongoDBService:
             logger.info("Disconnected from MongoDB")
     
     @property
-    def db(self) -> Database:
+    def db(self) -> Optional[Database]:
         """Get the database instance."""
         if self._db is None:
             self.connect()
         return self._db
     
-    def get_collection(self, collection_name: str) -> Collection:
+    def get_collection(self, collection_name: str) -> Optional[Collection]:
         """Get a collection from the database."""
+        if self.db is None:
+            return None
         return self.db[collection_name]
     
     def insert_one(self, collection_name: str, document: Dict[str, Any]) -> str:
