@@ -33,14 +33,18 @@ echo ""
 
 # Create necessary directories
 echo -e "${BLUE}📁 Creating directories...${NC}"
-mkdir -p ./certbot/conf
-mkdir -p ./certbot/www
+mkdir -p "$PROJECT_ROOT/certbot/conf"
+mkdir -p "$PROJECT_ROOT/certbot/www"
 
 # Step 1: Start nginx without SSL first (for certificate validation)
 echo -e "${BLUE}🚀 Step 1: Starting nginx for certificate validation...${NC}"
 
+# Get the project root directory
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+echo "Project root: $PROJECT_ROOT"
+
 # Create temporary nginx config for certificate validation
-cat > ./nginx/conf.d/temp-cert-validation.conf << EOF
+cat > "$PROJECT_ROOT/nginx/conf.d/temp-cert-validation.conf" << EOF
 server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN;
@@ -58,6 +62,7 @@ EOF
 
 # Start only nginx and certbot for certificate generation
 echo -e "${YELLOW}Starting nginx container for certificate validation...${NC}"
+cd "$PROJECT_ROOT"
 docker-compose -f docker-compose.ssl.yml up -d nginx
 
 # Wait for nginx to be ready
@@ -77,7 +82,7 @@ docker-compose -f docker-compose.ssl.yml run --rm certbot \
     -d www.$DOMAIN
 
 # Check if certificate was obtained successfully
-if [ ! -f "./certbot/conf/live/$DOMAIN/fullchain.pem" ]; then
+if [ ! -f "$PROJECT_ROOT/certbot/conf/live/$DOMAIN/fullchain.pem" ]; then
     echo -e "${RED}❌ Certificate generation failed!${NC}"
     echo "Please check the logs above and ensure:"
     echo "1. Your domain points to this server's IP address"
@@ -92,10 +97,10 @@ echo -e "${GREEN}✅ Certificate obtained successfully!${NC}"
 echo -e "${BLUE}🔧 Step 3: Updating nginx configuration...${NC}"
 
 # Replace placeholder domain in SSL config
-sed -i.bak "s/your-domain.com/$DOMAIN/g" ./nginx/conf.d/poseweaver-ssl.conf
+sed -i.bak "s/your-domain.com/$DOMAIN/g" "$PROJECT_ROOT/nginx/conf.d/poseweaver-ssl.conf"
 
 # Remove temporary validation config
-rm -f ./nginx/conf.d/temp-cert-validation.conf
+rm -f "$PROJECT_ROOT/nginx/conf.d/temp-cert-validation.conf"
 
 # Step 4: Restart with full SSL configuration
 echo -e "${BLUE}🔄 Step 4: Restarting with SSL configuration...${NC}"
