@@ -18,6 +18,14 @@ module.exports = {
         FLASK_DEBUG: 'true',
         PORT: 5001
       },
+      env_production: {
+        FLASK_ENV: 'production',
+        FLASK_DEBUG: 'false',
+        PORT: 5001,
+        STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+        STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
+        STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET
+      },
       instances: 1,
       exec_mode: 'fork',
       watch: false,
