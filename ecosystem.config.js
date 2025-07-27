@@ -4,7 +4,7 @@ module.exports = {
       name: 'poseweaver-backend',
       script: 'app.py',
       cwd: './backend',
-      interpreter: '/Users/lcanady/github/edit/.venv/bin/python',
+      interpreter: '/root/poseweaver/.venv/bin/python',
       env: {
         FLASK_ENV: 'production',
         FLASK_DEBUG: 'false',
