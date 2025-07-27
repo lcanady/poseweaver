@@ -5,6 +5,7 @@ module.exports = {
       script: 'app.py',
       cwd: './backend',
       interpreter: '/root/poseweaver/.venv/bin/python',
+      env_file: '../.env',
       env: {
         FLASK_ENV: 'production',
         FLASK_DEBUG: 'false',
@@ -49,6 +50,13 @@ module.exports = {
         NODE_ENV: 'development',
         PORT: 3000,
         NEXT_PUBLIC_API_URL: 'http://localhost:5001'
+      },
+      env_production: {
+        NODE_ENV: 'production',
+        PORT: 3000,
+        NEXT_PUBLIC_API_URL: 'https://poseweaver.com/api',
+        NEXT_TELEMETRY_DISABLED: 1,
+        HOSTNAME: '0.0.0.0'
       },
       instances: 1,
       exec_mode: 'fork',
