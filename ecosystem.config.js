@@ -8,7 +8,10 @@ module.exports = {
       env: {
         FLASK_ENV: 'production',
         FLASK_DEBUG: 'false',
-        PORT: 5001
+        PORT: 5001,
+        STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+        STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
+        STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET
       },
       env_development: {
         FLASK_ENV: 'development',
