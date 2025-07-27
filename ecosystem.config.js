@@ -32,7 +32,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
-        NEXT_PUBLIC_API_URL: 'http://localhost:5001'
+        NEXT_PUBLIC_API_URL: 'https://poseweaver.com/api'
       },
       env_development: {
         NODE_ENV: 'development',
