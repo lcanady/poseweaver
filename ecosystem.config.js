@@ -27,7 +27,7 @@ module.exports = {
     {
       name: 'poseweaver-frontend',
       script: 'npm',
-      args: 'run dev',
+      args: 'run start',
       cwd: './frontend',
       env: {
         NODE_ENV: 'production',
@@ -52,14 +52,14 @@ module.exports = {
 
   deploy: {
     production: {
-      user: 'node',
-      host: 'your-server.com',
+      user: 'deploy',
+      host: ['your-server.com'],
       ref: 'origin/main',
-      repo: 'git@github.com:username/poseweaver.git',
-      path: '/var/www/production',
+      repo: 'git@github.com:lcanady/poseweaver.git',
+      path: '/var/www/poseweaver',
       'pre-deploy-local': '',
-      'post-deploy': 'npm install && npm run build && pm2 reload ecosystem.config.js --env production',
-      'pre-setup': ''
+      'post-deploy': 'source ~/.bashrc && ./deploy.sh',
+      'pre-setup': 'ls -la'
     }
   }
 };
