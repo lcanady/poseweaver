@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, User, Sparkles } from "lucide-react"
+import { fixImageUrl } from "@/utils/api-utils"
 import { cn } from "@/lib/utils"
 
 interface FeaturedCharacter {
@@ -57,7 +58,7 @@ export function FeaturedCharacters() {
     try {
       setIsLoading(true)
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || ''}/api/characters/mgmt/featured?limit=12`
+        `${process.env.NEXT_PUBLIC_API_URL || '/api'}/characters/mgmt/featured?limit=12`
       )
       
       if (!response.ok) {
@@ -193,7 +194,7 @@ export function FeaturedCharacters() {
                 <Card key={character._id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="aspect-square relative overflow-hidden">
                     <img
-                      src={character.profile_image}
+                      src={fixImageUrl(character.profile_image)}
                       alt={character.name}
                       className="w-full h-full object-cover transition-transform hover:scale-105"
                       onError={(e) => {
