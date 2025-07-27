@@ -44,21 +44,6 @@ export function getApiUrl(): string {
 }
 
 /**
- * Fix image URLs that contain localhost:5001 to use the correct API URL
- */
-export function fixImageUrl(imageUrl: string | null | undefined): string {
-  if (!imageUrl) return '/placeholder.svg';
-  
-  // If the URL contains localhost:5001, replace it with the correct API URL
-  if (imageUrl.includes('localhost:5001')) {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    return imageUrl.replace('http://localhost:5001', apiUrl);
-  }
-  
-  return imageUrl;
-}
-
-/**
  * Make an authenticated API request with dynamic URL detection
  */
 export async function apiRequest(endpoint: string, options: RequestInit = {}) {

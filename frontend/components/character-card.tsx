@@ -1,7 +1,6 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { fixImageUrl } from "@/utils/api-utils"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { 
@@ -55,7 +54,7 @@ export function CharacterCard({ character }: CharacterCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start gap-4">
           <Avatar className="h-16 w-16 border-2 border-border/20">
-            <AvatarImage src={fixImageUrl(character.avatarUrl)} alt={character.name} />
+            <AvatarImage src={character.avatarUrl || "/placeholder.svg"} alt={character.name} />
             <AvatarFallback className="text-lg font-semibold">
               {character.name.charAt(0)}
             </AvatarFallback>
