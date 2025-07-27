@@ -104,6 +104,11 @@ create_nginx_config() {
         sed -i '/include \/etc\/nginx\/conf\.d\/\*\.conf;/a\    include /etc/nginx/sites-enabled/*;' /etc/nginx/nginx.conf
     fi
     
+    # Add rate limiting zones to http block if not already present
+    if ! grep -q "limit_req_zone" /etc/nginx/nginx.conf; then
+        sed -i '/http {/a\    # Rate limiting zones\n    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;\n    limit_req_zone $binary_remote_addr zone=login:10m rate=1r/s;' /etc/nginx/nginx.conf
+    fi
+    
     cat > $config_file << EOF
 # PoseWeaver Nginx Configuration
 server {
