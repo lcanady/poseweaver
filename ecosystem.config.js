@@ -53,7 +53,7 @@ module.exports = {
   deploy: {
     production: {
       user: 'deploy',
-      host: ['your-server.com'],
+      host: ['poseweaver.com'],
       ref: 'origin/main',
       repo: 'git@github.com:lcanady/poseweaver.git',
       path: '/var/www/poseweaver',
