@@ -25,10 +25,10 @@ export function getApiUrl(): string {
       return apiUrl;
     }
     
-    // If we're on port 3000 (development), use direct backend connection
+    // If we're on port 3000 (development), use relative API path
     if (port === '3000' && (hostname === 'localhost' || hostname === '127.0.0.1')) {
-      const apiUrl = 'http://localhost:5001';
-      console.log('[getApiUrl] Development mode - using direct backend:', apiUrl);
+      const apiUrl = '/api';
+      console.log('[getApiUrl] Development mode - using relative API path:', apiUrl);
       return apiUrl;
     }
     

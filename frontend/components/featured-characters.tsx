@@ -57,7 +57,7 @@ export function FeaturedCharacters() {
     try {
       setIsLoading(true)
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt/featured?limit=12`
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/api/characters/mgmt/featured?limit=12`
       )
       
       if (!response.ok) {
