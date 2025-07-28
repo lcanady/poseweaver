@@ -44,17 +44,20 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
-        NEXT_PUBLIC_API_URL: 'https://poseweaver.com/api'
+        NEXT_PUBLIC_API_URL: 'https://poseweaver.com/api',
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY
       },
       env_development: {
         NODE_ENV: 'development',
         PORT: 3000,
-        NEXT_PUBLIC_API_URL: 'http://localhost:5001'
+        NEXT_PUBLIC_API_URL: 'http://localhost:5001',
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY
       },
       env_production: {
         NODE_ENV: 'production',
         PORT: 3000,
         NEXT_PUBLIC_API_URL: 'https://poseweaver.com/api',
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
         NEXT_TELEMETRY_DISABLED: 1,
         HOSTNAME: '0.0.0.0'
       },
