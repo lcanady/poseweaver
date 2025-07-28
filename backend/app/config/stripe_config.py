@@ -110,13 +110,24 @@ def _ensure_stripe_initialized():
     # Test the API key by making a simple API call
     try:
         # This will fail if the API key is invalid
-        stripe.Account.retrieve()
+        account = stripe.Account.retrieve()
+        if account is None:
+            raise ValueError("Stripe Account.retrieve() returned None - API key may be invalid")
     except stripe.error.AuthenticationError:
         raise ValueError("Invalid Stripe API key. Please check your STRIPE_SECRET_KEY in the .env file.")
     except stripe.error.StripeError as e:
         # Other Stripe errors are acceptable here (like network issues)
         # We just want to verify the API key is valid
         pass
+    except AttributeError as e:
+        # Handle the 'NoneType' object has no attribute 'Secret' error
+        if "'NoneType' object has no attribute" in str(e):
+            raise ValueError(f"Stripe initialization failed - API response was None. Check your API key: {str(e)}")
+        else:
+            raise ValueError(f"Stripe initialization failed with AttributeError: {str(e)}")
+    except Exception as e:
+        # Catch any other unexpected errors
+        raise ValueError(f"Unexpected error during Stripe initialization: {str(e)}")
 
 
 def create_payment_intent(amount: int, currency: str = 'usd', metadata: Optional[Dict[str, str]] = None) -> Any:

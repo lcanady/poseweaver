@@ -2,9 +2,10 @@ from app import create_app
 from dotenv import load_dotenv
 import os
 
-# Load environment variables from the backend directory
+# Load environment variables from the project root directory
 backend_dir = os.path.dirname(os.path.abspath(__file__))
-env_path = os.path.join(backend_dir, '.env')
+project_root = os.path.dirname(backend_dir)  # Go up one level to project root
+env_path = os.path.join(project_root, '.env')
 load_dotenv(env_path)
 
 # Get port from environment (for DigitalOcean App Platform)
