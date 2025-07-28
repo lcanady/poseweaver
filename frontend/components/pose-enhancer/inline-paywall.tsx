@@ -44,6 +44,26 @@ interface PricingData {
       product_id: string;
       popular?: boolean;
     };
+    basic_annual: {
+      name: string;
+      price: number;
+      generations_included: number;
+      character_limit: number;
+      features: string[];
+      price_id: string;
+      product_id: string;
+      popular?: boolean;
+    };
+    pro_annual: {
+      name: string;
+      price: number;
+      generations_included: number;
+      character_limit: number;
+      features: string[];
+      price_id: string;
+      product_id: string;
+      popular?: boolean;
+    };
   };
   free_tier: {
     generations_included: number;
@@ -67,6 +87,7 @@ export function InlinePaywall({
   const [selectedPackage, setSelectedPackage] = useState<PricingPackage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPurchasing, setIsPurchasing] = useState(false);
+  const [isAnnual, setIsAnnual] = useState(true);
   const { toast } = useToast();
 
   const isPremium = subscriptionStatus === 'premium';
@@ -180,7 +201,8 @@ export function InlinePaywall({
   };
 
   const handleUpgrade = async (tier: 'basic' | 'pro') => {
-    console.log('handleUpgrade called with:', { tier, userId, userIdType: typeof userId });
+    const planType = isAnnual ? `${tier}_annual` : tier;
+    console.log('handleUpgrade called with:', { tier, planType, userId, userIdType: typeof userId });
     
     if (!userId) {
       toast({
@@ -205,7 +227,7 @@ export function InlinePaywall({
 
     setIsPurchasing(true);
     try {
-      const subscription = pricingData?.subscriptions?.[tier];
+      const subscription = pricingData?.subscriptions?.[planType as keyof typeof pricingData.subscriptions];
       if (!subscription) {
         throw new Error('Subscription data not available');
       }
@@ -220,7 +242,7 @@ export function InlinePaywall({
           body: JSON.stringify({
             user_id: userId,
             type: 'subscription',
-            plan: tier,
+            plan: planType,
             success_url: `${window.location.origin}/dashboard/pose-enhancer?success=true`,
             cancel_url: `${window.location.origin}/dashboard/pose-enhancer?canceled=true`,
           }),
@@ -306,18 +328,61 @@ export function InlinePaywall({
             <p className="text-muted-foreground">Unlock unlimited creativity with our subscription plans</p>
           </div>
 
+          {/* Billing Toggle */}
+          <div className="flex items-center justify-center gap-4">
+            <span className={`text-sm font-medium transition-colors ${
+              !isAnnual ? 'text-primary' : 'text-muted-foreground'
+            }`}>
+              Monthly
+            </span>
+            
+            <div className="relative">
+              <button
+                onClick={() => setIsAnnual(!isAnnual)}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full border-2 transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 ${
+                  isAnnual 
+                    ? 'bg-primary border-primary shadow-sm' 
+                    : 'bg-background border-border hover:border-muted-foreground/30'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full transition-all duration-300 ease-in-out shadow-sm ${
+                    isAnnual 
+                      ? 'translate-x-5 bg-primary-foreground' 
+                      : 'translate-x-0.5 bg-muted-foreground'
+                  }`}
+                />
+              </button>
+            </div>
+            
+            <span className={`text-sm font-medium transition-colors ${
+              isAnnual ? 'text-primary' : 'text-muted-foreground'
+            }`}>
+              Annual
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {/* Basic Plan */}
             <Card className="relative border-2 hover:border-primary/50 transition-colors flex flex-col h-full">
               <CardHeader className="text-center pb-4">
                 <CardTitle className="text-xl font-semibold">
-                  {pricingData.subscriptions.basic.name}
+                  {isAnnual ? 'Basic Annual' : pricingData.subscriptions.basic.name}
                 </CardTitle>
                 <div className="space-y-2">
                   <div className="text-3xl font-bold">
-                    ${pricingData.subscriptions.basic.price.toFixed(2)}
-                    <span className="text-sm font-normal text-muted-foreground">/month</span>
+                    ${isAnnual 
+                      ? (pricingData.subscriptions.basic_annual?.price?.toFixed(2) || '99.90')
+                      : pricingData.subscriptions.basic.price.toFixed(2)
+                    }
+                    <span className="text-sm font-normal text-muted-foreground">/{isAnnual ? 'year' : 'month'}</span>
                   </div>
+                  {isAnnual && (
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-sm text-muted-foreground line-through">$119.88</span>
+                      <span className="text-sm text-green-600 font-medium">Save $19.98</span>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="flex flex-col flex-grow">
@@ -342,7 +407,7 @@ export function InlinePaywall({
                     ) : (
                       <>
                         <Crown className="mr-2 h-4 w-4" />
-                        Upgrade to Basic
+                        {isAnnual ? 'Upgrade to Basic Annual' : 'Upgrade to Basic'}
                       </>
                     )}
                   </Button>
@@ -360,13 +425,22 @@ export function InlinePaywall({
               </div>
               <CardHeader className="text-center pb-4 pt-8">
                 <CardTitle className="text-xl font-semibold">
-                  {pricingData.subscriptions.pro.name}
+                  {isAnnual ? 'Pro Annual' : pricingData.subscriptions.pro.name}
                 </CardTitle>
                 <div className="space-y-2">
                   <div className="text-3xl font-bold">
-                    ${pricingData.subscriptions.pro.price.toFixed(2)}
-                    <span className="text-sm font-normal text-muted-foreground">/month</span>
+                    ${isAnnual 
+                      ? (pricingData.subscriptions.pro_annual?.price?.toFixed(2) || '199.90')
+                      : pricingData.subscriptions.pro.price.toFixed(2)
+                    }
+                    <span className="text-sm font-normal text-muted-foreground">/{isAnnual ? 'year' : 'month'}</span>
                   </div>
+                  {isAnnual && (
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-sm text-muted-foreground line-through">$239.88</span>
+                      <span className="text-sm text-green-600 font-medium">Save $39.98</span>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="flex flex-col flex-grow">
@@ -390,7 +464,7 @@ export function InlinePaywall({
                     ) : (
                       <>
                         <Crown className="mr-2 h-4 w-4" />
-                        Upgrade to Pro
+                        {isAnnual ? 'Upgrade to Pro Annual' : 'Upgrade to Pro'}
                       </>
                     )}
                   </Button>

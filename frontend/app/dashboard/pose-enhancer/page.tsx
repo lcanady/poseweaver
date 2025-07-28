@@ -317,13 +317,70 @@ export default function PoseEnhancerPage() {
 
   // Handle copy to clipboard
   const handleCopy = () => {
-    const textToCopy = getCurrentPose();
-    if (textToCopy) {
-      const formattedText = formatTextForCopy(textToCopy, copyFormat);
+    const currentPose = getCurrentPose();
+    if (currentPose) {
+      const formattedText = formatTextForCopy(currentPose, copyFormat);
       navigator.clipboard.writeText(formattedText);
       toast({
-        title: "Copied!",
-        description: "Enhanced pose copied to clipboard.",
+        title: "Copied to clipboard",
+        description: "Enhanced pose copied successfully"
+      });
+    }
+  };
+
+  // Handle saving pose for training
+  const handleSavePose = async () => {
+    if (!selectedCharacterId || !poseInput || !getCurrentPose()) {
+      toast({
+        title: "Cannot save pose",
+        description: "Please select a character and enhance a pose first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const enhancementSettings = {
+        enhancementStyle,
+        detailLevel,
+        creativityLevel,
+        sensoryFocus,
+        emotionalDepth,
+        narrativeTone,
+        includeInternalThoughts,
+        emphasizeActions,
+        preserveOriginalTone,
+        addEnvironmentalDetails
+      };
+
+      const response = await apiRequest(`/api/characters/${selectedCharacterId}/saved-poses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          original_pose: poseInput,
+          enhanced_pose: getCurrentPose(),
+          enhancement_settings: enhancementSettings,
+          tags: [] // Could be expanded to allow user-defined tags
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: "Pose saved for training",
+          description: "This enhanced pose has been saved to your character for future training"
+        });
+      } else {
+        throw new Error(data.error || 'Failed to save pose');
+      }
+    } catch (error) {
+      console.error('Error saving pose:', error);
+      toast({
+        title: "Failed to save pose",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive"
       });
     }
   };
@@ -590,9 +647,24 @@ export default function PoseEnhancerPage() {
           {/* Enhanced Output */}
           <EnhancedOutput
             enhancedPose={getCurrentPose()}
+            originalPose={poseInput}
+            selectedCharacterId={selectedCharacterId}
+            enhancementSettings={{
+              enhancementStyle,
+              detailLevel,
+              creativityLevel,
+              sensoryFocus,
+              emotionalDepth,
+              narrativeTone,
+              includeInternalThoughts,
+              emphasizeActions,
+              preserveOriginalTone,
+              addEnvironmentalDetails
+            }}
             copyFormat={copyFormat}
             onCopyFormatChange={setCopyFormat}
             onCopy={handleCopy}
+            onSave={handleSavePose}
           />
           
           {/* Enhancement Analysis - Moved to main area */}

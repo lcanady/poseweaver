@@ -65,7 +65,8 @@ class PoseService:
         character: Optional[CharacterProfile] = None,
         context: Optional[PoseContext] = None,
         enhancement_style: str = "balanced",
-        enhancement_options: Optional[Dict[str, Any]] = None
+        enhancement_options: Optional[Dict[str, Any]] = None,
+        character_settings: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Enhance a basic pose into rich narrative.
         
@@ -85,7 +86,7 @@ class PoseService:
         try:
             # Generate enhanced pose using AI
             enhancement_data = self._generate_pose_enhancement(
-                original_pose, character, context, enhancement_style, enhancement_options
+                original_pose, character, context, enhancement_style, enhancement_options, character_settings
             )
             
             # Return the enhancement data directly
@@ -143,7 +144,8 @@ class PoseService:
         character: Optional[CharacterProfile] = None,
         context: Optional[PoseContext] = None,
         enhancement_style: str = "balanced",
-        enhancement_options: Optional[Dict[str, Any]] = None
+        enhancement_options: Optional[Dict[str, Any]] = None,
+        character_settings: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Generate enhanced pose using AI.
         
@@ -187,6 +189,12 @@ class PoseService:
         # Build enhancement style guidance
         style_guidance = self._get_style_guidance(enhancement_style)
         
+        # Build enhancement options guidance
+        enhancement_guidance = self._build_enhancement_guidance(enhancement_options or {})
+        
+        # Build character settings guidance
+        character_settings_guidance = self._build_character_settings_guidance(character_settings or {})
+        
         # Analyze original pose paragraph structure
         original_paragraph_count = original_pose.count('\n\n') + 1
         original_paragraphs = original_pose.split('\n\n')
@@ -219,6 +227,8 @@ class PoseService:
         
         ENHANCEMENT STYLE: {enhancement_style}
         {style_guidance}
+        {enhancement_guidance}
+        {character_settings_guidance}
 
         🚨 CRITICAL ROLEPLAY RULES - MAIN CHARACTER ONLY 🚨:
         - ONLY enhance actions, thoughts, and reactions of the MAIN CHARACTER
@@ -878,51 +888,39 @@ Please refine the pose according to the user's suggestion while maintaining qual
         if detail_level < 30:
             guidance_parts.append("- Use minimal descriptive details, focus on core actions")
         elif detail_level > 70:
-            guidance_parts.append("- Add rich, extensive descriptive details and imagery")
-        else:
-            guidance_parts.append("- Include moderate descriptive details to enhance the scene")
+            guidance_parts.append("- Include rich descriptive details and elaborate descriptions")
         
         # Creativity level guidance
-        creativity_level = enhancement_options.get('creativity_level', 60)
+        creativity_level = enhancement_options.get('creativity_level', 50)
         if creativity_level < 30:
-            guidance_parts.append("- Use straightforward, conventional language and phrasing")
+            guidance_parts.append("- Stay close to the original pose structure and content")
         elif creativity_level > 70:
-            guidance_parts.append("- Use creative, varied language with unique metaphors and expressions")
-        else:
-            guidance_parts.append("- Use moderately creative language with some varied expressions")
+            guidance_parts.append("- Feel free to add creative flourishes and imaginative elements")
         
         # Sensory focus guidance
-        sensory_focus = enhancement_options.get('sensory_focus', 40)
+        sensory_focus = enhancement_options.get('sensory_focus', 50)
         if sensory_focus > 60:
-            guidance_parts.append("- Emphasize sensory details: sights, sounds, textures, scents, and physical sensations")
-        elif sensory_focus < 30:
-            guidance_parts.append("- Minimize sensory descriptions, focus on actions and dialogue")
-        else:
-            guidance_parts.append("- Include some sensory details to enhance immersion")
+            guidance_parts.append("- Emphasize sensory details (sight, sound, touch, smell, taste)")
         
         # Emotional depth guidance
         emotional_depth = enhancement_options.get('emotional_depth', 50)
         if emotional_depth > 60:
-            guidance_parts.append("- Explore deep emotional nuances, internal conflicts, and psychological states")
-        elif emotional_depth < 30:
-            guidance_parts.append("- Keep emotional content surface-level, focus on external actions")
-        else:
-            guidance_parts.append("- Include moderate emotional context and character feelings")
+            guidance_parts.append("- Explore deeper emotional nuances and internal feelings")
         
         # Narrative tone guidance
         narrative_tone = enhancement_options.get('narrative_tone', 'neutral')
-        tone_guidance = {
-            'dramatic': "- Use dramatic, intense language with heightened emotional impact",
-            'casual': "- Use relaxed, conversational tone with informal language",
-            'poetic': "- Use lyrical, artistic language with flowing, beautiful prose",
-            'intense': "- Use urgent, powerful language that conveys high stakes and tension",
-            'neutral': "- Maintain a balanced, versatile tone appropriate to the scene"
-        }
-        guidance_parts.append(tone_guidance.get(narrative_tone, tone_guidance['neutral']))
+        if narrative_tone == 'dramatic':
+            guidance_parts.append("- Use dramatic language and heightened emotional expression")
+        elif narrative_tone == 'casual':
+            guidance_parts.append("- Keep the tone relaxed and conversational")
+        elif narrative_tone == 'formal':
+            guidance_parts.append("- Use formal, elegant language and proper structure")
+        elif narrative_tone == 'humorous':
+            guidance_parts.append("- Include light humor and playful elements where appropriate")
         
-        # Boolean option guidance
+        # Feature toggles
         if enhancement_options.get('include_internal_thoughts', False):
-            guidance_parts.append("- Include the character's internal thoughts, reflections, and mental processes")
+            guidance_parts.append("- Include internal thoughts and mental reactions")
         
         if enhancement_options.get('emphasize_actions', True):
             guidance_parts.append("- Emphasize physical actions and movements as primary focus")
@@ -930,11 +928,57 @@ Please refine the pose according to the user's suggestion while maintaining qual
         if enhancement_options.get('preserve_original_tone', True):
             guidance_parts.append("- Maintain the original tone and mood of the pose")
         
-        if enhancement_options.get('add_environmental_details', False):
-            guidance_parts.append("- Add environmental and atmospheric details to set the scene")
-        
         if guidance_parts:
             return "\nUSER ENHANCEMENT PREFERENCES:\n" + "\n".join(guidance_parts) + "\n"
+        else:
+            return ""
+    
+    def _build_character_settings_guidance(self, character_settings: Dict[str, Any]) -> str:
+        """Build character-specific guidance from character settings.
+        
+        Args:
+            character_settings: Dictionary of character-specific settings
+            
+        Returns:
+            Character settings guidance text for the AI prompt
+        """
+        if not character_settings:
+            return ""
+        
+        guidance_parts = []
+        
+        # Enhancement notes - direct guidance from user
+        enhancement_notes = character_settings.get('enhancement_notes', '').strip()
+        if enhancement_notes:
+            guidance_parts.append(f"- Character Enhancement Notes: {enhancement_notes}")
+        
+        # Preferred writing style
+        preferred_writing_style = character_settings.get('preferred_writing_style', '').strip()
+        if preferred_writing_style:
+            guidance_parts.append(f"- Writing Style Preference: {preferred_writing_style}")
+        
+        # Voice emphasis
+        voice_emphasis = character_settings.get('voice_emphasis', 'balanced')
+        if voice_emphasis == 'dialogue':
+            guidance_parts.append("- Emphasize dialogue and spoken interactions")
+        elif voice_emphasis == 'action':
+            guidance_parts.append("- Focus primarily on physical actions and movements")
+        elif voice_emphasis == 'internal':
+            guidance_parts.append("- Emphasize internal thoughts and mental processes")
+        elif voice_emphasis == 'balanced':
+            guidance_parts.append("- Balance dialogue, action, and internal elements equally")
+        
+        # Personality emphasis
+        personality_emphasis = character_settings.get('personality_emphasis', 50)
+        if personality_emphasis > 70:
+            guidance_parts.append("- Strongly emphasize the character's personality traits in all actions")
+        elif personality_emphasis < 30:
+            guidance_parts.append("- Keep personality traits subtle and understated")
+        else:
+            guidance_parts.append("- Moderately incorporate personality traits into the pose")
+        
+        if guidance_parts:
+            return "\nCHARACTER-SPECIFIC PREFERENCES:\n" + "\n".join(guidance_parts) + "\n"
         else:
             return ""
     

@@ -50,6 +50,7 @@ export default function BillingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [usageInfo, setUsageInfo] = useState<any>(null);
+  const [isAnnual, setIsAnnual] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -120,6 +121,9 @@ export default function BillingPage() {
   const handleSubscriptionUpgrade = async (tier: 'basic' | 'pro') => {
     setIsPurchasing(true);
     try {
+      // Determine the plan type based on billing frequency
+      const planType = isAnnual ? `${tier}_annual` : tier;
+      
       const response = await fetch(
         `${getApiUrl()}/api/purchase/create-checkout-session`,
         {
@@ -129,7 +133,7 @@ export default function BillingPage() {
           },
           body: JSON.stringify({
             type: 'subscription',
-            plan: tier,
+            plan: planType,
             user_id: user?._id || user?.id
           })
         }
@@ -302,6 +306,40 @@ export default function BillingPage() {
                   </div>
                 )}
               </CardDescription>
+              
+              {/* Billing Toggle */}
+              <div className="flex items-center justify-center gap-4 mt-6 pt-4 border-t">
+                <span className={`text-sm font-medium transition-colors ${
+                  !isAnnual ? 'text-primary' : 'text-muted-foreground'
+                }`}>
+                  Monthly
+                </span>
+                
+                <div className="relative">
+                  <button
+                    onClick={() => setIsAnnual(!isAnnual)}
+                    className={`relative inline-flex h-7 w-12 items-center rounded-full border-2 transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 ${
+                      isAnnual 
+                        ? 'bg-primary border-primary shadow-sm' 
+                        : 'bg-background border-border hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full transition-all duration-300 ease-in-out shadow-sm ${
+                        isAnnual 
+                          ? 'translate-x-5 bg-primary-foreground' 
+                          : 'translate-x-0.5 bg-muted-foreground'
+                      }`}
+                    />
+                  </button>
+                </div>
+                
+                <span className={`text-sm font-medium transition-colors ${
+                  isAnnual ? 'text-primary' : 'text-muted-foreground'
+                }`}>
+                  Annual
+                </span>
+              </div>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-3">
               {/* Free Plan */}
@@ -348,8 +386,18 @@ export default function BillingPage() {
                     <p className="text-muted-foreground text-sm">For regular roleplayers.</p>
                   </div>
                   <div>
-                    <span className="text-2xl font-bold">${pricingData?.subscriptions?.basic?.price?.toFixed(2) || '0.00'}</span>
-                    <span className="text-muted-foreground">/ month</span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold">
+                        ${isAnnual ? '99.90' : (pricingData?.subscriptions?.basic?.price?.toFixed(2) || '9.99')}
+                      </span>
+                      <span className="text-muted-foreground">/ {isAnnual ? 'year' : 'month'}</span>
+                    </div>
+                    {isAnnual && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm text-muted-foreground line-through">$119.88</span>
+                        <span className="text-sm text-green-600 font-medium">Save $19.98</span>
+                      </div>
+                    )}
                   </div>
                   <ul className="space-y-2 text-sm flex-1">
                     {pricingData?.subscriptions?.basic?.features?.map((feature: string, index: number) => (
@@ -375,7 +423,7 @@ export default function BillingPage() {
                         {isPurchasing ? (
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                         ) : (
-                          <>Switch to Basic</>
+                          <>{isAnnual ? 'Switch to Basic Annual' : 'Switch to Basic'}</>
                         )}
                       </Button>
                     )}
@@ -391,8 +439,18 @@ export default function BillingPage() {
                     <p className="text-muted-foreground text-sm">For dedicated storytellers.</p>
                   </div>
                   <div>
-                    <span className="text-2xl font-bold">${pricingData?.subscriptions?.pro?.price?.toFixed(2) || '0.00'}</span>
-                    <span className="text-muted-foreground">/ month</span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold">
+                        ${isAnnual ? '199.90' : (pricingData?.subscriptions?.pro?.price?.toFixed(2) || '19.99')}
+                      </span>
+                      <span className="text-muted-foreground">/ {isAnnual ? 'year' : 'month'}</span>
+                    </div>
+                    {isAnnual && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm text-muted-foreground line-through">$239.88</span>
+                        <span className="text-sm text-green-600 font-medium">Save $39.98</span>
+                      </div>
+                    )}
                   </div>
                   <ul className="space-y-2 text-sm flex-1">
                     {pricingData?.subscriptions?.pro?.features?.map((feature: string, index: number) => (
@@ -422,7 +480,7 @@ export default function BillingPage() {
                         ) : (
                           <>
                             <Crown className="h-4 w-4 mr-2" />
-                            Switch to Pro
+                            {isAnnual ? 'Switch to Pro Annual' : 'Switch to Pro'}
                           </>
                         )}
                       </Button>

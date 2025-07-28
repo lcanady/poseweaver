@@ -159,9 +159,20 @@ def generate_description():
         return jsonify(response_data)
         
     except VeniceAPIError as e:
+        error_message = str(e)
+        # Provide more specific error messages for common issues
+        if '500' in error_message and 'unknown error' in error_message.lower():
+            error_message = 'The AI service is temporarily unavailable. Please try again in a few minutes.'
+        elif 'timeout' in error_message.lower():
+            error_message = 'The AI service is taking too long to respond. Please try again.'
+        elif 'connection' in error_message.lower():
+            error_message = 'Unable to connect to the AI service. Please check your internet connection and try again.'
+        
         return jsonify({
             'success': False,
-            'error': f'AI processing failed: {str(e)}'
+            'error': error_message,
+            'error_type': 'ai_service_error',
+            'retry_suggested': True
         }), 503
         
     except ValueError as e:

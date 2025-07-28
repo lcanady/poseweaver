@@ -295,6 +295,238 @@ def get_character_schema():
         }), 500
 
 
+@characters_bp.route('/<character_id>/saved-poses', methods=['POST'])
+@require_auth
+def save_enhanced_pose(character_id):
+    """Save an enhanced pose to a character for training.
+    
+    Request body:
+    {
+        "original_pose": "Basic pose text...",
+        "enhanced_pose": "Enhanced pose text...",
+        "enhancement_settings": {
+            "style": "balanced",
+            "detail_level": 50,
+            "creativity_level": 60,
+            // ... other settings
+        },
+        "tags": ["combat", "dialogue"]  // Optional
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "message": "Pose saved successfully",
+        "pose_id": "unique_pose_id"
+    }
+    """
+    try:
+        from app.models.character import Character
+        from datetime import datetime
+        import uuid
+        
+        # Get request data
+        data = request.get_json(force=True, silent=True)
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No JSON data provided'
+            }), 400
+        
+        # Validate required fields
+        original_pose = data.get('original_pose')
+        enhanced_pose = data.get('enhanced_pose')
+        enhancement_settings = data.get('enhancement_settings', {})
+        
+        if not original_pose or not original_pose.strip():
+            return jsonify({
+                'success': False,
+                'error': 'original_pose is required'
+            }), 400
+            
+        if not enhanced_pose or not enhanced_pose.strip():
+            return jsonify({
+                'success': False,
+                'error': 'enhanced_pose is required'
+            }), 400
+        
+        # Get the character
+        character = Character.find_by_id(character_id)
+        if not character:
+            return jsonify({
+                'success': False,
+                'error': 'Character not found'
+            }), 404
+        
+        # Check if user owns this character
+        current_user = request.current_user
+        if str(character.user_id) != str(current_user['_id']):
+            return jsonify({
+                'success': False,
+                'error': 'Access denied'
+            }), 403
+        
+        # Create pose data
+        pose_id = str(uuid.uuid4())
+        pose_data = {
+            'id': pose_id,
+            'original_pose': original_pose.strip(),
+            'enhanced_pose': enhanced_pose.strip(),
+            'enhancement_settings': enhancement_settings,
+            'tags': data.get('tags', []),
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        
+        # Initialize metadata if it doesn't exist
+        if not character.metadata:
+            character.metadata = {}
+        
+        # Initialize saved_poses if it doesn't exist
+        if 'saved_poses' not in character.metadata:
+            character.metadata['saved_poses'] = []
+        
+        # Add the pose
+        character.metadata['saved_poses'].append(pose_data)
+        
+        # Save the character
+        character.save()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Pose saved successfully',
+            'pose_id': pose_id
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to save pose: {str(e)}'
+        }), 500
+
+
+@characters_bp.route('/<character_id>/saved-poses', methods=['GET'])
+@require_auth
+def get_saved_poses(character_id):
+    """Get all saved enhanced poses for a character.
+    
+    Returns:
+    {
+        "success": true,
+        "poses": [
+            {
+                "id": "pose_id",
+                "original_pose": "...",
+                "enhanced_pose": "...",
+                "enhancement_settings": {...},
+                "tags": [...],
+                "timestamp": "2024-01-01T00:00:00"
+            }
+        ]
+    }
+    """
+    try:
+        from app.models.character import Character
+        
+        # Get the character
+        character = Character.find_by_id(character_id)
+        if not character:
+            return jsonify({
+                'success': False,
+                'error': 'Character not found'
+            }), 404
+        
+        # Check if user owns this character
+        current_user = request.current_user
+        if str(character.user_id) != str(current_user['_id']):
+            return jsonify({
+                'success': False,
+                'error': 'Access denied'
+            }), 403
+        
+        # Get saved poses
+        saved_poses = []
+        if character.metadata and 'saved_poses' in character.metadata:
+            saved_poses = character.metadata['saved_poses']
+        
+        return jsonify({
+            'success': True,
+            'poses': saved_poses
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to retrieve poses: {str(e)}'
+        }), 500
+
+
+@characters_bp.route('/<character_id>/saved-poses/<pose_id>', methods=['DELETE'])
+@require_auth
+def delete_saved_pose(character_id, pose_id):
+    """Delete a saved enhanced pose from a character.
+    
+    Returns:
+    {
+        "success": true,
+        "message": "Pose deleted successfully"
+    }
+    """
+    try:
+        from app.models.character import Character
+        
+        # Get the character
+        character = Character.find_by_id(character_id)
+        if not character:
+            return jsonify({
+                'success': False,
+                'error': 'Character not found'
+            }), 404
+        
+        # Check if user owns this character
+        current_user = request.current_user
+        if str(character.user_id) != str(current_user['_id']):
+            return jsonify({
+                'success': False,
+                'error': 'Access denied'
+            }), 403
+        
+        # Find and remove the pose
+        if not character.metadata or 'saved_poses' not in character.metadata:
+            return jsonify({
+                'success': False,
+                'error': 'Pose not found'
+            }), 404
+        
+        saved_poses = character.metadata['saved_poses']
+        original_length = len(saved_poses)
+        
+        # Filter out the pose to delete
+        character.metadata['saved_poses'] = [
+            pose for pose in saved_poses if pose.get('id') != pose_id
+        ]
+        
+        # Check if pose was found and removed
+        if len(character.metadata['saved_poses']) == original_length:
+            return jsonify({
+                'success': False,
+                'error': 'Pose not found'
+            }), 404
+        
+        # Save the character
+        character.save()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Pose deleted successfully'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to delete pose: {str(e)}'
+        }), 500
+
+
 @characters_bp.errorhandler(404)
 def not_found(error):
     """Handle 404 errors for character endpoints."""

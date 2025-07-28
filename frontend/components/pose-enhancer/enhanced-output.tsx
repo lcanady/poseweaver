@@ -2,29 +2,48 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Copy, CheckCircle } from "lucide-react";
+import { Copy, CheckCircle, Save } from "lucide-react";
 import { useState } from "react";
 
 interface EnhancedOutputProps {
   enhancedPose: string | null;
+  originalPose?: string;
+  selectedCharacterId?: string;
+  enhancementSettings?: any;
   copyFormat: string;
   onCopyFormatChange: (format: string) => void;
   onCopy: () => void;
+  onSave?: () => void;
 }
 
 export const EnhancedOutput = ({
   enhancedPose,
+  originalPose,
+  selectedCharacterId,
+  enhancementSettings,
   copyFormat,
   onCopyFormatChange,
-  onCopy
+  onCopy,
+  onSave
 }: EnhancedOutputProps) => {
   const [justCopied, setJustCopied] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
 
   const handleCopy = () => {
     onCopy();
     setJustCopied(true);
     setTimeout(() => setJustCopied(false), 2000);
   };
+
+  const handleSave = () => {
+    if (onSave) {
+      onSave();
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 2000);
+    }
+  };
+
+  const canSave = enhancedPose && originalPose && selectedCharacterId && onSave;
 
   if (!enhancedPose) {
     return (
@@ -66,24 +85,46 @@ export const EnhancedOutput = ({
                 </SelectContent>
               </Select>
             </div>
-            <Button
-              onClick={handleCopy}
-              size="sm"
-              variant="outline"
-              className="mt-5"
-            >
-              {justCopied ? (
-                <>
-                  <CheckCircle className="mr-1 h-3 w-3 text-green-500" />
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <Copy className="mr-1 h-3 w-3" />
-                  Copy
-                </>
+            <div className="flex gap-2">
+              {canSave && (
+                <Button
+                  onClick={handleSave}
+                  size="sm"
+                  variant="outline"
+                  className="mt-5"
+                >
+                  {justSaved ? (
+                    <>
+                      <CheckCircle className="mr-1 h-3 w-3 text-green-500" />
+                      Saved!
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-1 h-3 w-3" />
+                      Save for Training
+                    </>
+                  )}
+                </Button>
               )}
-            </Button>
+              <Button
+                onClick={handleCopy}
+                size="sm"
+                variant="outline"
+                className="mt-5"
+              >
+                {justCopied ? (
+                  <>
+                    <CheckCircle className="mr-1 h-3 w-3 text-green-500" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-1 h-3 w-3" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </CardHeader>

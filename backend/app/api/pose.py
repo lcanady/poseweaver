@@ -129,10 +129,13 @@ def enhance_pose():
         # Get enhancement options
         enhancement_options = data.get('enhancement_options', {})
         
+        # Get character settings
+        character_settings = data.get('character_settings', {})
+        
         # Enhance the pose
         service = get_pose_service()
         enhancement = service.enhance_pose(
-            original_pose, character, context, enhancement_style, enhancement_options
+            original_pose, character, context, enhancement_style, enhancement_options, character_settings
         )
         
         # Get usage info from request context (added by decorator)

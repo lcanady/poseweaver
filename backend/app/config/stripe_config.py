@@ -8,23 +8,25 @@ from typing import Dict, Any, Optional
 # Stripe will be initialized when functions are called
 # This avoids issues with missing API keys during import
 
-# Stripe Product and Price IDs (created via Stripe API)
+# Stripe Product and Price IDs (created via Stripe API - LIVE)
 STRIPE_PRODUCTS = {
-    'basic_subscription': 'prod_SjX1vdjwGl5SwL',
-    'pro_subscription': 'prod_SjX17U04Fl4joF',
-    'recharge_50': 'prod_SjX1RFOurYYZ08',
-    'recharge_100': 'prod_SjX2mSPYiP5Kfq',
-    'recharge_250': 'prod_SjX2W0Ha4DNvbu',
-    'recharge_500': 'prod_SjX2ju6mvnO3r2'
+    'basic_subscription': 'prod_SlH4efjw4w1zAM',
+    'pro_subscription': 'prod_SlH5S5nhZwkfe6',
+    'recharge_50': 'prod_SlH5vb5XH0O3Hb',
+    'recharge_100': 'prod_SlH5bVyPdcLWYf',
+    'recharge_250': 'prod_SlH5W0IKaBOCK7',
+    'recharge_500': 'prod_SlH54TVGzxso1d'
 }
 
 STRIPE_PRICES = {
-    'basic_subscription': 'price_1RoEFDPiG9G5Z3VQQ6Vbuz3X',  # $9.99 recurring
-    'pro_subscription': 'price_1RoEFDPiG9G5Z3VQz9JsnHLI',    # $19.99 recurring
-    'recharge_50': 'price_1Ro3xqPiG9G5Z3VQbCKkyiS2',         # $4.99
-    'recharge_100': 'price_1Ro3yBPiG9G5Z3VQX4n9zw6i',        # $8.99
-    'recharge_250': 'price_1Ro3ycPiG9G5Z3VQqnlVLWNg',        # $19.99
-    'recharge_500': 'price_1Ro3z3PiG9G5Z3VQMo3LjKz6'         # $34.99
+    'basic_subscription': 'price_1RpwygPnxX6KbXoKMPthxOpM',  # $9.99 recurring monthly (LIVE)
+    'pro_subscription': 'price_1RpwyqPnxX6KbXoKs4CrRKwy',    # $19.99 recurring monthly (LIVE)
+    'basic_annual': 'price_1Rpwz1PnxX6KbXoKNClZKC94',        # $99.90 recurring yearly (LIVE)
+    'pro_annual': 'price_1RpwzAPnxX6KbXoK8glqkrBX',          # $199.90 recurring yearly (LIVE)
+    'recharge_50': 'price_1RpkY3PnxX6KbXoKHKR3nLh5',         # $4.99 (LIVE)
+    'recharge_100': 'price_1RpkY3PnxX6KbXoKnIc2YZGu',        # $8.99 (LIVE)
+    'recharge_250': 'price_1RpkY4PnxX6KbXoK1o9Heout',        # $19.99 (LIVE)
+    'recharge_500': 'price_1RpkY4PnxX6KbXoKtXazQ2MS'         # $34.99 (LIVE)
 }
 
 # Recharge pack mappings
@@ -63,7 +65,7 @@ SUBSCRIPTION_PLANS = {
         'amount': 999,  # $9.99 in cents
         'generations': 200,
         'character_limit': 10,
-        'name': 'Basic'
+        'name': 'Basic Monthly'
     },
     'pro': {
         'price_id': STRIPE_PRICES['pro_subscription'],
@@ -71,7 +73,23 @@ SUBSCRIPTION_PLANS = {
         'amount': 1999,  # $19.99 in cents
         'generations': 500,
         'character_limit': -1,  # Unlimited
-        'name': 'Pro'
+        'name': 'Pro Monthly'
+    },
+    'basic_annual': {
+        'price_id': STRIPE_PRICES['basic_annual'],
+        'product_id': STRIPE_PRODUCTS['basic_subscription'],
+        'amount': 9990,  # $99.90 in cents
+        'generations': 200,
+        'character_limit': 10,
+        'name': 'Basic Annual'
+    },
+    'pro_annual': {
+        'price_id': STRIPE_PRICES['pro_annual'],
+        'product_id': STRIPE_PRODUCTS['pro_subscription'],
+        'amount': 19990,  # $199.90 in cents
+        'generations': 500,
+        'character_limit': -1,  # Unlimited
+        'name': 'Pro Annual'
     }
 }
 

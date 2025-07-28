@@ -220,7 +220,25 @@ export default function DescriptionWriterPage() {
       toast.success('Description generated successfully!')
     } catch (error) {
       console.error('Error generating description:', error)
-      toast.error('Failed to generate description. Please try again.')
+      
+      // Try to get more specific error information
+      let errorMessage = 'Failed to generate description. Please try again.'
+      
+      if (error instanceof Error) {
+        const errorText = error.message.toLowerCase()
+        
+        if (errorText.includes('503') || errorText.includes('service unavailable')) {
+          errorMessage = 'Our AI service provider is currently overloaded. Please try again in a few minutes.'
+        } else if (errorText.includes('500') || errorText.includes('internal server')) {
+          errorMessage = 'The AI service is experiencing issues. Please try again shortly.'
+        } else if (errorText.includes('timeout')) {
+          errorMessage = 'The request timed out. Please try again.'
+        } else if (errorText.includes('network') || errorText.includes('connection')) {
+          errorMessage = 'Network connection issue. Please check your internet and try again.'
+        }
+      }
+      
+      toast.error(errorMessage)
     } finally {
       setIsGenerating(false)
     }

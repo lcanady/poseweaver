@@ -1,8 +1,11 @@
+"use client"
+
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
 import { Check } from "lucide-react"
 
-const tiers = [
+const getTiers = (isAnnual: boolean) => [
   {
     name: "Free",
     price: "$0",
@@ -17,11 +20,14 @@ const tiers = [
     ],
     cta: "Start for Free",
     variant: "outline",
+    planType: "free",
   },
   {
     name: "Basic",
-    price: "$9.99",
-    priceSuffix: "/month",
+    price: isAnnual ? "$99.90" : "$9.99",
+    priceSuffix: isAnnual ? "/year" : "/month",
+    originalPrice: isAnnual ? "$119.88" : null,
+    savings: isAnnual ? "Save $19.98" : null,
     description: "Great for regular roleplayers.",
     features: [
       "200 pose enhancements/month",
@@ -30,13 +36,16 @@ const tiers = [
       "Email support",
       "Buy recharge packs when needed"
     ],
-    cta: "Choose Basic",
+    cta: isAnnual ? "Choose Basic Annual" : "Choose Basic",
     variant: "outline",
+    planType: isAnnual ? "basic_annual" : "basic",
   },
   {
     name: "Pro",
-    price: "$19.99",
-    priceSuffix: "/month",
+    price: isAnnual ? "$199.90" : "$19.99",
+    priceSuffix: isAnnual ? "/year" : "/month",
+    originalPrice: isAnnual ? "$239.88" : null,
+    savings: isAnnual ? "Save $39.98" : null,
     description: "For serious storytellers and power users.",
     features: [
       "500 pose enhancements/month",
@@ -45,13 +54,17 @@ const tiers = [
       "Priority support",
       "Buy recharge packs when needed"
     ],
-    cta: "Go Pro",
+    cta: isAnnual ? "Go Pro Annual" : "Go Pro",
     variant: "default",
     popular: true,
+    planType: isAnnual ? "pro_annual" : "pro",
   },
 ]
 
 export function Pricing() {
+  const [isAnnual, setIsAnnual] = useState(true)
+  const tiers = getTiers(isAnnual)
+
   return (
     <section id="pricing" className="container py-12 lg:py-24 bg-muted/20 rounded-lg">
       <div className="text-center space-y-4 mb-12">
@@ -59,10 +72,45 @@ export function Pricing() {
         <p className="text-lg text-muted-foreground max-w-xl mx-auto">
           Start for free, and upgrade when you're ready to unlock your full storytelling potential.
         </p>
+        
+        {/* Billing Toggle */}
+        <div className="flex items-center justify-center gap-4 mt-8">
+          <span className={`text-sm font-medium transition-colors ${
+            !isAnnual ? 'text-primary' : 'text-muted-foreground'
+          }`}>
+            Monthly
+          </span>
+          
+          <div className="relative">
+            <button
+              onClick={() => setIsAnnual(!isAnnual)}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full border-2 transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 ${
+                isAnnual 
+                  ? 'bg-primary border-primary shadow-sm' 
+                  : 'bg-background border-border hover:border-muted-foreground/30'
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full transition-all duration-300 ease-in-out shadow-sm ${
+                  isAnnual 
+                    ? 'translate-x-5 bg-primary-foreground' 
+                    : 'translate-x-0.5 bg-muted-foreground'
+                }`}
+              />
+            </button>
+          </div>
+          
+          <span className={`text-sm font-medium transition-colors ${
+            isAnnual ? 'text-primary' : 'text-muted-foreground'
+          }`}>
+            Annual
+          </span>
+        </div>
       </div>
+      
       <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
         {tiers.map((tier) => (
-          <Card key={tier.name} className={`flex flex-col relative ${tier.variant === "default" ? "border-primary" : ""} ${tier.popular ? "scale-105" : ""}`}>
+          <Card key={`${tier.name}-${isAnnual ? 'annual' : 'monthly'}`} className={`flex flex-col relative ${tier.variant === "default" ? "border-primary" : ""} ${tier.popular ? "scale-105" : ""}`}>
             {tier.popular && (
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                 <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">
@@ -76,11 +124,19 @@ export function Pricing() {
             </CardHeader>
             <CardContent className="flex-grow">
               <div className="mb-6">
-                <span className="text-4xl font-bold">{tier.price}</span>
-                {tier.priceSuffix && <span className="text-muted-foreground">{tier.priceSuffix}</span>}
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold">{tier.price}</span>
+                  {tier.priceSuffix && <span className="text-muted-foreground">{tier.priceSuffix}</span>}
+                </div>
+                {tier.originalPrice && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm text-muted-foreground line-through">{tier.originalPrice}</span>
+                    <span className="text-sm text-green-600 font-medium">{tier.savings}</span>
+                  </div>
+                )}
               </div>
               <ul className="space-y-3">
-                {tier.features.map((feature) => (
+                {tier.features.map((feature: string) => (
                   <li key={feature} className="flex items-center gap-2">
                     <Check className="w-5 h-5 text-green-500" />
                     <span>{feature}</span>
@@ -90,7 +146,7 @@ export function Pricing() {
             </CardContent>
             <CardFooter>
               <Button className="w-full" variant={tier.variant as "default" | "outline"} asChild>
-                <a href={tier.name === "Free" ? "/signup" : `/signup?plan=${tier.name.toLowerCase()}`}>
+                <a href={tier.planType === "free" ? "/signup" : `/signup?plan=${tier.planType}`}>
                   {tier.cta}
                 </a>
               </Button>
