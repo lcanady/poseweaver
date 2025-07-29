@@ -85,6 +85,7 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - certbot_certs:/etc/letsencrypt:ro
+      - certbot_webroot:/var/www/certbot:ro
       - nginx_logs:/var/log/nginx
     depends_on:
       - frontend
@@ -107,6 +108,8 @@ volumes:
   ssl_certs:
     driver: local
   certbot_certs:
+    driver: local
+  certbot_webroot:
     driver: local
 
 networks:
