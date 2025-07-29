@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Social Card Generator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        .card {
+            width: 1200px;
+            height: 630px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+        .decorative-dots {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .dot {
+            position: absolute;
+            border-radius: 50%;
+        }
+        .dot1 { width: 4px; height: 4px; background: #8b5cf6; opacity: 0.6; top: 100px; left: 100px; }
+        .dot2 { width: 6px; height: 6px; background: #06b6d4; opacity: 0.4; top: 530px; left: 1100px; }
+        .dot3 { width: 3px; height: 3px; background: #8b5cf6; opacity: 0.8; top: 500px; left: 200px; }
+        .dot4 { width: 5px; height: 5px; background: #06b6d4; opacity: 0.5; top: 150px; left: 1000px; }
+        
+        .content {
+            position: absolute;
+            top: 120px;
+            left: 80px;
+            width: 1040px;
+            height: 390px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 0;
+        }
+        
+        .logo {
+            position: absolute;
+            top: 60px;
+            left: 40px;
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(90deg, #8b5cf6 0%, #06b6d4 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 36px;
+            font-weight: bold;
+        }
+        
+        .title {
+            position: absolute;
+            top: 80px;
+            left: 160px;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .subtitle {
+            position: absolute;
+            top: 140px;
+            left: 160px;
+            color: #94a3b8;
+            font-size: 24px;
+            font-weight: 500;
+            margin: 0;
+        }
+        
+        .description {
+            position: absolute;
+            top: 200px;
+            left: 40px;
+            color: #cbd5e1;
+            font-size: 20px;
+            line-height: 1.5;
+        }
+        
+        .features {
+            position: absolute;
+            top: 270px;
+            left: 40px;
+            display: flex;
+            gap: 30px;
+        }
+        
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #e2e8f0;
+            font-size: 16px;
+        }
+        
+        .feature-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .feature-dot.purple { background: #8b5cf6; }
+        .feature-dot.cyan { background: #06b6d4; }
+        
+        .accent-line {
+            position: absolute;
+            bottom: 80px;
+            left: 80px;
+            width: 1040px;
+            height: 3px;
+            background: linear-gradient(90deg, #8b5cf6 0%, #06b6d4 100%);
+            border-radius: 1.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="decorative-dots">
+            <div class="dot dot1"></div>
+            <div class="dot dot2"></div>
+            <div class="dot dot3"></div>
+            <div class="dot dot4"></div>
+        </div>
+        
+        <div class="content">
+            <div class="logo">PW</div>
+            <h1 class="title">PoseWeaver</h1>
+            <h2 class="subtitle">AI Co-writer for Roleplayers</h2>
+            
+            <div class="description">
+                Elevate your storytelling in seconds with AI-powered<br>
+                pose enhancement and character development
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-dot purple"></div>
+                    <span>Enhance poses with AI</span>
+                </div>
+                <div class="feature">
+                    <div class="feature-dot cyan"></div>
+                    <span>Character development</span>
+                </div>
+                <div class="feature">
+                    <div class="feature-dot purple"></div>
+                    <span>Immersive storytelling</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="accent-line"></div>
+    </div>
+    
+    <script>
+        // Instructions for generating PNG:
+        // 1. Open this HTML file in a browser
+        // 2. Use browser dev tools or screenshot tool to capture the card
+        // 3. Save as social-card.png in the public folder
+        console.log('Social card ready for screenshot. Recommended size: 1200x630px');
+    </script>
+</body>
+</html>

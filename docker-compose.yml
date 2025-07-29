@@ -36,6 +36,8 @@ services:
       - PORT=5001
     env_file:
       - ./backend/.env
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       mongodb:
         condition: service_healthy
@@ -53,12 +55,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5001}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://poseweaver.com/api}
     container_name: poseweaver-frontend
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5001}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://poseweaver.com/api}
     depends_on:
       backend:
         condition: service_healthy
@@ -98,6 +100,8 @@ volumes:
   mongodb_data:
     driver: local
   nginx_logs:
+    driver: local
+  uploads_data:
     driver: local
 
 networks:

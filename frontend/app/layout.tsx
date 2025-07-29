@@ -29,8 +29,55 @@ const fontMono = Inconsolata({
 
 export const metadata: Metadata = {
   title: "PoseWeaver - AI Co-writer for Roleplayers",
-  description: "Your AI co-writer for immersive roleplay. Elevate your storytelling in seconds.",
-    generator: 'v0.dev'
+  description: "Your AI co-writer for immersive roleplay. Elevate your storytelling in seconds with AI-powered pose enhancement and character development.",
+  generator: 'Next.js',
+  metadataBase: new URL('https://poseweaver.com'),
+  
+  // Open Graph
+  openGraph: {
+    title: "PoseWeaver - AI Co-writer for Roleplayers",
+    description: "Your AI co-writer for immersive roleplay. Elevate your storytelling in seconds with AI-powered pose enhancement and character development.",
+    url: 'https://poseweaver.com',
+    siteName: 'PoseWeaver',
+    images: [
+      {
+        url: '/social-card.svg',
+        width: 1200,
+        height: 630,
+        alt: 'PoseWeaver - AI Co-writer for Roleplayers',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  
+  // Twitter Card
+  twitter: {
+    card: 'summary_large_image',
+    title: "PoseWeaver - AI Co-writer for Roleplayers",
+    description: "Your AI co-writer for immersive roleplay. Elevate your storytelling in seconds with AI-powered pose enhancement and character development.",
+    images: ['/social-card.svg'],
+    creator: '@poseweaver',
+    site: '@poseweaver',
+  },
+  
+  // Additional meta tags
+  keywords: ['AI', 'roleplay', 'storytelling', 'writing', 'character development', 'pose enhancement', 'creative writing', 'RPG'],
+  authors: [{ name: 'PoseWeaver Team' }],
+  category: 'Technology',
+  
+  // Robots
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 }
 
 export default function RootLayout({
