@@ -152,7 +152,9 @@ dist
 
 # Gatsby files
 .cache/
-public
+# Gatsby public directory (but not frontend/public)
+*/public
+!frontend/public/
 
 # Storybook build outputs
 .out
