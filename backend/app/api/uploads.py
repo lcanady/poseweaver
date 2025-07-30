@@ -123,7 +123,15 @@ def upload_avatar():
             file.save(avatar_path)
             
             # Generate the URL for the uploaded file
+            # Ensure we use HTTPS in production (behind reverse proxy)
             base_url = request.host_url.rstrip('/')
+            
+            # Force HTTPS if we're in production or if the request was forwarded through HTTPS
+            if (request.headers.get('X-Forwarded-Proto') == 'https' or 
+                request.headers.get('X-Forwarded-Ssl') == 'on' or
+                request.host == 'poseweaver.com'):
+                base_url = base_url.replace('http://', 'https://')
+            
             file_url = f"{base_url}/api/uploads/avatars/{unique_filename}"
             
             return jsonify({

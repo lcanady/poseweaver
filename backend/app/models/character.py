@@ -57,7 +57,15 @@ class Character(BaseModel):
         
     def to_dict(self) -> Dict[str, Any]:
         """Convert character to dictionary for JSON serialization."""
+        # Debug: Log what we have before conversion
+        from flask import current_app
+        current_app.logger.debug(f"Character.to_dict() - profile_image before conversion: {getattr(self, 'profile_image', 'MISSING')}")
+        
         data = super().to_dict()
+        
+        # Debug: Log what's in the data after parent to_dict()
+        current_app.logger.debug(f"Character.to_dict() - profile_image in data: {data.get('profile_image', 'MISSING')}")
+        current_app.logger.debug(f"Character.to_dict() - all fields: {list(data.keys())}")
         
         # Convert ObjectId fields to strings for JSON serialization
         if '_id' in data and isinstance(data['_id'], ObjectId):
