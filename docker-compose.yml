@@ -28,6 +28,8 @@ services:
       dockerfile: Dockerfile
     container_name: poseweaver-backend
     restart: unless-stopped
+    ports:
+      - "5001:5001"
     environment:
       - FLASK_ENV=production
       - FLASK_DEBUG=False
@@ -55,12 +57,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://poseweaver.com/api}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5001/api}
     container_name: poseweaver-frontend
     restart: unless-stopped
+    ports:
+      - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://poseweaver.com/api}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5001/api}
     depends_on:
       backend:
         condition: service_healthy
@@ -72,44 +76,12 @@ services:
       timeout: 10s
       retries: 3
 
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: poseweaver-nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/proxy_params:/etc/nginx/proxy_params:ro
-      - certbot_certs:/etc/letsencrypt:ro
-      - certbot_webroot:/var/www/certbot:ro
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      - frontend
-      - backend
-    networks:
-      - poseweaver-network
-    healthcheck:
-      test: nginx -t || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
+
 
 volumes:
   mongodb_data:
     driver: local
-  nginx_logs:
-    driver: local
   uploads_data:
-    driver: local
-  ssl_certs:
-    driver: local
-  certbot_certs:
-    driver: local
-  certbot_webroot:
     driver: local
 
 networks:

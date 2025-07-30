@@ -45,6 +45,11 @@ case $MODE in
         sed -i 's/^        include \/etc\/nginx\/proxy_params;/    #     include \/etc\/nginx\/proxy_params;/' ./nginx/conf.d/poseweaver.conf
         sed -i 's/^    }$/    # }/' ./nginx/conf.d/poseweaver.conf
         
+        # Enable HTTPS server block
+        sed -i 's/^# server {/server {/' ./nginx/conf.d/poseweaver.conf
+        sed -i 's/^#     /    /' ./nginx/conf.d/poseweaver.conf
+        sed -i 's/^# }$/}/' ./nginx/conf.d/poseweaver.conf
+        
         echo "✅ Production mode configured"
         echo "   Next steps:"
         echo "   1. Run: ./scripts/setup-ssl.sh"
