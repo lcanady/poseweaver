@@ -271,10 +271,20 @@ class User:
         """Upgrade user to a subscription tier."""
         from datetime import datetime, timedelta
         
-        if tier in ['basic', 'pro']:
-            self.subscription_status = tier
-            # Set expiration to 1 month from now
-            self.subscription_expires_at = datetime.utcnow() + timedelta(days=30)
+        valid_tiers = ['basic', 'pro', 'basic_annual', 'pro_annual']
+        if tier in valid_tiers:
+            # For annual plans, store the base tier (basic/pro) as subscription_status
+            # but track the billing period separately if needed
+            if tier.endswith('_annual'):
+                base_tier = tier.replace('_annual', '')
+                self.subscription_status = base_tier
+                # Set expiration to 1 year from now for annual plans
+                self.subscription_expires_at = datetime.utcnow() + timedelta(days=365)
+            else:
+                self.subscription_status = tier
+                # Set expiration to 1 month from now for monthly plans
+                self.subscription_expires_at = datetime.utcnow() + timedelta(days=30)
+            
             self.reset_monthly_generations()
             self.save()
     
@@ -293,6 +303,7 @@ class User:
         if self.subscription_status in ['basic', 'pro']:
             # Extend expiration if needed
             if not self.subscription_expires_at or self.subscription_expires_at < datetime.utcnow():
+                # Default to monthly renewal - annual plans should be handled by Stripe webhooks
                 self.subscription_expires_at = datetime.utcnow() + timedelta(days=30)
             self.save()
     
@@ -328,10 +339,18 @@ class User:
         """Update subscription tier (for upgrades/downgrades)."""
         from datetime import datetime, timedelta
         
-        if new_tier in ['basic', 'pro']:
-            self.subscription_status = new_tier
-            # Extend expiration for tier changes
-            self.subscription_expires_at = datetime.utcnow() + timedelta(days=30)
+        valid_tiers = ['basic', 'pro', 'basic_annual', 'pro_annual']
+        if new_tier in valid_tiers:
+            # For annual plans, store the base tier (basic/pro) as subscription_status
+            if new_tier.endswith('_annual'):
+                base_tier = new_tier.replace('_annual', '')
+                self.subscription_status = base_tier
+                # Set expiration to 1 year from now for annual plans
+                self.subscription_expires_at = datetime.utcnow() + timedelta(days=365)
+            else:
+                self.subscription_status = new_tier
+                # Extend expiration for tier changes (monthly)
+                self.subscription_expires_at = datetime.utcnow() + timedelta(days=30)
             self.save()
     
     def update_settings(self, new_settings: Dict[str, Any]) -> None:

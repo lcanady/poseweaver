@@ -111,10 +111,11 @@ def create_checkout_session_endpoint():
         elif purchase_type == 'subscription':
             # Handle subscription purchase
             plan = data.get('plan')
-            if not plan or plan not in ['basic', 'pro']:
+            valid_plans = ['basic', 'pro', 'basic_annual', 'pro_annual']
+            if not plan or plan not in valid_plans:
                 return jsonify({
                     'success': False,
-                    'error': 'plan must be "basic" or "pro"'
+                    'error': f'plan must be one of: {", ".join(valid_plans)}'
                 }), 400
             
             subscription_plan = get_subscription_plan(plan)
@@ -427,11 +428,12 @@ def handle_subscription_checkout_completed(session):
         print(f"[DEBUG] Customer ID: {customer_id}, Subscription ID: {subscription_id}")
         
         # Upgrade user to subscription tier
-        if plan in ['basic', 'pro']:
+        valid_plans = ['basic', 'pro', 'basic_annual', 'pro_annual']
+        if plan in valid_plans:
             user.upgrade_to_subscription(plan, subscription_id)
             print(f"[DEBUG] Successfully upgraded user {user.email} to {plan} subscription")
         else:
-            print(f"[DEBUG] Invalid subscription plan: {plan}")
+            print(f"[DEBUG] Invalid subscription plan: {plan}. Valid plans: {valid_plans}")
         
     except Exception as e:
         print(f"Error handling subscription checkout completion: {e}")
@@ -566,6 +568,10 @@ def handle_subscription_created(subscription):
             subscription_tier = 'basic'
         elif price_id == STRIPE_PRICES['pro_subscription']:
             subscription_tier = 'pro'
+        elif price_id == STRIPE_PRICES['basic_annual']:
+            subscription_tier = 'basic_annual'
+        elif price_id == STRIPE_PRICES['pro_annual']:
+            subscription_tier = 'pro_annual'
         
         print(f"Subscription tier: {subscription_tier}")
         
@@ -614,6 +620,10 @@ def handle_subscription_updated(subscription):
                 new_tier = 'basic'
             elif price_id == STRIPE_PRICES['pro_subscription']:
                 new_tier = 'pro'
+            elif price_id == STRIPE_PRICES['basic_annual']:
+                new_tier = 'basic_annual'
+            elif price_id == STRIPE_PRICES['pro_annual']:
+                new_tier = 'pro_annual'
             
             if new_tier:
                 print(f"Plan changed to: {new_tier}")
