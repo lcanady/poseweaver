@@ -34,9 +34,9 @@ Have these ready when running the script:
 You'll need these for the backend `.env` file:
 
 ```bash
-# Venice AI Configuration
-VENICE_API_KEY=your_venice_api_key_here
-VENICE_TIMEOUT=120
+# OpenRouter AI Configuration
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_TIMEOUT=120
 
 # Flask Configuration
 FLASK_ENV=production

@@ -64,7 +64,7 @@ def create_app(config_name='development'):
         app.config['MONGODB_URI'] = 'mongodb://admin:password@localhost:27017/test_db?authSource=admin'
         app.config['MONGODB_DB'] = 'test_db'
     else:
-        app.config['VENICE_API_KEY'] = os.getenv('VENICE_API_KEY')
+        app.config['OPENROUTER_API_KEY'] = os.getenv('OPENROUTER_API_KEY')
         app.config['FLASK_ENV'] = os.getenv('FLASK_ENV', 'development')
     
     # Register blueprints
@@ -126,7 +126,8 @@ def create_app(config_name='development'):
         cors_allowed_origins=allowed_origins,
         async_mode='threading',
         logger=True,
-        engineio_logger=True
+        engineio_logger=True,
+        max_http_buffer_size=10 * 1024 * 1024  # 10MB
     )
     
     # Initialize WebSocket service

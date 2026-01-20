@@ -5,7 +5,7 @@ import { PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getApiUrl } from '@/utils/api-utils';
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -20,8 +20,8 @@ interface CreateSceneButtonProps {
   className?: string;
 }
 
-export function CreateSceneButton({ 
-  variant = "default", 
+export function CreateSceneButton({
+  variant = "default",
   size = "default",
   className = ""
 }: CreateSceneButtonProps) {
@@ -29,52 +29,31 @@ export function CreateSceneButton({
   const [isLoading, setIsLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const router = useRouter();
-  const { refreshToken } = useAuth();
+  const { getToken } = useAuth();
 
   useEffect(() => {
     const checkForCharacters = async () => {
       setIsLoading(true);
       try {
-        const token = localStorage.getItem('access_token');
+        const token = await getToken();
         if (!token) {
           setHasCharacters(false);
           setIsLoading(false);
           return;
         }
 
-        // Use the character management API to check if user has characters
-        const fetchWithRefresh = async (retryCount = 0) => {
-          try {
-            // Get the latest token from localStorage
-            const currentToken = localStorage.getItem('access_token');
-            
-            const response = await fetch(`${getApiUrl()}/api/characters/mgmt`, {
-              headers: {
-                'Authorization': `Bearer ${currentToken}`,
-                'Content-Type': 'application/json',
-              },
-            });
+        const response = await fetch(`${getApiUrl()}/api/characters/mgmt`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
-            if (response.status === 401 && retryCount < 1) {
-              console.log('Token expired, attempting refresh...');
-              // Try to refresh the token
-              await refreshToken();
-              // Retry the request
-              return await fetchWithRefresh(retryCount + 1);
-            }
+        if (!response.ok) {
+          throw new Error('Failed to fetch characters');
+        }
 
-            if (!response.ok) {
-              throw new Error('Failed to fetch characters');
-            }
-
-            return await response.json();
-          } catch (error) {
-            console.error('Error in fetchWithRefresh:', error);
-            throw error;
-          }
-        };
-
-        const data = await fetchWithRefresh();
+        const data = await response.json();
         // Check if user has any characters
         setHasCharacters(data.success && data.data && data.data.length > 0);
       } catch (err) {
@@ -86,7 +65,7 @@ export function CreateSceneButton({
     };
 
     checkForCharacters();
-  }, [refreshToken]);  // Added refreshToken to dependency array
+  }, [getToken]);
 
   const handleClick = (e: React.MouseEvent) => {
     if (!hasCharacters) {
@@ -103,10 +82,10 @@ export function CreateSceneButton({
 
   return (
     <>
-      <Button 
-        asChild 
-        variant={variant} 
-        size={size} 
+      <Button
+        asChild
+        variant={variant}
+        size={size}
         className={className}
         disabled={isLoading}
       >

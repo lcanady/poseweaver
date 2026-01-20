@@ -24,50 +24,33 @@ export function RecentScenes({ onDataLoaded }: { onDataLoaded?: (hasData: boolea
   const [scenes, setScenes] = useState<Scene[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { refreshToken } = useAuth()
-  
+  const { getToken } = useAuth()
+
   const fetchScenes = async () => {
     setIsLoading(true)
     setError(null)
-    
+
     try {
-      // Implement fetch with token refresh logic
-      const fetchWithRefresh = async (retryCount = 0) => {
-        try {
-          // Get token from localStorage if it exists
-          const token = localStorage.getItem('access_token');
-          const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
-          };
-          
-          // Add token to headers if available
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-          
-          const response = await fetch(`${getApiUrl()}/api/scenes?limit=10&sort=updated_at&order=desc`, {
-            headers
-          })
-          
-          // If unauthorized and we haven't retried yet, refresh token and retry
-          if (response.status === 401 && retryCount < 1) {
-            console.log('Token expired, attempting refresh...');
-            await refreshToken();
-            return fetchWithRefresh(retryCount + 1);
-          }
-          
-          if (!response.ok) {
-            throw new Error(`Failed to fetch scenes: ${response.status}`);
-          }
-          
-          return await response.json();
-        } catch (error) {
-          console.error('Error in fetchWithRefresh:', error);
-          throw error;
-        }
+      const token = await getToken();
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
       };
 
-      const data = await fetchWithRefresh();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${getApiUrl()}/api/scenes?limit=10&sort=updated_at&order=desc`, {
+        headers
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch scenes: ${response.status}`);
+      }
+
+      const data = await response.json();
+
       if (data.success && data.data) {
         // Sort scenes by updated_at to ensure most recent first
         const sortedScenes = data.data.sort((a: Scene, b: Scene) => {
@@ -75,7 +58,7 @@ export function RecentScenes({ onDataLoaded }: { onDataLoaded?: (hasData: boolea
           const bTime = new Date(b.updated_at || b.created_at).getTime();
           return bTime - aTime; // Most recent first
         });
-        
+
         // Take only the first 3 most recent scenes for display
         setScenes(sortedScenes.slice(0, 3))
         // Notify parent component about data status
@@ -91,11 +74,11 @@ export function RecentScenes({ onDataLoaded }: { onDataLoaded?: (hasData: boolea
       setIsLoading(false)
     }
   }
-  
+
   useEffect(() => {
     fetchScenes()
-  }, [refreshToken]) // Add refreshToken to dependency array
-  
+  }, [getToken]) // Add getToken to dependency array
+
   // Listen for scene updates via localStorage events
   useEffect(() => {
     const handleSceneUpdate = (event: StorageEvent) => {
@@ -119,7 +102,7 @@ export function RecentScenes({ onDataLoaded }: { onDataLoaded?: (hasData: boolea
 
     window.addEventListener('storage', handleSceneUpdate);
     window.addEventListener('focus', handleFocusReturn);
-    
+
     return () => {
       window.removeEventListener('storage', handleSceneUpdate);
       window.removeEventListener('focus', handleFocusReturn);
@@ -168,7 +151,7 @@ export function RecentScenes({ onDataLoaded }: { onDataLoaded?: (hasData: boolea
             </div>
           ))
         )}
-      
+
       </CardContent>
     </Card>
   )

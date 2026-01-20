@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { vi } from 'vitest'
+const vi = jest;
 import { AdvancedSummaryInterface } from '../../../components/search/advanced-summary-interface'
 
 // Mock hooks and utilities
@@ -613,7 +613,7 @@ describe('AdvancedSummaryInterface', () => {
       render(
         <AdvancedSummaryInterface 
           {...defaultProps} 
-          existingSummaries={existingSummaries}
+          existingSummaries={[mockGeneratedSummary] as any}
         />
       )
       

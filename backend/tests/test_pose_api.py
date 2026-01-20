@@ -7,7 +7,7 @@ from app import create_app
 from app.services.pose_service import PoseEnhancement
 from app.services.character_service import CharacterProfile
 from app.services.context_service import PoseContext
-from app.services.venice_client import VeniceAPIError
+from app.services.openrouter_client import OpenRouterAPIError
 
 
 class TestPoseAPI:
@@ -263,11 +263,11 @@ class TestPoseAPI:
         assert 'Invalid context data' in result['error']
 
     @patch('app.api.pose.get_pose_service')
-    def test_enhance_pose_venice_api_error(self, mock_get_service, client):
-        """Test pose enhancement with Venice API error."""
-        # Mock the service to raise VeniceAPIError
+    def test_enhance_pose_openrouter_api_error(self, mock_get_service, client):
+        """Test pose enhancement with OpenRouter API error."""
+        # Mock the service to raise OpenRouterAPIError
         mock_service = MagicMock()
-        mock_service.enhance_pose.side_effect = VeniceAPIError("API quota exceeded")
+        mock_service.enhance_pose.side_effect = OpenRouterAPIError("API quota exceeded")
         mock_get_service.return_value = mock_service
         
         data = {'original_pose': 'Alice examines the artifact.'}
@@ -454,10 +454,10 @@ class TestPoseAPI:
         # If HTML response, that's also acceptable for 405
 
     # Test service initialization
-    @patch('app.api.pose.VeniceClient')
+    @patch('app.api.pose.OpenRouterClient')
     @patch('app.api.pose.PoseService')
     def test_get_pose_service_initialization(self, mock_pose_service, 
-                                           mock_venice_client):
+                                           mock_openrouter_client):
         """Test pose service initialization."""
         from app.api.pose import get_pose_service
         
@@ -469,8 +469,8 @@ class TestPoseAPI:
         service = get_pose_service()
         
         # Verify initialization
-        mock_venice_client.assert_called_once_with(api_key="test_key")
-        mock_pose_service.assert_called_once_with(mock_venice_client.return_value)
+        mock_openrouter_client.assert_called_once_with(api_key="test_key")
+        mock_pose_service.assert_called_once_with(mock_openrouter_client.return_value)
         
         # Verify service is returned
         assert service == mock_pose_service.return_value
@@ -479,8 +479,8 @@ class TestPoseAPI:
         service2 = get_pose_service()
         assert service2 == service
         
-        # Venice client should only be called once
-        assert mock_venice_client.call_count == 1
+        # OpenRouter client should only be called once
+        assert mock_openrouter_client.call_count == 1
         assert mock_pose_service.call_count == 1
 
     def test_enhance_pose_invalid_enhancement_style(self, client):

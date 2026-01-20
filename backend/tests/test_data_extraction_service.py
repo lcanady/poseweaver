@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock, patch
 
 from app.services.data_extraction_service import DataExtractionService
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 
 
 class TestDataExtractionService:
@@ -10,12 +10,12 @@ class TestDataExtractionService:
     
     def setup_method(self):
         """Set up test fixtures."""
-        self.mock_venice_client = Mock(spec=VeniceClient)
-        self.service = DataExtractionService(self.mock_venice_client)
+        self.mock_openrouter_client = Mock(spec=OpenRouterClient)
+        self.service = DataExtractionService(self.mock_openrouter_client)
         
     def test_initialization(self):
         """Test that DataExtractionService initializes correctly."""
-        assert self.service.venice_client is self.mock_venice_client
+        assert self.service.openrouter_client is self.mock_openrouter_client
         
     def test_extract_scene_context_success(self):
         """Test successful scene context extraction with structured response."""
@@ -30,7 +30,7 @@ class TestDataExtractionService:
             "recent_events": ["A heated argument", "A toast to fallen comrades"],
             "relationship_dynamics": {"Galen-Thorne": "Cautious allies"}
         }
-        self.mock_venice_client.extract_structured_data.return_value = mock_response
+        self.mock_openrouter_client.extract_structured_data.return_value = mock_response
         
         # Call the method
         result = self.service.extract_scene_context(
@@ -44,8 +44,8 @@ class TestDataExtractionService:
         assert len(result["active_characters"]) == 3
         assert "Galen" in result["active_characters"]
         
-        # Verify the correct schema was passed to Venice client
-        _, kwargs = self.mock_venice_client.extract_structured_data.call_args
+        # Verify the correct schema was passed to OpenRouter client
+        _, kwargs = self.mock_openrouter_client.extract_structured_data.call_args
         schema = kwargs.get("schema", {})
         assert "setting" in schema
         assert "active_characters" in schema
@@ -77,7 +77,7 @@ class TestDataExtractionService:
                 }
             ]
         }
-        self.mock_venice_client.extract_structured_data.return_value = mock_response
+        self.mock_openrouter_client.extract_structured_data.return_value = mock_response
         
         # Call the method
         result = self.service.extract_scene_context(
@@ -90,15 +90,15 @@ class TestDataExtractionService:
         assert len(result["poses"]) == 2
         assert result["poses"][0]["character_name"] == "Queen"
         
-        # Verify the correct schema was passed to Venice client
-        _, kwargs = self.mock_venice_client.extract_structured_data.call_args
+        # Verify the correct schema was passed to OpenRouter client
+        _, kwargs = self.mock_openrouter_client.extract_structured_data.call_args
         schema = kwargs.get("schema", {})
         assert "poses" in schema
         
     def test_extract_scene_context_error_handling(self):
         """Test error handling during scene context extraction."""
         # Mock error during extraction
-        self.mock_venice_client.extract_structured_data.side_effect = VeniceAPIError("API error")
+        self.mock_openrouter_client.extract_structured_data.side_effect = OpenRouterAPIError("API error")
         
         # Call the method (should not raise exception)
         result = self.service.extract_scene_context("Scene text")
@@ -123,7 +123,7 @@ class TestDataExtractionService:
             "skills": ["Arcane magic", "Herbalism", "Diplomacy"],
             "speaking_style": "Formal and measured, with occasional ancient proverbs"
         }
-        self.mock_venice_client.extract_structured_data.return_value = mock_response
+        self.mock_openrouter_client.extract_structured_data.return_value = mock_response
         
         # Call the method
         result = self.service.extract_character_details("Character description text")
@@ -134,8 +134,8 @@ class TestDataExtractionService:
         assert "Wise" in result["personality_traits"]
         assert "Arcane magic" in result["skills"]
         
-        # Verify the correct schema was passed to Venice client
-        _, kwargs = self.mock_venice_client.extract_structured_data.call_args
+        # Verify the correct schema was passed to OpenRouter client
+        _, kwargs = self.mock_openrouter_client.extract_structured_data.call_args
         schema = kwargs.get("schema", {})
         assert "name" in schema
         assert "physical_description" in schema
@@ -145,7 +145,7 @@ class TestDataExtractionService:
     def test_extract_character_details_error_handling(self):
         """Test error handling during character details extraction."""
         # Mock error during extraction
-        self.mock_venice_client.extract_structured_data.side_effect = Exception("Generic error")
+        self.mock_openrouter_client.extract_structured_data.side_effect = Exception("Generic error")
         
         # Call the method (should not raise exception)
         result = self.service.extract_character_details("Character text")
@@ -173,7 +173,7 @@ class TestDataExtractionService:
             "narrative_voice": "Third person limited",
             "emotional_arcs": ["Hope to despair", "Fear to courage"]
         }
-        self.mock_venice_client.extract_structured_data.return_value = mock_response
+        self.mock_openrouter_client.extract_structured_data.return_value = mock_response
         
         # Call the method
         result = self.service.extract_narrative_elements("Narrative text")
@@ -184,8 +184,8 @@ class TestDataExtractionService:
         assert len(result["characters"]) == 2
         assert result["characters"][0]["name"] == "Lyra"
         
-        # Verify the correct schema was passed to Venice client
-        _, kwargs = self.mock_venice_client.extract_structured_data.call_args
+        # Verify the correct schema was passed to OpenRouter client
+        _, kwargs = self.mock_openrouter_client.extract_structured_data.call_args
         schema = kwargs.get("schema", {})
         assert "plot_points" in schema
         assert "characters" in schema
@@ -196,7 +196,7 @@ class TestDataExtractionService:
     def test_extract_narrative_elements_error_handling(self):
         """Test error handling during narrative elements extraction."""
         # Mock error during extraction
-        self.mock_venice_client.extract_structured_data.side_effect = VeniceAPIError("Schema error")
+        self.mock_openrouter_client.extract_structured_data.side_effect = OpenRouterAPIError("Schema error")
         
         # Call the method (should not raise exception)
         result = self.service.extract_narrative_elements("Narrative text")

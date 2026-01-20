@@ -50,5 +50,5 @@ class TestApplication:
     
     def test_environment_configuration(self, app):
         """Test environment variables are properly loaded."""
-        assert app.config.get('VENICE_API_KEY') is not None
+        assert app.config.get('OPENROUTER_API_KEY') is not None
         assert app.config.get('TESTING') is True 

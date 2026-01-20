@@ -6,15 +6,16 @@ Handles long-running operations like description generation without HTTP timeout
 import base64
 import traceback
 from typing import Dict, Any, Optional
-from flask import request
+from flask import request, session
 from flask_socketio import SocketIO, emit, disconnect
 from flask_jwt_extended import decode_token, JWTManager
 import logging
 
 from app.services.description_service import DescriptionService
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 from app.services.usage_tracking_service import UsageTrackingService
 from app.services.auth_service import AuthService
+from app.models.user_mongo import User
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +28,13 @@ class WebSocketService:
         import os
         self.socketio = socketio
         
-        # Get Venice API key from environment
-        venice_api_key = os.getenv('VENICE_API_KEY')
-        if not venice_api_key:
-            raise ValueError("VENICE_API_KEY environment variable is required")
+        # Get OpenRouter API key from environment
+        openrouter_api_key = os.getenv('OPENROUTER_API_KEY')
+        if not openrouter_api_key:
+            raise ValueError("OPENROUTER_API_KEY environment variable is required")
             
-        self.venice_client = VeniceClient(venice_api_key)
-        self.description_service = DescriptionService(self.venice_client)
+        self.openrouter_client = OpenRouterClient(openrouter_api_key)
+        self.description_service = DescriptionService(self.openrouter_client)
         self.usage_service = UsageTrackingService()
         self.auth_service = AuthService()
         
@@ -62,8 +63,7 @@ class WebSocketService:
                     return False
                 
                 # Store user_id in session for this connection
-                request.sid_user_map = getattr(request, 'sid_user_map', {})
-                request.sid_user_map[request.sid] = user_id
+                session['user_id'] = user_id
                 
                 logger.info(f"WebSocket connected: user_id={user_id}, sid={request.sid}")
                 emit('connected', {'status': 'success', 'message': 'Connected successfully'})
@@ -77,8 +77,7 @@ class WebSocketService:
         def handle_disconnect():
             """Handle client disconnection."""
             try:
-                sid_user_map = getattr(request, 'sid_user_map', {})
-                user_id = sid_user_map.pop(request.sid, None)
+                user_id = session.get('user_id')
                 logger.info(f"WebSocket disconnected: user_id={user_id}, sid={request.sid}")
             except Exception as e:
                 logger.error(f"WebSocket disconnect error: {str(e)}")
@@ -87,9 +86,11 @@ class WebSocketService:
         def handle_generate_description(data):
             """Handle description generation request via WebSocket."""
             try:
+                logger.info(f"Received generate_description request: sid={request.sid}")
                 # Get authenticated user
                 user_id = self._get_user_from_session()
                 if not user_id:
+                    logger.warning(f"Unauthorized generate_description request: sid={request.sid}")
                     emit('description_error', {'error': 'Authentication required'})
                     return
                 
@@ -105,8 +106,11 @@ class WebSocketService:
                     return
                 
                 # Check usage limits
-                usage_check = self.usage_service.check_pose_generation_limit(user_id)
+                user = User.find_by_id(user_id)
+                usage_check = self.usage_service.check_pose_generation_limit(user)
+                logger.info(f"Usage check for user {user_id}: {usage_check}")
                 if not usage_check['can_generate']:
+                    logger.warning(f"Generation limit reached for user {user_id}")
                     emit('description_error', {
                         'error': 'Generation limit reached',
                         'usage_info': usage_check
@@ -120,7 +124,7 @@ class WebSocketService:
                 })
                 
                 # Process the description generation
-                result = self._process_description_generation(data, user_id)
+                result = self._process_description_generation(data, user)
                 
                 # Emit success result
                 emit('description_complete', {
@@ -128,8 +132,8 @@ class WebSocketService:
                     'result': result
                 })
                 
-            except VeniceAPIError as e:
-                logger.error(f"Venice API error in WebSocket: {str(e)}")
+            except OpenRouterAPIError as e:
+                logger.error(f"OpenRouter API error in WebSocket: {str(e)}")
                 emit('description_error', {
                     'error': f'AI service error: {str(e)}'
                 })
@@ -165,14 +169,13 @@ class WebSocketService:
     def _get_user_from_session(self) -> Optional[str]:
         """Get authenticated user_id from WebSocket session."""
         try:
-            sid_user_map = getattr(request, 'sid_user_map', {})
-            return sid_user_map.get(request.sid)
+            return session.get('user_id')
         except Exception:
             return None
     
     def _validate_description_request(self, data: Dict[str, Any]) -> bool:
         """Validate description generation request data."""
-        required_fields = ['image_data', 'image_format', 'user_prompt']
+        required_fields = ['image_data', 'image_format']
         
         for field in required_fields:
             if field not in data or not data[field]:
@@ -187,20 +190,26 @@ class WebSocketService:
         
         return True
     
-    def _process_description_generation(self, data: Dict[str, Any], user_id: str) -> Dict[str, Any]:
+    def _process_description_generation(self, data: Dict[str, Any], user: User) -> Dict[str, Any]:
         """Process description generation and return result."""
         try:
             # Extract request parameters
             image_data_b64 = data['image_data']
             image_format = data['image_format']
-            user_prompt = data['user_prompt']
+            
+            # Get prompt or use default
+            user_prompt = data.get('user_prompt', '').strip()
+            if not user_prompt:
+                user_prompt = "Describe the character's physical appearance, focusing on body type, facial features, hair, and visible traits. Keep the description open-ended and suitable for adding an outfit later."
             description_style = data.get('description_style', 'balanced')
             focus_areas = data.get('focus_areas', [])
             
             # Decode base64 image data
+            logger.info(f"Decoding image data (length: {len(image_data_b64)})")
             image_data = base64.b64decode(image_data_b64)
             
             # Generate description
+            logger.info(f"Calling description_service.generate_description for user {user.id}")
             result = self.description_service.generate_description(
                 image_data=image_data,
                 image_format=image_format,
@@ -210,7 +219,8 @@ class WebSocketService:
             )
             
             # Update usage tracking
-            self.usage_service.use_pose_generation(user_id)
+            self.usage_service.use_generation(user)
+            logger.info(f"Successfully generated and recorded usage for user {user.id}")
             
             # Convert result to dictionary
             return {

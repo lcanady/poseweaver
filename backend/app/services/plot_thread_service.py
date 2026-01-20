@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from ..models.scene_memory import (
     PlotThread, Pose, PlotStatus
 )
-from ..services.venice_client import VeniceClient, VeniceAPIError
+from ..services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 
 logger = logging.getLogger(__name__)
 
@@ -63,14 +63,14 @@ class PlotThreadService:
     - Plot thread status tracking and updates
     """
     
-    def __init__(self, venice_client: VeniceClient):
+    def __init__(self, openrouter_client: OpenRouterClient):
         """
         Initialize the plot thread service.
         
         Args:
-            venice_client: Venice.ai client for AI analysis
+            openrouter_client: OpenRouter.ai client for AI analysis
         """
-        self.venice_client = venice_client
+        self.openrouter_client = openrouter_client
         self.logger = logging.getLogger(__name__)
         
         # Configuration for plot analysis
@@ -101,8 +101,8 @@ class PlotThreadService:
             # Build plot extraction prompt
             plot_prompt = self._build_plot_extraction_prompt(pose)
             
-            # Call Venice.ai for analysis
-            response = self.venice_client.generate_completion(
+            # Call OpenRouter.ai for analysis
+            response = self.openrouter_client.generate_completion(
                 prompt=plot_prompt,
                 model=self.config['model'],
                 temperature=self.config['temperature'],
@@ -133,8 +133,8 @@ class PlotThreadService:
             self.logger.debug(f"Extracted {len(plot_elements)} plot elements")
             return plot_elements
             
-        except VeniceAPIError as e:
-            self.logger.error(f"Venice.ai API error during plot extraction: {e}")
+        except OpenRouterAPIError as e:
+            self.logger.error(f"OpenRouter.ai API error during plot extraction: {e}")
             return []
         except Exception as e:
             self.logger.error(f"Error during plot extraction: {e}")
@@ -268,7 +268,7 @@ class PlotThreadService:
             # Use AI to find semantic relationships
             similarity_prompt = self._build_thread_similarity_prompt(element, existing_threads)
             
-            response = self.venice_client.generate_completion(
+            response = self.openrouter_client.generate_completion(
                 prompt=similarity_prompt,
                 model=self.config['model'],
                 temperature=0.2,  # Lower temperature for consistent matching
@@ -295,8 +295,8 @@ class PlotThreadService:
             self.logger.debug(f"Found {len(related_threads)} related threads")
             return related_threads
             
-        except VeniceAPIError as e:
-            self.logger.error(f"Venice.ai API error during thread matching: {e}")
+        except OpenRouterAPIError as e:
+            self.logger.error(f"OpenRouter.ai API error during thread matching: {e}")
             return self._fallback_thread_matching(element, existing_threads)
         except Exception as e:
             self.logger.error(f"Error during thread matching: {e}")

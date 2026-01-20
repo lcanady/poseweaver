@@ -4,9 +4,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import websocketService, { 
-  DescriptionRequest, 
-  DescriptionResult, 
+import websocketService, {
+  DescriptionRequest,
+  DescriptionResult,
   ProgressUpdate
 } from '@/utils/websocket-service';
 
@@ -32,7 +32,7 @@ export function useWebSocket(): UseWebSocketReturn {
   const [progress, setProgress] = useState<ProgressUpdate | null>(null);
   const [result, setResult] = useState<DescriptionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   const connectionAttempted = useRef(false);
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -44,13 +44,13 @@ export function useWebSocket(): UseWebSocketReturn {
     setConnectionError(null);
 
     try {
-      const token = getToken();
+      const token = await getToken();
       if (!token) {
         throw new Error('No authentication token available');
       }
 
       const success = await websocketService.connect(token);
-      
+
       if (success) {
         setIsConnected(true);
         setConnectionError(null);
@@ -62,7 +62,7 @@ export function useWebSocket(): UseWebSocketReturn {
       const errorMessage = err instanceof Error ? err.message : 'Connection failed';
       setConnectionError(errorMessage);
       console.error('WebSocket connection error:', errorMessage);
-      
+
       // Schedule reconnection attempt
       if (reconnectTimer.current) {
         clearTimeout(reconnectTimer.current);
@@ -83,7 +83,7 @@ export function useWebSocket(): UseWebSocketReturn {
     setIsConnected(false);
     setIsConnecting(false);
     setConnectionError(null);
-    
+
     if (reconnectTimer.current) {
       clearTimeout(reconnectTimer.current);
       reconnectTimer.current = null;
@@ -161,7 +161,7 @@ export function useWebSocket(): UseWebSocketReturn {
       const socketConnected = websocketService.isSocketConnected();
       if (isConnected !== socketConnected) {
         setIsConnected(socketConnected);
-        
+
         // If we think we're connected but socket says we're not, try to reconnect
         if (isConnected && !socketConnected) {
           connect();

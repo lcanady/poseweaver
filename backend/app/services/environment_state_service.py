@@ -10,7 +10,7 @@ from typing import List, Optional, Dict, Any, Tuple
 import logging
 import json
 from ..models.scene_memory import EnvironmentState, Pose
-from .venice_client import VeniceClient, VeniceAPIError
+from .openrouter_client import OpenRouterClient, OpenRouterAPIError
 
 logger = logging.getLogger(__name__)
 
@@ -62,15 +62,15 @@ class EnvironmentStateService:
     - Location and setting management within scenes
     """
     
-    def __init__(self, venice_client: Optional[VeniceClient] = None):
+    def __init__(self, openrouter_client: Optional[OpenRouterClient] = None):
         """
         Initialize the environment state service.
         
         Args:
-            venice_client: Optional Venice.ai client for AI analysis
+            openrouter_client: Optional OpenRouter.ai client for AI analysis
         """
         self.logger = logging.getLogger(__name__)
-        self.venice_client = venice_client
+        self.openrouter_client = openrouter_client
     
     def initialize_environment_state(
         self,
@@ -128,8 +128,8 @@ class EnvironmentStateService:
         """
         self.logger.debug(f"Extracting environmental details from pose {pose.id}")
         
-        if not self.venice_client:
-            self.logger.warning("No Venice client available, using basic extraction")
+        if not self.openrouter_client:
+            self.logger.warning("No OpenRouter client available, using basic extraction")
             return self._extract_basic_environmental_details(pose)
         
         try:
@@ -154,8 +154,8 @@ class EnvironmentStateService:
             # Prepare the pose content for analysis
             user_content = f"Pose by {pose.character_name}:\n{pose.content}"
             
-            # Call Venice.ai for analysis
-            response = self.venice_client.generate_completion(
+            # Call OpenRouter.ai for analysis
+            response = self.openrouter_client.generate_completion(
                 prompt=user_content,
                 system_message=system_prompt,
                 model="qwen3-235b",
@@ -172,8 +172,8 @@ class EnvironmentStateService:
                 self.logger.warning(f"Failed to parse AI response as JSON: {response}")
                 return self._extract_basic_environmental_details(pose)
                 
-        except VeniceAPIError as e:
-            self.logger.error(f"Venice API error during environmental extraction: {e}")
+        except OpenRouterAPIError as e:
+            self.logger.error(f"OpenRouter API error during environmental extraction: {e}")
             return self._extract_basic_environmental_details(pose)
         except Exception as e:
             self.logger.error(f"Unexpected error during environmental extraction: {e}")
@@ -391,8 +391,8 @@ class EnvironmentStateService:
         """
         self.logger.debug(f"Checking environmental consistency for pose {pose.id}")
         
-        if not self.venice_client:
-            self.logger.warning("No Venice client available, using basic consistency check")
+        if not self.openrouter_client:
+            self.logger.warning("No OpenRouter client available, using basic consistency check")
             return self._check_basic_environmental_consistency(pose, current_environment)
         
         try:
@@ -440,8 +440,8 @@ New Pose by {pose.character_name}:
 
 Check for environmental consistency."""
             
-            # Call Venice.ai for analysis
-            response = self.venice_client.generate_completion(
+            # Call OpenRouter.ai for analysis
+            response = self.openrouter_client.generate_completion(
                 prompt=user_content,
                 system_message=system_prompt,
                 model="qwen3-235b",
@@ -462,8 +462,8 @@ Check for environmental consistency."""
                 self.logger.warning(f"Failed to parse AI consistency response: {response}")
                 return self._check_basic_environmental_consistency(pose, current_environment)
                 
-        except VeniceAPIError as e:
-            self.logger.error(f"Venice API error during consistency check: {e}")
+        except OpenRouterAPIError as e:
+            self.logger.error(f"OpenRouter API error during consistency check: {e}")
             return self._check_basic_environmental_consistency(pose, current_environment)
         except Exception as e:
             self.logger.error(f"Unexpected error during consistency check: {e}")

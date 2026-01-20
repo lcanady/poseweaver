@@ -4,7 +4,7 @@ Tests for context service.
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from app.services.context_service import ContextService, PoseContext
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 import json
 
 
@@ -12,14 +12,14 @@ class TestContextService:
     """Test cases for ContextService."""
     
     @pytest.fixture
-    def mock_venice_client(self):
-        """Create a mock Venice client."""
-        return Mock(spec=VeniceClient)
+    def mock_openrouter_client(self):
+        """Create a mock OpenRouter client."""
+        return Mock(spec=OpenRouterClient)
     
     @pytest.fixture
-    def context_service(self, mock_venice_client):
+    def context_service(self, mock_openrouter_client):
         """Create a context service instance."""
-        return ContextService(mock_venice_client)
+        return ContextService(mock_openrouter_client)
     
     @pytest.fixture
     def sample_context_data(self):
@@ -40,16 +40,16 @@ class TestContextService:
         """Sample pose context instance."""
         return PoseContext(**sample_context_data)
 
-    def test_init(self, mock_venice_client):
+    def test_init(self, mock_openrouter_client):
         """Test ContextService initialization."""
-        service = ContextService(mock_venice_client)
-        assert service.venice_client == mock_venice_client
+        service = ContextService(mock_openrouter_client)
+        assert service.openrouter_client == mock_openrouter_client
 
-    def test_analyze_pose_context_success(self, context_service, mock_venice_client, 
+    def test_analyze_pose_context_success(self, context_service, mock_openrouter_client, 
                                         sample_context_data):
         """Test successful pose context analysis."""
-        # Mock Venice client response - returns JSON string
-        mock_venice_client.generate_completion.return_value = json.dumps(sample_context_data)
+        # Mock OpenRouter client response - returns JSON string
+        mock_openrouter_client.generate_completion.return_value = json.dumps(sample_context_data)
         
         # Test the analysis
         result = context_service.analyze_pose_context(
@@ -68,15 +68,15 @@ class TestContextService:
         assert result.urgency_level == 'low'
         assert result.narrative_tone == 'mysterious'
         
-        # Verify Venice client was called
-        mock_venice_client.generate_completion.assert_called_once()
+        # Verify OpenRouter client was called
+        mock_openrouter_client.generate_completion.assert_called_once()
 
     def test_analyze_pose_context_without_character(self, context_service, 
-                                                  mock_venice_client, 
+                                                  mock_openrouter_client, 
                                                   sample_context_data):
         """Test pose context analysis without character name."""
-        # Mock Venice client response - returns JSON string
-        mock_venice_client.generate_completion.return_value = json.dumps(sample_context_data)
+        # Mock OpenRouter client response - returns JSON string
+        mock_openrouter_client.generate_completion.return_value = json.dumps(sample_context_data)
         
         # Test the analysis
         result = context_service.analyze_pose_context(
@@ -87,24 +87,24 @@ class TestContextService:
         assert isinstance(result, PoseContext)
         assert result.actions == ['examining', 'studying']
         
-        # Verify Venice client was called
-        mock_venice_client.generate_completion.assert_called_once()
+        # Verify OpenRouter client was called
+        mock_openrouter_client.generate_completion.assert_called_once()
 
-    def test_analyze_pose_context_venice_api_error(self, context_service, 
-                                                 mock_venice_client):
-        """Test pose context analysis with Venice API error."""
-        # Mock Venice client to raise error
-        mock_venice_client.generate_completion.side_effect = VeniceAPIError("API error")
+    def test_analyze_pose_context_openrouter_api_error(self, context_service, 
+                                                 mock_openrouter_client):
+        """Test pose context analysis with OpenRouter API error."""
+        # Mock OpenRouter client to raise error
+        mock_openrouter_client.generate_completion.side_effect = OpenRouterAPIError("API error")
         
         # Test that the error is re-raised
-        with pytest.raises(VeniceAPIError, match="API error"):
+        with pytest.raises(OpenRouterAPIError, match="API error"):
             context_service.analyze_pose_context("Alice examines the artifact.")
 
     def test_analyze_pose_context_invalid_response(self, context_service, 
-                                                 mock_venice_client):
+                                                 mock_openrouter_client):
         """Test pose context analysis with invalid AI response."""
-        # Mock Venice client with invalid response
-        mock_venice_client.generate_completion.return_value = {
+        # Mock OpenRouter client with invalid response
+        mock_openrouter_client.generate_completion.return_value = {
             'choices': [{'message': {'content': 'invalid json'}}]
         }
         
@@ -113,10 +113,10 @@ class TestContextService:
             context_service.analyze_pose_context("Alice examines the artifact.")
 
     def test_extract_pose_context_with_character(self, context_service, 
-                                               mock_venice_client):
+                                               mock_openrouter_client):
         """Test _extract_pose_context with character name."""
-        # Mock Venice client response - returns JSON string
-        mock_venice_client.generate_completion.return_value = '{"actions": ["test"]}'
+        # Mock OpenRouter client response - returns JSON string
+        mock_openrouter_client.generate_completion.return_value = '{"actions": ["test"]}'
         
         # Test extraction
         result = context_service._extract_pose_context(
@@ -128,17 +128,17 @@ class TestContextService:
         assert result == {"actions": ["test"]}
         
         # Verify the prompt includes character name and pose text
-        call_args = mock_venice_client.generate_completion.call_args
+        call_args = mock_openrouter_client.generate_completion.call_args
         messages = call_args[1]['messages']
         user_message = messages[1]['content']
         assert "Bob" in user_message
         assert "Alice examines the artifact." in user_message
 
     def test_extract_pose_context_without_character(self, context_service, 
-                                                  mock_venice_client):
+                                                  mock_openrouter_client):
         """Test _extract_pose_context without character name."""
-        # Mock Venice client response - returns JSON string
-        mock_venice_client.generate_completion.return_value = '{"actions": ["test"]}'
+        # Mock OpenRouter client response - returns JSON string
+        mock_openrouter_client.generate_completion.return_value = '{"actions": ["test"]}'
         
         # Test extraction
         result = context_service._extract_pose_context(
@@ -150,7 +150,7 @@ class TestContextService:
         assert result == {"actions": ["test"]}
         
         # Verify the prompt includes pose text
-        call_args = mock_venice_client.generate_completion.call_args
+        call_args = mock_openrouter_client.generate_completion.call_args
         messages = call_args[1]['messages']
         user_message = messages[1]['content']
         assert "Alice examines the artifact." in user_message
@@ -188,10 +188,10 @@ class TestContextService:
             context_service._validate_context_data(invalid_data)
 
     def test_get_response_suggestions_with_character(self, context_service, 
-                                                   mock_venice_client, 
+                                                   mock_openrouter_client, 
                                                    sample_pose_context):
         """Test get_response_suggestions with character name."""
-        # This method doesn't use Venice client - it generates suggestions from context
+        # This method doesn't use OpenRouter client - it generates suggestions from context
         
         # Test suggestions
         result = context_service.get_response_suggestions(
@@ -215,10 +215,10 @@ class TestContextService:
         assert all("text" in s for s in result)
 
     def test_get_response_suggestions_without_character(self, context_service, 
-                                                      mock_venice_client, 
+                                                      mock_openrouter_client, 
                                                       sample_pose_context):
         """Test get_response_suggestions without character name."""
-        # This method doesn't use Venice client - it generates suggestions from context
+        # This method doesn't use OpenRouter client - it generates suggestions from context
         
         # Test suggestions
         result = context_service.get_response_suggestions(sample_pose_context)
@@ -277,32 +277,32 @@ class TestContextService:
         # Should have no suggestions since no actions, emotions, or hooks
         assert len(result) == 0
 
-    def test_get_response_suggestions_venice_api_error(self, context_service, 
-                                                     mock_venice_client, 
+    def test_get_response_suggestions_openrouter_api_error(self, context_service, 
+                                                     mock_openrouter_client, 
                                                      sample_pose_context):
-        """Test get_response_suggestions - this method doesn't use Venice client."""
-        # This method doesn't use Venice client, so no error should occur
+        """Test get_response_suggestions - this method doesn't use OpenRouter client."""
+        # This method doesn't use OpenRouter client, so no error should occur
         result = context_service.get_response_suggestions(sample_pose_context, "Bob")
         
         assert isinstance(result, list)
         assert len(result) == 5
 
     def test_get_response_suggestions_invalid_response(self, context_service, 
-                                                     mock_venice_client, 
+                                                     mock_openrouter_client, 
                                                      sample_pose_context):
-        """Test get_response_suggestions - this method doesn't use Venice client."""
-        # This method doesn't use Venice client, so no error should occur
+        """Test get_response_suggestions - this method doesn't use OpenRouter client."""
+        # This method doesn't use OpenRouter client, so no error should occur
         result = context_service.get_response_suggestions(sample_pose_context, "Bob")
         
         assert isinstance(result, list)
         assert len(result) == 5
 
     def test_analyze_multiple_poses_success(self, context_service, 
-                                          mock_venice_client, 
+                                          mock_openrouter_client, 
                                           sample_context_data):
         """Test successful multiple pose analysis."""
-        # Mock Venice client response - returns JSON string
-        mock_venice_client.generate_completion.return_value = json.dumps(sample_context_data)
+        # Mock OpenRouter client response - returns JSON string
+        mock_openrouter_client.generate_completion.return_value = json.dumps(sample_context_data)
         
         # Test multiple pose analysis
         poses = [
@@ -320,15 +320,15 @@ class TestContextService:
         assert isinstance(result["pose_0"], PoseContext)
         assert isinstance(result["pose_1"], PoseContext)
         
-        # Verify Venice client was called for each pose
-        assert mock_venice_client.generate_completion.call_count == 2
+        # Verify OpenRouter client was called for each pose
+        assert mock_openrouter_client.generate_completion.call_count == 2
 
     def test_analyze_multiple_poses_without_character(self, context_service, 
-                                                    mock_venice_client, 
+                                                    mock_openrouter_client, 
                                                     sample_context_data):
         """Test multiple pose analysis without character name."""
-        # Mock Venice client response - returns JSON string
-        mock_venice_client.generate_completion.return_value = json.dumps(sample_context_data)
+        # Mock OpenRouter client response - returns JSON string
+        mock_openrouter_client.generate_completion.return_value = json.dumps(sample_context_data)
         
         # Test multiple pose analysis
         poses = ["Alice examines the artifact."]
@@ -349,11 +349,11 @@ class TestContextService:
         assert isinstance(result, dict)
         assert len(result) == 0
 
-    def test_analyze_multiple_poses_venice_api_error(self, context_service, 
-                                                   mock_venice_client):
-        """Test multiple pose analysis with Venice API error."""
-        # Mock Venice client to raise error
-        mock_venice_client.generate_completion.side_effect = VeniceAPIError("API error")
+    def test_analyze_multiple_poses_openrouter_api_error(self, context_service, 
+                                                   mock_openrouter_client):
+        """Test multiple pose analysis with OpenRouter API error."""
+        # Mock OpenRouter client to raise error
+        mock_openrouter_client.generate_completion.side_effect = OpenRouterAPIError("API error")
         
         # Test that errors are caught and returned in results
         result = context_service.analyze_multiple_poses(["Alice examines the artifact."])
@@ -366,13 +366,13 @@ class TestContextService:
         assert "API error" in result["pose_0"]["error"]
 
     def test_analyze_multiple_poses_partial_failure(self, context_service, 
-                                                   mock_venice_client, 
+                                                   mock_openrouter_client, 
                                                    sample_context_data):
         """Test multiple pose analysis with partial failure."""
-        # Mock Venice client to succeed first, then fail
-        mock_venice_client.generate_completion.side_effect = [
+        # Mock OpenRouter client to succeed first, then fail
+        mock_openrouter_client.generate_completion.side_effect = [
             json.dumps(sample_context_data),
-            VeniceAPIError("API error")
+            OpenRouterAPIError("API error")
         ]
         
         poses = [

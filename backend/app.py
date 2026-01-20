@@ -32,4 +32,4 @@ if __name__ == '__main__':
                         allow_unsafe_werkzeug=True)  # Allow for production deployment
     else:
         # Development mode
-        app.socketio.run(app, debug=debug_mode, host='0.0.0.0', port=port) 
+        app.socketio.run(app, debug=debug_mode, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True) 

@@ -11,13 +11,13 @@ import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "next-themes"
-import { 
-  Settings, 
-  Bell, 
-  Shield, 
-  Palette, 
-  Moon, 
-  Sun, 
+import {
+  Settings,
+  Bell,
+  Shield,
+  Palette,
+  Moon,
+  Sun,
   Monitor,
   Download,
   Trash2,
@@ -47,10 +47,10 @@ interface UserSettings {
 }
 
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { user, getToken } = useAuth()
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
-  
+
   const [settings, setSettings] = useState<UserSettings>({
     theme: 'system',
     notifications: {
@@ -71,14 +71,14 @@ export default function SettingsPage() {
       character_limit_warnings: true
     }
   })
-  
+
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
   // Load user settings on component mount
   useEffect(() => {
     loadSettings()
-  }, [user?._id])
+  }, [user?.uid])
 
   // Sync theme state with next-themes provider
   useEffect(() => {
@@ -91,18 +91,18 @@ export default function SettingsPage() {
   }, [theme])
 
   const loadSettings = async () => {
-    if (!user?._id) return
-    
+    if (!user?.uid) return
+
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('access_token')
+      const token = await getToken()
       const response = await fetch(`${getApiUrl()}/api/user/settings`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         if (data.success && data.settings) {
@@ -117,11 +117,11 @@ export default function SettingsPage() {
   }
 
   const saveSettings = async () => {
-    if (!user?._id) return
-    
+    if (!user?.uid) return
+
     setIsSaving(true)
     try {
-      const token = localStorage.getItem('access_token')
+      const token = await getToken()
       const response = await fetch(`${getApiUrl()}/api/user/settings`, {
         method: 'POST',
         headers: {
@@ -130,7 +130,7 @@ export default function SettingsPage() {
         },
         body: JSON.stringify(settings)
       })
-      
+
       if (response.ok) {
         toast({
           title: "Settings Saved",
@@ -152,13 +152,13 @@ export default function SettingsPage() {
 
   const exportData = async () => {
     try {
-      const token = localStorage.getItem('access_token')
+      const token = await getToken()
       const response = await fetch(`${getApiUrl()}/api/user/export-data`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       })
-      
+
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
@@ -169,7 +169,7 @@ export default function SettingsPage() {
         a.click()
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
-        
+
         toast({
           title: "Data Exported",
           description: "Your data has been downloaded successfully."
@@ -189,12 +189,12 @@ export default function SettingsPage() {
       const keys = path.split('.')
       const newSettings = { ...prev }
       let current: any = newSettings
-      
+
       for (let i = 0; i < keys.length - 1; i++) {
         current[keys[i]] = { ...current[keys[i]] }
         current = current[keys[i]]
       }
-      
+
       current[keys[keys.length - 1]] = value
       return newSettings
     })
@@ -228,8 +228,8 @@ export default function SettingsPage() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="theme">Theme</Label>
-              <Select 
-                value={settings.theme} 
+              <Select
+                value={settings.theme}
                 onValueChange={(value: 'light' | 'dark' | 'system') => {
                   setTheme(value)
                   updateSetting('theme', value)
@@ -290,9 +290,9 @@ export default function SettingsPage() {
                 onCheckedChange={(checked) => updateSetting('notifications.email_updates', checked)}
               />
             </div>
-            
+
             <Separator />
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Pose Generation Alerts</Label>
@@ -305,9 +305,9 @@ export default function SettingsPage() {
                 onCheckedChange={(checked) => updateSetting('notifications.pose_generation_alerts', checked)}
               />
             </div>
-            
+
             <Separator />
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Subscription Reminders</Label>
@@ -320,9 +320,9 @@ export default function SettingsPage() {
                 onCheckedChange={(checked) => updateSetting('notifications.subscription_reminders', checked)}
               />
             </div>
-            
+
             <Separator />
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Feature Announcements</Label>
@@ -352,8 +352,8 @@ export default function SettingsPage() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="profile-visibility">Profile Visibility</Label>
-              <Select 
-                value={settings.privacy.profile_visibility} 
+              <Select
+                value={settings.privacy.profile_visibility}
                 onValueChange={(value: 'public' | 'private') => updateSetting('privacy.profile_visibility', value)}
               >
                 <SelectTrigger>
@@ -368,9 +368,9 @@ export default function SettingsPage() {
                 Control who can see your profile information.
               </p>
             </div>
-            
+
             <Separator />
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Analytics Tracking</Label>
@@ -383,9 +383,9 @@ export default function SettingsPage() {
                 onCheckedChange={(checked) => updateSetting('privacy.analytics_tracking', checked)}
               />
             </div>
-            
+
             <Separator />
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Data Collection</Label>
@@ -415,8 +415,8 @@ export default function SettingsPage() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="default-style">Default Enhancement Style</Label>
-              <Select 
-                value={settings.preferences.default_enhancement_style} 
+              <Select
+                value={settings.preferences.default_enhancement_style}
                 onValueChange={(value: 'minimal' | 'balanced' | 'elaborate') => updateSetting('preferences.default_enhancement_style', value)}
               >
                 <SelectTrigger>
@@ -432,9 +432,9 @@ export default function SettingsPage() {
                 Your preferred enhancement style for new poses.
               </p>
             </div>
-            
+
             <Separator />
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Auto-save Poses</Label>
@@ -447,9 +447,9 @@ export default function SettingsPage() {
                 onCheckedChange={(checked) => updateSetting('preferences.auto_save_poses', checked)}
               />
             </div>
-            
+
             <Separator />
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Show Advanced Settings</Label>
@@ -462,9 +462,9 @@ export default function SettingsPage() {
                 onCheckedChange={(checked) => updateSetting('preferences.show_advanced_settings', checked)}
               />
             </div>
-            
+
             <Separator />
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Character Limit Warnings</Label>
@@ -504,9 +504,9 @@ export default function SettingsPage() {
                 Export Data
               </Button>
             </div>
-            
+
             <Separator />
-            
+
             <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />

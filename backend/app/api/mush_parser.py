@@ -6,7 +6,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 
 from app.services.pose_service import PoseService
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 from app.services.character_service import CharacterProfile
 from app.services.scene_management_service import SceneManagementService, PoseData
 from app.models.scene_memory import PoseType
@@ -24,9 +24,9 @@ def get_pose_service():
     global pose_service
     if pose_service is None:
         from flask import current_app
-        api_key = current_app.config.get('VENICE_API_KEY', 'test_key_12345')
-        venice_client = VeniceClient(api_key)
-        pose_service = PoseService(venice_client)
+        api_key = current_app.config.get('OPENROUTER_API_KEY', 'test_key_12345')
+        openrouter_client = OpenRouterClient(api_key)
+        pose_service = PoseService(openrouter_client)
     return pose_service
 
 
@@ -157,7 +157,7 @@ def enhance_from_mush_output():
         
         return jsonify(result)
         
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
         return jsonify({"error": f"AI service error: {str(e)}"}), 503
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -445,7 +445,7 @@ def enhance_mush_output_with_scene_storage():
         
         return jsonify(response_data)
         
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
         return jsonify({"error": f"AI service error: {str(e)}"}), 503
     except Exception as e:
         return jsonify({"error": f"Processing error: {str(e)}"}), 500 

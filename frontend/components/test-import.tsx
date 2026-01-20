@@ -1,5 +1,5 @@
 // This is a test component to verify path resolution
-import { cn } from '../lib';
+import { cn } from '../lib/utils';
 
 export default function TestImport() {
   return (

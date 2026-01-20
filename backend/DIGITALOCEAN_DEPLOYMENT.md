@@ -8,7 +8,7 @@ This guide walks you through deploying the PoseWeaver backend to DigitalOcean's 
 2. **GitHub Repository**: Your code should be in a GitHub repository
 3. **MongoDB Database**: Set up MongoDB Atlas or DigitalOcean Managed MongoDB
 4. **Stripe Account**: For payment processing (if using paid features)
-5. **Venice AI API Key**: For AI functionality
+5. **OpenRouter AI API Key**: For AI functionality
 
 ## Step 1: Prepare Your Repository
 
@@ -17,9 +17,9 @@ This guide walks you through deploying the PoseWeaver backend to DigitalOcean's 
 Ensure your `.env.example` file includes all necessary environment variables:
 
 ```bash
-# Venice AI Configuration
-VENICE_API_KEY=your_venice_api_key_here
-VENICE_TIMEOUT=120
+# OpenRouter AI Configuration
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_TIMEOUT=120
 
 # Flask Configuration
 FLASK_ENV=production
@@ -80,10 +80,10 @@ services:
     type: SECRET
   - key: MONGODB_DB
     value: poseweaver
-  - key: VENICE_API_KEY
+  - key: OPENROUTER_API_KEY
     scope: RUN_TIME
     type: SECRET
-  - key: VENICE_TIMEOUT
+  - key: OPENROUTER_TIMEOUT
     value: "120"
   - key: STRIPE_SECRET_KEY
     scope: RUN_TIME
@@ -160,7 +160,7 @@ In the App Platform dashboard:
    - `SECRET_KEY`: Generate a secure random string
    - `JWT_SECRET_KEY`: Generate another secure random string
    - `MONGODB_URI`: Your MongoDB connection string
-   - `VENICE_API_KEY`: Your Venice AI API key
+   - `OPENROUTER_API_KEY`: Your OpenRouter AI API key
    - `STRIPE_SECRET_KEY`: Your Stripe secret key (if using payments)
    - `STRIPE_PUBLISHABLE_KEY`: Your Stripe publishable key
    - `STRIPE_WEBHOOK_SECRET`: Your Stripe webhook secret

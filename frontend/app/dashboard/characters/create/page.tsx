@@ -17,7 +17,7 @@ import { getApiUrl } from '@/utils/api-utils';
 export default function CreateCharacterPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { refreshToken } = useAuth();
+  const { getToken } = useAuth();
   const [characterLimitError, setCharacterLimitError] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormDisabled, setIsFormDisabled] = useState(false);
@@ -30,52 +30,47 @@ export default function CreateCharacterPage() {
   });
 
   // Function to fetch with token refresh capabilities (reusable)
-  const fetchWithRefresh = async (url: string, method: string = 'GET', body: any = null, retryCount = 0) => {
+  // Helper function for authenticated requests
+  const fetchWithAuth = async (url: string, method: string = 'GET', body: any = null) => {
     try {
-      const currentToken = localStorage.getItem('access_token');
-      
+      const token = await getToken();
+
       const options: RequestInit = {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentToken}`
+          'Authorization': `Bearer ${token}`
         }
       };
-      
+
       if (body) {
         options.body = JSON.stringify(body);
       }
-      
+
       const response = await fetch(url, options);
-      
-      // If unauthorized and we haven't retried yet, refresh token and retry
-      if (response.status === 401 && retryCount < 1) {
-        console.log(`Token expired for ${url}, attempting refresh...`);
-        await refreshToken();
-        return fetchWithRefresh(url, method, body, retryCount + 1);
-      }
-      
+
       // Handle error responses
       if (!response.ok) {
         const errorData = await response.json().catch(async () => {
           const errorText = await response.text().catch(() => 'Could not read response text');
           return { message: errorText };
         });
-        
+
+
         // Check for character limit error
         if (response.status === 403 && errorData.needs_upgrade) {
-          throw { 
+          throw {
             type: 'CHARACTER_LIMIT',
             data: errorData
           };
         }
-        
+
         throw new Error(errorData.message || `Failed to fetch from ${url}: ${response.status}`);
       }
-      
+
       return await response.json();
     } catch (error) {
-      console.error(`Error in fetchWithRefresh (${url}):`, error);
+      console.error(`Error in fetchWithAuth (${url}):`, error);
       throw error;
     }
   };
@@ -85,21 +80,21 @@ export default function CreateCharacterPage() {
     const checkCharacterLimits = async () => {
       try {
         setIsLoading(true);
-        
+
         // Fetch current characters to check limits
-        const data = await fetchWithRefresh(
+        const data = await fetchWithAuth(
           `${getApiUrl()}/api/characters/mgmt`
         );
-        
+
         // Extract subscription metadata
         if (data.meta) {
           setSubscriptionMeta(data.meta);
-          
+
           // Check if user has reached their character limit
           const currentCount = data.data ? data.data.length : 0;
           const characterLimit = data.meta.character_limit;
           const needsUpgrade = data.meta.needs_upgrade;
-          
+
           if (needsUpgrade && characterLimit !== -1 && currentCount >= characterLimit) {
             setIsFormDisabled(true);
             setCharacterLimitError({
@@ -118,7 +113,7 @@ export default function CreateCharacterPage() {
         setIsLoading(false);
       }
     };
-    
+
     checkCharacterLimits();
   }, []);
 
@@ -132,7 +127,7 @@ export default function CreateCharacterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Check if form is disabled due to character limits
     if (isFormDisabled) {
       toast({
@@ -142,7 +137,7 @@ export default function CreateCharacterPage() {
       });
       return;
     }
-    
+
     if (!formData.name || !formData.brainDump) {
       toast({
         title: "Missing information",
@@ -155,8 +150,8 @@ export default function CreateCharacterPage() {
     setIsSubmitting(true);
 
     try {
-      // Get the latest token
-      const token = localStorage.getItem('access_token');
+      // Get the latest token (validated by fetchWithAuth implicitly, but if we needed it explicitly:)
+      const token = await getToken();
       if (!token) {
         throw new Error('Not authenticated');
       }
@@ -166,15 +161,15 @@ export default function CreateCharacterPage() {
       const brainDumpPayload = {
         brain_dump: formData.brainDump || ''
       };
-      
+
       console.log('Brain dump payload:', brainDumpPayload);
-      
-      const processedData = await fetchWithRefresh(
+
+      const processedData = await fetchWithAuth(
         `${getApiUrl()}/api/characters/process`,
         'POST',
         brainDumpPayload
       );
-      
+
       if (!processedData.success) {
         throw new Error(processedData.error || 'Failed to process character');
       }
@@ -187,13 +182,13 @@ export default function CreateCharacterPage() {
         metadata: processedData.character
       };
 
-      // Use the same fetchWithRefresh function for creating the character
-      const result = await fetchWithRefresh(
+      // Use the same fetchWithAuth function for creating the character
+      const result = await fetchWithAuth(
         `${getApiUrl()}/api/characters/mgmt`,
         'POST',
         characterData
       );
-      
+
       if (!result.success) {
         throw new Error(result.message || 'Failed to create character');
       }
@@ -205,10 +200,10 @@ export default function CreateCharacterPage() {
 
       // Redirect to characters page
       router.push('/dashboard/characters');
-      
+
     } catch (error: any) {
       console.error('Error creating character:', error);
-      
+
       // Handle character limit error specifically
       if (error.type === 'CHARACTER_LIMIT') {
         setCharacterLimitError(error.data);
@@ -273,7 +268,7 @@ export default function CreateCharacterPage() {
                 <div className="md:col-span-1 flex flex-col items-center gap-4">
                   <Label>Character Avatar</Label>
                   <AvatarUpload
-                    initialImage={formData.profileImage || "/placeholder.svg?width=128&height=128"}
+                    initialImage={formData.profileImage}
                     name={formData.name}
                     onImageUploaded={(imageUrl) => {
                       setFormData(prev => ({
@@ -287,9 +282,9 @@ export default function CreateCharacterPage() {
                 <div className="md:col-span-2 space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Character Name</Label>
-                    <Input 
-                      id="name" 
-                      placeholder="e.g., Jax, the Cyber-Noir Detective" 
+                    <Input
+                      id="name"
+                      placeholder="e.g., Jax, the Cyber-Noir Detective"
                       value={formData.name}
                       onChange={handleChange}
                       disabled={isFormDisabled || isLoading}
@@ -298,9 +293,9 @@ export default function CreateCharacterPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="description">Short Description / Tagline</Label>
-                    <Input 
-                      id="description" 
-                      placeholder="A cynical ex-cop with a cybernetic eye..." 
+                    <Input
+                      id="description"
+                      placeholder="A cynical ex-cop with a cybernetic eye..."
                       value={formData.description}
                       onChange={handleChange}
                       disabled={isFormDisabled || isLoading}

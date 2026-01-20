@@ -16,7 +16,7 @@ from typing import Dict, Any, List, Optional
 from app.services.search_service import SearchService
 from app.services.summary_service import SummaryService, SummaryOptions
 from app.services.scene_service import SceneService
-from app.services.venice_client import VeniceClient
+from app.services.openrouter_client import OpenRouterClient
 from app.middleware.auth_middleware import require_auth
 from app.models.scene import Scene
 from app.models.scene_memory import SceneMemory
@@ -27,24 +27,24 @@ search_summary_bp = Blueprint('search_summary', __name__)
 # Initialize services with lazy initialization
 
 
-def get_venice_client():
-    """Get Venice client with proper API key handling."""
+def get_openrouter_client():
+    """Get OpenRouter client with proper API key handling."""
     import os
-    api_key = os.getenv('VENICE_API_KEY', 'test-key')
-    return VeniceClient(api_key=api_key)
+    api_key = os.getenv('OPENROUTER_API_KEY', 'test-key')
+    return OpenRouterClient(api_key=api_key)
 
 
 # Initialize services
-venice_client = None
+openrouter_client = None
 search_service = None
 summary_service = None
 
 
 def init_services():
     """Initialize services lazily."""
-    global venice_client, search_service, summary_service
-    if venice_client is None:
-        venice_client = get_venice_client()
+    global openrouter_client, search_service, summary_service
+    if openrouter_client is None:
+        openrouter_client = get_openrouter_client()
         search_service = SearchService()
         summary_service = SummaryService()
 
@@ -1236,7 +1236,7 @@ def health_check():
         services_status = {
             'search_service': 'healthy',
             'summary_service': 'healthy',
-            'venice_client': 'healthy' if venice_client else 'unavailable'
+            'openrouter_client': 'healthy' if openrouter_client else 'unavailable'
         }
         
         # Check database connectivity

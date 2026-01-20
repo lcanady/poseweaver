@@ -29,7 +29,7 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
 - [x] 5. Implement AI-powered Continuity Analysis Service
-  - Create ContinuityService with Venice.ai integration for content analysis
+  - Create ContinuityService with OpenRouter.ai integration for content analysis
   - Implement specialized prompts for character consistency checking
   - Add plot element extraction and tracking functionality
   - Create continuity flag generation and management system

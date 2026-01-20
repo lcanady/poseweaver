@@ -1,7 +1,7 @@
 # MUSH Pose Editor - Development TODO List
 
 ## Project Overview
-Building a MUSH Pose Editor using TDD principles with Venice.ai (Dolphin uncensored thinking model), React frontend, and Flask backend.
+Building a MUSH Pose Editor using TDD principles with OpenRouter.ai (Dolphin uncensored thinking model), React frontend, and Flask backend.
 
 **Target:** >90% test coverage across all components
 **Timeline:** 10 weeks following TDD methodology
@@ -39,10 +39,10 @@ frontend/
 
 ---
 
-## Phase 2: Venice.ai Integration Layer (Week 2)
+## Phase 2: OpenRouter.ai Integration Layer (Week 2)
 
 ### AI Integration
-- [ ] **implement-venice-client** - Implement Venice.ai API client with Dolphin model integration and comprehensive tests
+- [ ] **implement-openrouter-client** - Implement OpenRouter.ai API client with Dolphin model integration and comprehensive tests
 - [ ] **implement-model-config** - Create model configuration service for Dolphin uncensored thinking model settings
 
 ### Core Requirements
@@ -186,11 +186,11 @@ frontend/
 ### Backend
 - Flask with Python 3.11+
 - pytest for testing
-- requests for Venice.ai integration
+- requests for OpenRouter.ai integration
 - Flask-CORS for cross-origin support
 
 ### AI Integration
-- Venice.ai API
+- OpenRouter.ai API
 - Dolphin uncensored thinking model
 - OpenAI-compatible API format
 
@@ -228,7 +228,7 @@ frontend/
 
 - Follow TDD principles: Write tests first, then implement
 - Maintain >90% test coverage throughout development
-- Use Venice.ai Dolphin uncensored thinking model exclusively
+- Use OpenRouter.ai Dolphin uncensored thinking model exclusively
 - Prioritize user experience and accessibility
 - Focus on MUSH community-specific needs and conventions
 - Implement comprehensive error handling and user feedback

@@ -11,7 +11,8 @@ import Link from "next/link"
 import { Icons } from "@/components/icons"
 
 export default function LoginPage() {
-  const { login, googleLogin, isLoading } = useAuth()
+  const { loginHelper, googleLogin, loading } = useAuth()
+  const isLoading = loading;
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -26,7 +27,7 @@ export default function LoginPage() {
     }
 
     try {
-      await login(email, password)
+      await loginHelper(email, password)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
     }
@@ -64,7 +65,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={isLoading}
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -80,11 +81,11 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={isLoading}
+                disabled={loading}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Log In"}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Logging in..." : "Log In"}
             </Button>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -94,10 +95,10 @@ export default function LoginPage() {
                 <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              className="w-full bg-transparent" 
-              type="button" 
+            <Button
+              variant="outline"
+              className="w-full bg-transparent"
+              type="button"
               disabled={isLoading}
               onClick={handleGoogleLogin}
             >

@@ -7,12 +7,12 @@ from app import create_app
 def app():
     """Create and configure a new app instance for each test."""
     # Set testing environment
-    os.environ['VENICE_API_KEY'] = 'test_key_12345'
+    os.environ['OPENROUTER_API_KEY'] = 'test_key_12345'
     
     app = create_app('testing')
     app.config.update({
         'TESTING': True,
-        'VENICE_API_KEY': 'test_key_12345',
+        'OPENROUTER_API_KEY': 'test_key_12345',
     })
     
     yield app
@@ -31,8 +31,8 @@ def runner(app):
 
 
 @pytest.fixture
-def mock_venice_response():
-    """Mock response for Venice.ai API calls."""
+def mock_openrouter_response():
+    """Mock response for OpenRouter.ai API calls."""
     return {
         "choices": [
             {

@@ -8,7 +8,7 @@ from app.services.pose_service import PoseService
 from app.services.character_service import CharacterProfile
 from app.services.context_service import PoseContext
 from app.services.scene_flow_service import SceneFlowService
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 from app.services.usage_tracking_service import require_pose_generation_limit, get_usage_info
 
 pose_bp = Blueprint('pose', __name__)
@@ -23,11 +23,11 @@ def get_pose_service():
     global pose_service
     if pose_service is None:
         import os
-        api_key = os.getenv('VENICE_API_KEY')
+        api_key = os.getenv('OPENROUTER_API_KEY')
         if not api_key:
-            raise ValueError("VENICE_API_KEY environment variable is required")
-        venice_client = VeniceClient(api_key=api_key)
-        pose_service = PoseService(venice_client)
+            raise ValueError("OPENROUTER_API_KEY environment variable is required")
+        openrouter_client = OpenRouterClient(api_key=api_key)
+        pose_service = PoseService(openrouter_client)
     return pose_service
 
 
@@ -36,11 +36,11 @@ def get_scene_flow_service():
     global scene_flow_service
     if scene_flow_service is None:
         import os
-        api_key = os.getenv('VENICE_API_KEY')
+        api_key = os.getenv('OPENROUTER_API_KEY')
         if not api_key:
-            raise ValueError("VENICE_API_KEY environment variable is required")
-        venice_client = VeniceClient(api_key=api_key)
-        scene_flow_service = SceneFlowService(venice_client)
+            raise ValueError("OPENROUTER_API_KEY environment variable is required")
+        openrouter_client = OpenRouterClient(api_key=api_key)
+        scene_flow_service = SceneFlowService(openrouter_client)
     return scene_flow_service
 
 
@@ -157,7 +157,7 @@ def enhance_pose():
             
         return jsonify(response_data)
         
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
         return jsonify({
             'success': False,
             'error': f'AI processing failed: {str(e)}'
@@ -249,7 +249,7 @@ def refine_pose():
         
         return jsonify(result)
         
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
         return jsonify({
             'success': False,
             'error': f'AI processing failed: {str(e)}'
@@ -377,7 +377,7 @@ def enhance_pose_with_scene():
             }
         })
         
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
         return jsonify({
             'success': False,
             'error': f'AI processing failed: {str(e)}'
@@ -472,7 +472,7 @@ def generate_pose_variations():
             'variations': [v.to_dict() for v in variations]
         })
         
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
         return jsonify({
             'success': False,
             'error': f'AI processing failed: {str(e)}'
@@ -643,7 +643,7 @@ def parse_mush_output():
             **results
         })
         
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
         return jsonify({
             'success': False,
             'error': f'AI service error: {str(e)}'
@@ -821,7 +821,7 @@ def enhance_pose_with_continuity():
         
         return jsonify(response_data)
         
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
         return jsonify({
             'success': False,
             'error': f'AI processing failed: {str(e)}'
@@ -1005,7 +1005,7 @@ def enhance_pose_with_precheck():
         
         return jsonify(response_data)
         
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
         return jsonify({
             'success': False,
             'error': f'AI processing failed: {str(e)}'

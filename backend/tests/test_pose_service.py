@@ -7,21 +7,21 @@ from unittest.mock import Mock
 from app.services.pose_service import PoseService, PoseEnhancement
 from app.services.character_service import CharacterProfile
 from app.services.context_service import PoseContext
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 
 
 class TestPoseService:
     """Test cases for PoseService."""
     
     @pytest.fixture
-    def mock_venice_client(self):
-        """Create a mock Venice client."""
-        return Mock(spec=VeniceClient)
+    def mock_openrouter_client(self):
+        """Create a mock OpenRouter client."""
+        return Mock(spec=OpenRouterClient)
     
     @pytest.fixture
-    def pose_service(self, mock_venice_client):
+    def pose_service(self, mock_openrouter_client):
         """Create a pose service instance."""
-        return PoseService(mock_venice_client)
+        return PoseService(mock_openrouter_client)
     
     @pytest.fixture
     def sample_enhancement_data(self):
@@ -67,16 +67,16 @@ class TestPoseService:
             narrative_tone="mysterious"
         )
 
-    def test_init(self, mock_venice_client):
+    def test_init(self, mock_openrouter_client):
         """Test PoseService initialization."""
-        service = PoseService(mock_venice_client)
-        assert service.venice_client == mock_venice_client
+        service = PoseService(mock_openrouter_client)
+        assert service.openrouter_client == mock_openrouter_client
 
-    def test_enhance_pose_success(self, pose_service, mock_venice_client,
+    def test_enhance_pose_success(self, pose_service, mock_openrouter_client,
                                  sample_enhancement_data):
         """Test successful pose enhancement."""
-        # Mock Venice client response - now returns plain text
-        mock_venice_client.generate_completion.return_value = "Alice carefully examines the ancient artifact, running her fingers along its intricate surface."
+        # Mock OpenRouter client response - now returns plain text
+        mock_openrouter_client.generate_completion.return_value = "Alice carefully examines the ancient artifact, running her fingers along its intricate surface."
         
         # Test the enhancement
         result = pose_service.enhance_pose(
@@ -94,15 +94,15 @@ class TestPoseService:
         assert result.character_voice_elements == []
         assert result.narrative_techniques == []
         
-        # Verify Venice client was called twice (enhancement + validation)
-        assert mock_venice_client.generate_completion.call_count == 2
+        # Verify OpenRouter client was called twice (enhancement + validation)
+        assert mock_openrouter_client.generate_completion.call_count == 2
 
-    def test_enhance_pose_with_character(self, pose_service, mock_venice_client, 
+    def test_enhance_pose_with_character(self, pose_service, mock_openrouter_client, 
                                        sample_enhancement_data, 
                                        sample_character_profile):
         """Test pose enhancement with character profile."""
-        # Mock Venice client response
-        mock_venice_client.generate_completion.return_value = json.dumps(sample_enhancement_data)
+        # Mock OpenRouter client response
+        mock_openrouter_client.generate_completion.return_value = json.dumps(sample_enhancement_data)
         
         # Test the enhancement
         result = pose_service.enhance_pose(
@@ -115,15 +115,15 @@ class TestPoseService:
         assert isinstance(result, PoseEnhancement)
         assert result.original_pose == "Alice examines the artifact."
         
-        # Verify Venice client was called twice (enhancement + validation)
-        assert mock_venice_client.generate_completion.call_count == 2
+        # Verify OpenRouter client was called twice (enhancement + validation)
+        assert mock_openrouter_client.generate_completion.call_count == 2
 
-    def test_enhance_pose_with_context(self, pose_service, mock_venice_client, 
+    def test_enhance_pose_with_context(self, pose_service, mock_openrouter_client, 
                                      sample_enhancement_data, 
                                      sample_pose_context):
         """Test pose enhancement with context."""
-        # Mock Venice client response
-        mock_venice_client.generate_completion.return_value = json.dumps(sample_enhancement_data)
+        # Mock OpenRouter client response
+        mock_openrouter_client.generate_completion.return_value = json.dumps(sample_enhancement_data)
         
         # Test the enhancement
         result = pose_service.enhance_pose(
@@ -136,16 +136,16 @@ class TestPoseService:
         assert isinstance(result, PoseEnhancement)
         assert result.original_pose == "Alice examines the artifact."
         
-        # Verify Venice client was called twice (enhancement + validation)
-        assert mock_venice_client.generate_completion.call_count == 2
+        # Verify OpenRouter client was called twice (enhancement + validation)
+        assert mock_openrouter_client.generate_completion.call_count == 2
 
-    def test_enhance_pose_with_character_and_context(self, pose_service, mock_venice_client, 
+    def test_enhance_pose_with_character_and_context(self, pose_service, mock_openrouter_client, 
                                                    sample_enhancement_data, 
                                                    sample_character_profile,
                                                    sample_pose_context):
         """Test pose enhancement with both character and context."""
-        # Mock Venice client response
-        mock_venice_client.generate_completion.return_value = json.dumps(sample_enhancement_data)
+        # Mock OpenRouter client response
+        mock_openrouter_client.generate_completion.return_value = json.dumps(sample_enhancement_data)
         
         # Test the enhancement
         result = pose_service.enhance_pose(
@@ -159,22 +159,22 @@ class TestPoseService:
         assert isinstance(result, PoseEnhancement)
         assert result.original_pose == "Alice examines the artifact."
         
-        # Verify Venice client was called twice (enhancement + validation)
-        assert mock_venice_client.generate_completion.call_count == 2
+        # Verify OpenRouter client was called twice (enhancement + validation)
+        assert mock_openrouter_client.generate_completion.call_count == 2
 
-    def test_enhance_pose_venice_api_error(self, pose_service, mock_venice_client):
-        """Test pose enhancement with Venice API error."""
-        # Mock Venice client to raise error
-        mock_venice_client.generate_completion.side_effect = VeniceAPIError("API error")
+    def test_enhance_pose_openrouter_api_error(self, pose_service, mock_openrouter_client):
+        """Test pose enhancement with OpenRouter API error."""
+        # Mock OpenRouter client to raise error
+        mock_openrouter_client.generate_completion.side_effect = OpenRouterAPIError("API error")
         
         # Test that the error is re-raised
-        with pytest.raises(VeniceAPIError, match="API error"):
+        with pytest.raises(OpenRouterAPIError, match="API error"):
             pose_service.enhance_pose("Alice examines the artifact.")
 
-    def test_enhance_pose_invalid_response(self, pose_service, mock_venice_client):
+    def test_enhance_pose_invalid_response(self, pose_service, mock_openrouter_client):
         """Test pose enhancement with invalid AI response."""
-        # Mock Venice client with invalid response
-        mock_venice_client.generate_completion.return_value = "invalid json"
+        # Mock OpenRouter client with invalid response
+        mock_openrouter_client.generate_completion.return_value = "invalid json"
         
         # Test that the service handles it gracefully by using the raw response
         result = pose_service.enhance_pose(
@@ -191,10 +191,10 @@ class TestPoseService:
         assert result.character_voice_elements == []
         assert result.narrative_techniques == []
 
-    def test_generate_pose_enhancement_minimal_style(self, pose_service, mock_venice_client):
+    def test_generate_pose_enhancement_minimal_style(self, pose_service, mock_openrouter_client):
         """Test _generate_pose_enhancement with minimal style."""
-        # Mock Venice client response
-        mock_venice_client.generate_completion.return_value = '{"original_pose": "test"}'
+        # Mock OpenRouter client response
+        mock_openrouter_client.generate_completion.return_value = '{"original_pose": "test"}'
         
         # Test enhancement generation
         result = pose_service._generate_pose_enhancement(
@@ -206,15 +206,15 @@ class TestPoseService:
         assert isinstance(result, dict)
         
         # Verify the prompt includes minimal style guidance (check first call)
-        first_call_args = mock_venice_client.generate_completion.call_args_list[0]
+        first_call_args = mock_openrouter_client.generate_completion.call_args_list[0]
         messages = first_call_args[1]['messages']
         user_message = messages[1]['content']
         assert "minimal" in user_message.lower()
 
-    def test_generate_pose_enhancement_elaborate_style(self, pose_service, mock_venice_client):
+    def test_generate_pose_enhancement_elaborate_style(self, pose_service, mock_openrouter_client):
         """Test _generate_pose_enhancement with elaborate style."""
-        # Mock Venice client response
-        mock_venice_client.generate_completion.return_value = '{"original_pose": "test"}'
+        # Mock OpenRouter client response
+        mock_openrouter_client.generate_completion.return_value = '{"original_pose": "test"}'
         
         # Test enhancement generation
         result = pose_service._generate_pose_enhancement(
@@ -226,7 +226,7 @@ class TestPoseService:
         assert isinstance(result, dict)
         
         # Verify the prompt includes elaborate style guidance (check first call)
-        first_call_args = mock_venice_client.generate_completion.call_args_list[0]
+        first_call_args = mock_openrouter_client.generate_completion.call_args_list[0]
         messages = first_call_args[1]['messages']
         user_message = messages[1]['content']
         assert "elaborate" in user_message.lower()
@@ -292,11 +292,11 @@ class TestPoseService:
         with pytest.raises(ValueError, match="should be a list"):
             pose_service._validate_enhancement_data(invalid_data)
 
-    def test_generate_pose_variations_success(self, pose_service, mock_venice_client, 
+    def test_generate_pose_variations_success(self, pose_service, mock_openrouter_client, 
                                             sample_enhancement_data):
         """Test successful pose variation generation."""
-        # Mock Venice client response
-        mock_venice_client.generate_completion.return_value = json.dumps(sample_enhancement_data)
+        # Mock OpenRouter client response
+        mock_openrouter_client.generate_completion.return_value = json.dumps(sample_enhancement_data)
         
         # Test variation generation
         result = pose_service.generate_pose_variations(
@@ -309,15 +309,15 @@ class TestPoseService:
         assert len(result) == 3
         assert all(isinstance(enhancement, PoseEnhancement) for enhancement in result)
         
-        # Verify Venice client was called for each variation (enhancement + validation)
-        assert mock_venice_client.generate_completion.call_count == 6
+        # Verify OpenRouter client was called for each variation (enhancement + validation)
+        assert mock_openrouter_client.generate_completion.call_count == 6
 
-    def test_generate_pose_variations_with_character(self, pose_service, mock_venice_client, 
+    def test_generate_pose_variations_with_character(self, pose_service, mock_openrouter_client, 
                                                    sample_enhancement_data,
                                                    sample_character_profile):
         """Test pose variation generation with character profile."""
-        # Mock Venice client response
-        mock_venice_client.generate_completion.return_value = json.dumps(sample_enhancement_data)
+        # Mock OpenRouter client response
+        mock_openrouter_client.generate_completion.return_value = json.dumps(sample_enhancement_data)
         
         # Test variation generation
         result = pose_service.generate_pose_variations(
@@ -331,10 +331,10 @@ class TestPoseService:
         assert len(result) == 2
         assert all(isinstance(enhancement, PoseEnhancement) for enhancement in result)
 
-    def test_generate_pose_variations_venice_api_error(self, pose_service, mock_venice_client):
-        """Test pose variation generation with Venice API error."""
-        # Mock Venice client to raise error
-        mock_venice_client.generate_completion.side_effect = VeniceAPIError("API error")
+    def test_generate_pose_variations_openrouter_api_error(self, pose_service, mock_openrouter_client):
+        """Test pose variation generation with OpenRouter API error."""
+        # Mock OpenRouter client to raise error
+        mock_openrouter_client.generate_completion.side_effect = OpenRouterAPIError("API error")
         
         # Test that errors are caught and error enhancements are returned
         result = pose_service.generate_pose_variations("Alice examines the artifact.", count=1)
@@ -346,9 +346,9 @@ class TestPoseService:
         assert "Error generating variation" in result[0].enhanced_pose
         assert "Error: API error" in result[0].enhancement_notes[0]
 
-    def test_analyze_pose_quality_success(self, pose_service, mock_venice_client):
+    def test_analyze_pose_quality_success(self, pose_service, mock_openrouter_client):
         """Test successful pose quality analysis."""
-        # This method doesn't use Venice client - it does local analysis
+        # This method doesn't use OpenRouter client - it does local analysis
         
         # Test analysis
         result = pose_service.analyze_pose_quality(
@@ -366,10 +366,10 @@ class TestPoseService:
         assert result['word_count'] == 7  # "Alice looks at the ancient artifact carefully."
         assert result['has_action'] is True  # Contains "looks"
 
-    def test_analyze_pose_quality_with_character(self, pose_service, mock_venice_client,
+    def test_analyze_pose_quality_with_character(self, pose_service, mock_openrouter_client,
                                                sample_character_profile):
         """Test pose quality analysis with character profile."""
-        # This method doesn't use Venice client - it does local analysis
+        # This method doesn't use OpenRouter client - it does local analysis
         
         # Test analysis
         result = pose_service.analyze_pose_quality(
@@ -398,17 +398,17 @@ class TestPoseService:
         
         assert result['has_emotion'] is True
 
-    def test_analyze_pose_quality_venice_api_error(self, pose_service, mock_venice_client):
-        """Test analyze_pose_quality - this method doesn't use Venice client."""
-        # This method doesn't use Venice client, so no error should occur
+    def test_analyze_pose_quality_openrouter_api_error(self, pose_service, mock_openrouter_client):
+        """Test analyze_pose_quality - this method doesn't use OpenRouter client."""
+        # This method doesn't use OpenRouter client, so no error should occur
         result = pose_service.analyze_pose_quality("Alice examines the artifact.")
         
         assert isinstance(result, dict)
         assert 'word_count' in result
 
-    def test_analyze_pose_quality_invalid_response(self, pose_service, mock_venice_client):
-        """Test analyze_pose_quality - this method doesn't use Venice client."""
-        # This method doesn't use Venice client, so no error should occur
+    def test_analyze_pose_quality_invalid_response(self, pose_service, mock_openrouter_client):
+        """Test analyze_pose_quality - this method doesn't use OpenRouter client."""
+        # This method doesn't use OpenRouter client, so no error should occur
         result = pose_service.analyze_pose_quality("Alice examines the artifact.")
         
         assert isinstance(result, dict)

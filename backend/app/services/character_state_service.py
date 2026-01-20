@@ -9,7 +9,7 @@ from typing import List, Optional, Dict, Any, Tuple
 import logging
 import re
 from ..models.scene_memory import CharacterState, Pose, SceneMemory
-from ..services.venice_client import VeniceClient, VeniceAPIError
+from ..services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 from ..services.character_service import CharacterProfile
 
 logger = logging.getLogger(__name__)
@@ -67,14 +67,14 @@ class CharacterStateService:
     - State consistency validation
     """
     
-    def __init__(self, venice_client: Optional[VeniceClient] = None):
+    def __init__(self, openrouter_client: Optional[OpenRouterClient] = None):
         """Initialize the character state service.
         
         Args:
-            venice_client: Optional Venice.ai client for AI-powered analysis
+            openrouter_client: Optional OpenRouter.ai client for AI-powered analysis
         """
         self.logger = logging.getLogger(__name__)
-        self.venice_client = venice_client
+        self.openrouter_client = openrouter_client
     
     def initialize_character_state(
         self,
@@ -232,11 +232,11 @@ class CharacterStateService:
         changes = []
         
         # Use AI analysis if available, otherwise use pattern matching
-        if self.venice_client:
+        if self.openrouter_client:
             try:
                 ai_changes = self._detect_changes_with_ai(pose)
                 changes.extend(ai_changes)
-            except (VeniceAPIError, Exception) as e:
+            except (OpenRouterAPIError, Exception) as e:
                 self.logger.warning(f"AI analysis failed for pose {pose.id}: {e}")
                 # Fall back to pattern matching
                 pattern_changes = self._detect_changes_with_patterns(pose)
@@ -348,7 +348,7 @@ class CharacterStateService:
             Analyze this pose for character state changes.
             """
             
-            response = self.venice_client.generate_completion(
+            response = self.openrouter_client.generate_completion(
                 model="qwen3-235b",
                 messages=[
                     {"role": "system", "content": system_message},
@@ -873,7 +873,7 @@ class CharacterStateService:
         }
         
         # Analyze poses for new personality traits
-        if self.venice_client:
+        if self.openrouter_client:
             try:
                 personality_analysis = self._analyze_poses_for_personality(poses, character_profile)
                 if personality_analysis:
@@ -898,7 +898,7 @@ class CharacterStateService:
         Returns:
             Dictionary of suggested updates or None if analysis fails
         """
-        if not poses or not self.venice_client:
+        if not poses or not self.openrouter_client:
             return None
         
         # Build analysis prompt
@@ -925,7 +925,7 @@ class CharacterStateService:
         """
         
         try:
-            response = self.venice_client.generate_completion(
+            response = self.openrouter_client.generate_completion(
                 prompt=prompt,
                 model='qwen3-235b',
                 temperature=0.3,

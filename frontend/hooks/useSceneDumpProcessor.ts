@@ -7,10 +7,78 @@ import { getApiUrl } from '@/utils/api-utils';
 const DISCORD_USER_PATTERN = /^([^\u2014]+)\s+\u2014\s+(\d+\/\d+\/\d+,\s+\d+:\d+\s+[AP]M)/
 const DISCORD_POSE_BLOCK_PATTERN = /^([^\u2014]+)\s+\u2014\s+(\d+\/\d+\/\d+,\s+\d+:\d+\s+[AP]M)([\s\S]*?)(?=(?:[^\u2014]+\s+\u2014\s+\d+\/\d+\/\d+,\s+\d+:\d+\s+[AP]M)|$)/gm
 
+
+export interface OpenRouterProcessingResult {
+  success: boolean;
+  poses: ProcessedPose[];
+  importedCount: number;
+  error?: string;
+}
+
+export class OpenRouterClient {
+  private apiKey: string;
+  private baseUrl: string = '/api'; // Use local API proxy
+
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+  }
+
+  async processSceneDump(
+    text: string,
+    characterName: string,
+    options: { apiKey?: string; enhancementStyle?: string; token?: string } = {}
+  ): Promise<OpenRouterProcessingResult> {
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      if (options.token) {
+        headers['Authorization'] = `Bearer ${options.token}`;
+      } else {
+        // Try getting token from context if hook but this is a class method...
+        // Wait, OpenRouterClient is a class. It doesn't have access to context unless passed.
+        // The callers (useSceneDumpProcessor hook) should pass the token.
+        // So I just remove the fallback.
+      }
+
+      const response = await fetch(`${this.baseUrl}/mush/parse`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          raw_text: text,
+          character_name: characterName,
+          enhancement_style: options.enhancementStyle
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: data.success,
+        poses: data.poses || [],
+        importedCount: data.imported_count || (data.poses ? data.poses.length : 0),
+        error: data.error
+      };
+    } catch (error) {
+      return {
+        success: false,
+        poses: [],
+        importedCount: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+}
+
 export interface ProcessedPose {
   id?: string
   character_name: string
   pose_text: string
+  enhanced_text?: string
   pose_type: 'action' | 'dialogue' | 'narrative' | 'internal' | 'mixed'
   timestamp: string
   mentions?: string[]
@@ -50,7 +118,9 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
   const [lastResult, setLastResult] = useState<SceneDumpProcessingResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
-  const { user, isLoading, isAuthenticated, refreshToken } = useAuth()
+  const { user, loading, getToken } = useAuth()
+  const isAuthenticated = !!user;
+  const isLoading = loading;
 
   const clearError = useCallback(() => {
     setError(null)
@@ -63,36 +133,36 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
     if (discordMatch) {
       return discordMatch[1].trim(); // Return the username part (trimmed)
     }
-    
+
     // Try to extract character name from content
     const firstSentenceMatch = /^([A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?\s+(?:is|was|has|had|seems|looks|moves|walks|sits|stands|takes)/m.exec(text);
     if (firstSentenceMatch) {
       return firstSentenceMatch[1]; // Return the actual character name
     }
-    
+
     // For now, just return the user's display name or a generic name
-    return user?.display_name?.split(' ')[0] || 'Player';
+    return user?.displayName?.split(' ')[0] || 'Player';
   }, [user])
-  
+
   // Helper function to detect if content is in Discord format
   const isDiscordFormat = useCallback((text: string): boolean => {
     // Check if text contains at least one line in Discord format
     // Example: "FaeWitch — 7/21/24, 3:46 PM"
     return DISCORD_USER_PATTERN.test(text);
   }, [])
-  
+
   // Helper function to parse Discord-formatted content
   const parseDiscordContent = useCallback((text: string): ProcessedPose[] => {
     const poses: ProcessedPose[] = [];
     let match;
-    
+
     // Reset regex state
     DISCORD_POSE_BLOCK_PATTERN.lastIndex = 0;
-    
+
     // Match each Discord pose block
     while ((match = DISCORD_POSE_BLOCK_PATTERN.exec(text)) !== null) {
       const [, username, timestamp, content] = match;
-      
+
       if (username && content) {
         // Parse timestamp into ISO format
         let isoTimestamp: string;
@@ -102,9 +172,9 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
           if (dtMatch) {
             const [, month, day, year, hour, minute, ampm] = dtMatch;
             const fullYear = year.length === 2 ? `20${year}` : year;
-            const hour24 = ampm === 'PM' && hour !== '12' ? parseInt(hour) + 12 : 
-                         (ampm === 'AM' && hour === '12' ? 0 : parseInt(hour));
-            
+            const hour24 = ampm === 'PM' && hour !== '12' ? parseInt(hour) + 12 :
+              (ampm === 'AM' && hour === '12' ? 0 : parseInt(hour));
+
             const dt = new Date(
               parseInt(fullYear),
               parseInt(month) - 1, // JavaScript months are 0-indexed
@@ -119,13 +189,13 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
         } catch (e) {
           isoTimestamp = new Date().toISOString();
         }
-        
+
         // Clean up content
         const cleanContent = content.trim();
-        
+
         // Determine pose type based on content
         const poseType = determineDiscordPoseType(cleanContent);
-        
+
         poses.push({
           character_name: username.trim(),
           pose_text: cleanContent,
@@ -134,27 +204,27 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
         });
       }
     }
-    
+
     return poses;
   }, [])
-  
+
   // Helper function to determine pose type based on content
   const determineDiscordPoseType = useCallback((content: string): ProcessedPose['pose_type'] => {
     // Count quotation marks to detect dialogue
     const quoteCount = (content.match(/"/g) || []).length;
-    
+
     // Check for first-person narrative
     const firstPerson = /\b(I|I'm|I'd|I'll|I've)\b/i.test(content);
-    
+
     // Look for dialogue indicators
     const hasDialogue = quoteCount >= 2 || /\b(says|said|asks|exclaims)\b/i.test(content);
-    
+
     // Check for action descriptions
     const hasAction = /[*\-_!]|\b(moves|walks|runs|grabs|takes|holds|reaches)\b|\b(she|he|they)\s/i.test(content);
-    
+
     // Check for emotional or internal thought indicators
     const hasInternal = /\b(feels|thinks|remembers|wonders|thought|feel|desire)\b/i.test(content);
-    
+
     // Determine pose type based on content analysis
     if (hasDialogue && hasAction && hasInternal) {
       return 'mixed';
@@ -170,39 +240,6 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
       return 'narrative';
     }
   }, [])
-
-  // Helper function to make authenticated API call with retry on 401
-  const makeAuthenticatedRequest = useCallback(async (url: string, requestOptions: RequestInit): Promise<Response> => {
-    let response = await fetch(url, requestOptions)
-    
-    // If 401, try to refresh token and retry once
-    if (response.status === 401 && requestOptions.headers) {
-      console.log('Access token expired, attempting refresh...')
-      try {
-        await refreshToken()
-        
-        // Get the new token and retry
-        const newToken = localStorage.getItem('access_token')
-        if (newToken) {
-          const updatedHeaders = {
-            ...requestOptions.headers as Record<string, string>,
-            'Authorization': `Bearer ${newToken}`
-          }
-          
-          response = await fetch(url, {
-            ...requestOptions,
-            headers: updatedHeaders
-          })
-        }
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError)
-        // Token refresh failed, user needs to log in again
-        throw new Error('Session expired. Please log in again.')
-      }
-    }
-    
-    return response
-  }, [refreshToken])
 
   const processSceneDump = useCallback(async (
     sceneDumpText: string,
@@ -241,9 +278,9 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
     }
 
     // Check authentication state
-    const userId = user?.id || user?._id
+    const userId = user?.uid
     if (!isAuthenticated || !userId) {
-      console.log('Auth check failed:', { isAuthenticated, hasUser: !!user, userId, userIdField: user?.id, userIdMongo: user?._id })
+      console.log('Auth check failed:', { isAuthenticated, hasUser: !!user, userId })
       const result = {
         success: false,
         poses: [],
@@ -256,11 +293,8 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
     }
 
     // Check for access token (after auth validation)
-    let token: string | null = null
-    if (typeof window !== 'undefined') {
-      token = localStorage.getItem('access_token')
-    }
-    
+    const token = await getToken()
+
     if (!token) {
       const result = {
         success: false,
@@ -329,18 +363,18 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
       // First, check if this is Discord format and handle it specially if so
       let discordPoses: ProcessedPose[] = []
       const isDiscordFormatted = isDiscordFormat(sceneDumpText)
-      
+
       if (isDiscordFormatted) {
         console.log('Detected Discord format - using specialized parser')
         discordPoses = parseDiscordContent(sceneDumpText)
         console.log(`Parsed ${discordPoses.length} poses from Discord format`)
       }
-      
+
       // If we have enhancement enabled, use the advanced endpoint
       if (includeEnhancement) {
         // Let the LLM handle the parsing unless we already parsed Discord content
         const yourCharacterName = extractCharacterName(sceneDumpText);
-        
+
         const requestBody = {
           // Always include raw_text if we don't have successfully parsed poses
           raw_text: (!isDiscordFormatted || discordPoses.length === 0) ? sceneDumpText : undefined,
@@ -368,7 +402,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
           discord_poses_count: discordPoses.length
         })
 
-        const response = await makeAuthenticatedRequest(
+        const response = await fetch(
           `${getApiUrl()}/api/mush/enhance`,
           {
             method: 'POST',
@@ -388,14 +422,14 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
             statusText: response.statusText,
             response: data
           })
-          
+
           // Better error extraction from response
           let errorMessage: string;
           if (data) {
             if (typeof data === 'string') {
               errorMessage = data;
             } else if (typeof data === 'object') {
-              errorMessage = data.error || data.message || data.details || data.statusText || 
+              errorMessage = data.error || data.message || data.details || data.statusText ||
                 `HTTP error! status: ${response.status} (${response.statusText || 'Unknown error'})`;
             } else {
               errorMessage = `HTTP error! status: ${response.status} (${response.statusText || 'Unknown error'})`;
@@ -403,7 +437,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
           } else {
             errorMessage = `HTTP error! status: ${response.status} (${response.statusText || 'Unknown error'})`;
           }
-          
+
           throw new Error(errorMessage)
         }
 
@@ -419,12 +453,12 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
           }
 
           setLastResult(result)
-          
+
           // Now we need to manually store the poses in the scene
           if (sceneId && result.poses.length > 0) {
             try {
               // Store poses in the scene using the bulk import endpoint
-              const bulkImportResponse = await makeAuthenticatedRequest(
+              const bulkImportResponse = await fetch(
                 `${getApiUrl()}/api/scene-flow/scenes/${sceneId}/poses/bulk`,
                 {
                   method: 'POST',
@@ -443,32 +477,32 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
                   })
                 }
               )
-              
+
               if (bulkImportResponse.ok) {
                 const bulkImportData = await bulkImportResponse.json();
                 if (bulkImportData.success) {
                   result.importedCount = bulkImportData.imported_count || result.poses.length;
-                  
+
                   // Trigger a refresh of the scene-weaver poses view
                   // This uses a custom event that the scene-weaver component will listen for
                   if (typeof window !== 'undefined') {
                     // Create and dispatch a custom event to notify scene-weaver to refresh
-                    const refreshEvent = new CustomEvent('scene-poses-updated', { 
-                      detail: { 
+                    const refreshEvent = new CustomEvent('scene-poses-updated', {
+                      detail: {
                         sceneId,
                         posesCount: result.importedCount,
                         timestamp: new Date().toISOString()
-                      } 
+                      }
                     });
                     window.dispatchEvent(refreshEvent);
-                    
+
                     // Also update localStorage to trigger updates in other components
                     localStorage.setItem('scene-poses-updated', JSON.stringify({
                       sceneId,
                       posesCount: result.importedCount,
                       timestamp: new Date().toISOString()
                     }));
-                    
+
                     // Dispatch a storage event for same-tab updates
                     window.dispatchEvent(new StorageEvent('storage', {
                       key: 'scene-poses-updated',
@@ -486,7 +520,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
               console.error('Error storing poses:', importError);
             }
           }
-          
+
           toast({
             title: "Scene Dump Processed Successfully",
             description: `Imported ${result.importedCount} poses.`
@@ -505,7 +539,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
         // If we already parsed Discord content, use it directly
         if (isDiscordFormatted && discordPoses.length > 0) {
           // Use the bulk import endpoint with pre-parsed poses
-          const bulkImportResponse = await makeAuthenticatedRequest(
+          const bulkImportResponse = await fetch(
             `${getApiUrl()}/api/scene-flow/scenes/${sceneId}/poses/bulk`,
             {
               method: 'POST',
@@ -536,26 +570,26 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
             }
 
             setLastResult(result)
-            
+
             // Trigger a refresh of the scene-weaver poses view
             if (typeof window !== 'undefined' && sceneId) {
               // Create and dispatch a custom event to notify scene-weaver to refresh
-              const refreshEvent = new CustomEvent('scene-poses-updated', { 
-                detail: { 
+              const refreshEvent = new CustomEvent('scene-poses-updated', {
+                detail: {
                   sceneId,
                   posesCount: result.importedCount,
                   timestamp: new Date().toISOString()
-                } 
+                }
               });
               window.dispatchEvent(refreshEvent);
-              
+
               // Also update localStorage to trigger updates in other components
               localStorage.setItem('scene-poses-updated', JSON.stringify({
                 sceneId,
                 posesCount: result.importedCount,
                 timestamp: new Date().toISOString()
               }));
-              
+
               // Dispatch a storage event for same-tab updates
               window.dispatchEvent(new StorageEvent('storage', {
                 key: 'scene-poses-updated',
@@ -567,7 +601,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
                 storageArea: localStorage
               }));
             }
-            
+
             toast({
               title: "Discord Poses Imported Successfully",
               description: `Added ${result.importedCount} poses extracted from Discord chat to the scene.`
@@ -579,7 +613,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
           }
         } else {
           // Let the LLM handle the parsing of non-Discord format
-          const response = await makeAuthenticatedRequest(
+          const response = await fetch(
             `${getApiUrl()}/api/scene-flow/scenes/${sceneId}/poses/bulk`,
             {
               method: 'POST',
@@ -610,26 +644,26 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
             }
 
             setLastResult(result)
-            
+
             // Trigger a refresh of the scene-weaver poses view
             if (typeof window !== 'undefined' && sceneId) {
               // Create and dispatch a custom event to notify scene-weaver to refresh
-              const refreshEvent = new CustomEvent('scene-poses-updated', { 
-                detail: { 
+              const refreshEvent = new CustomEvent('scene-poses-updated', {
+                detail: {
                   sceneId,
                   posesCount: result.importedCount,
                   timestamp: new Date().toISOString()
-                } 
+                }
               });
               window.dispatchEvent(refreshEvent);
-              
+
               // Also update localStorage to trigger updates in other components
               localStorage.setItem('scene-poses-updated', JSON.stringify({
                 sceneId,
                 posesCount: result.importedCount,
                 timestamp: new Date().toISOString()
               }));
-              
+
               // Dispatch a storage event for same-tab updates
               window.dispatchEvent(new StorageEvent('storage', {
                 key: 'scene-poses-updated',
@@ -641,7 +675,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
                 storageArea: localStorage
               }));
             }
-            
+
             toast({
               title: "Poses Imported Successfully",
               description: `Added ${result.importedCount} poses to the scene.`
@@ -656,10 +690,10 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
     } catch (err) {
       // Enhanced error handling
       console.error('Scene dump processing error:', err);
-      
+
       // Extract a meaningful error message
       let errorMessage: string;
-      
+
       if (err instanceof Error) {
         errorMessage = err.message;
         // Handle empty error objects in error message
@@ -671,12 +705,12 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
       } else if (err && typeof err === 'object') {
         // Try to extract error info from object
         const errorObj = err as any;
-        errorMessage = errorObj.error || errorObj.message || errorObj.statusText || 
-                      (errorObj.status ? `Server error: ${errorObj.status}` : 'Unknown error occurred');
+        errorMessage = errorObj.error || errorObj.message || errorObj.statusText ||
+          (errorObj.status ? `Server error: ${errorObj.status}` : 'Unknown error occurred');
       } else {
         errorMessage = 'Unknown error occurred during scene processing';
       }
-      
+
       const result: SceneDumpProcessingResult = {
         success: false,
         poses: [],
@@ -697,7 +731,7 @@ export function useSceneDumpProcessor(): UseSceneDumpProcessorReturn {
     } finally {
       setIsProcessing(false)
     }
-  }, [toast, user, extractCharacterName, isAuthenticated, isLoading, refreshToken, makeAuthenticatedRequest, isDiscordFormat, parseDiscordContent])
+  }, [toast, user, extractCharacterName, isAuthenticated, isLoading, getToken, isDiscordFormat, parseDiscordContent])
 
   return {
     processSceneDump,

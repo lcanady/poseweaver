@@ -14,6 +14,7 @@ import { useState } from 'react'
 import { Loader2 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { getApiUrl } from '@/utils/api-utils';
+import { useAuth } from '@/contexts/auth-context';
 
 interface DeleteCharacterDialogProps {
   characterId: string;
@@ -23,45 +24,46 @@ interface DeleteCharacterDialogProps {
 export function DeleteCharacterDialog({ characterId, characterName }: DeleteCharacterDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  
+  const { getToken } = useAuth();
+
   const handleDelete = async () => {
     if (!characterId) return;
-    
+
     setIsDeleting(true);
-    
+
     try {
-      // Get access token from localStorage
-      const accessToken = localStorage.getItem('access_token');
-      
-      if (!accessToken) {
+      // Get access token
+      const token = await getToken();
+
+      if (!token) {
         throw new Error('No access token found. Please log in.');
       }
-      
+
       const response = await fetch(
         `${getApiUrl()}/api/characters/mgmt/${characterId}`,
         {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
+            'Authorization': `Bearer ${token}`
           }
         }
       );
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to delete character');
       }
-      
+
       toast({
         title: "Success",
         description: `${characterName} has been deleted successfully.`,
       });
-      
+
       // Close the dialog and refresh the page to update the character list
       setIsOpen(false);
       setTimeout(() => window.location.reload(), 500);
-      
+
     } catch (error) {
       console.error('Error deleting character:', error);
       toast({
@@ -73,7 +75,7 @@ export function DeleteCharacterDialog({ characterId, characterName }: DeleteChar
       setIsDeleting(false);
     }
   };
-  
+
   return (
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
       <AlertDialogTrigger asChild>
@@ -89,8 +91,8 @@ export function DeleteCharacterDialog({ characterId, characterName }: DeleteChar
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={handleDelete} 
+          <AlertDialogAction
+            onClick={handleDelete}
             disabled={isDeleting}
           >
             {isDeleting ? (

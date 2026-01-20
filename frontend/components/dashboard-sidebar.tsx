@@ -27,9 +27,12 @@ export function DashboardSidebar() {
   ]
 
   // Add admin navigation for admin users
+  // TODO: Implement admin check with Firebase Custom Claims or Firestore User Profile
+  /*
   if (user?.is_admin) {
     navItems.push({ href: "/dashboard/admin", label: "Admin Panel", icon: Shield });
   }
+  */
 
   const bottomNavItems: NavItem[] = [
     // Settings and Billing moved to user dropdown menu

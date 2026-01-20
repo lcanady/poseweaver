@@ -60,7 +60,7 @@ export default function BillingPage() {
   useEffect(() => {
     fetchPricingData();
     fetchUsageInfo();
-  }, [user?._id]);
+  }, [user?.uid]);
 
   const fetchPricingData = async () => {
     try {
@@ -89,11 +89,11 @@ export default function BillingPage() {
   };
 
   const fetchUsageInfo = async () => {
-    if (!user?._id) return;
-    
+    if (!user?.uid) return;
+
     try {
       const response = await fetch(
-        `${getApiUrl()}/api/purchase/usage-status?user_id=${user._id}`,
+        `${getApiUrl()}/api/purchase/usage-status?user_id=${user.uid}`,
         {
           method: 'GET',
           headers: {
@@ -102,7 +102,7 @@ export default function BillingPage() {
           credentials: 'include'
         }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('Usage info response:', data); // Debug log
@@ -130,7 +130,7 @@ export default function BillingPage() {
           body: JSON.stringify({
             type: 'subscription',
             plan: tier,
-            user_id: user?._id || user?.id
+            user_id: user?.uid || user?.uid
           })
         }
       );
@@ -169,7 +169,7 @@ export default function BillingPage() {
           body: JSON.stringify({
             type: 'recharge',
             generation_count: generationCount,
-            user_id: user?._id || user?.id
+            user_id: user?.uid || user?.uid
           })
         }
       );
@@ -196,7 +196,7 @@ export default function BillingPage() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!user?._id) {
+    if (!user?.uid) {
       toast({
         title: "Error",
         description: "Please log in to manage your subscription.",
@@ -215,7 +215,7 @@ export default function BillingPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            user_id: user._id,
+            user_id: user.uid,
             return_url: `${window.location.origin}/dashboard/billing`
           })
         }
@@ -286,11 +286,11 @@ export default function BillingPage() {
               <CardTitle>Your Plan</CardTitle>
               <CardDescription>
                 You are currently on the <strong>
-                  {currentSubscription === 'free' ? 'Free' : 
-                   currentSubscription === 'basic' ? 'Basic' : 
-                   currentSubscription === 'pro' ? 'Pro' : 
-                   currentSubscription === 'premium' ? 'Premium (Legacy)' : 
-                   currentSubscription === 'admin' ? 'Admin' : 'Free'}
+                  {currentSubscription === 'free' ? 'Free' :
+                    currentSubscription === 'basic' ? 'Basic' :
+                      currentSubscription === 'pro' ? 'Pro' :
+                        currentSubscription === 'premium' ? 'Premium (Legacy)' :
+                          currentSubscription === 'admin' ? 'Admin' : 'Free'}
                 </strong> plan.
                 {currentSubscription !== 'free' && ' Your plan renews on the 1st of next month.'}
                 {usageInfo && (
@@ -328,9 +328,9 @@ export default function BillingPage() {
                     ) : currentSubscription === 'admin' ? (
                       <Button variant="outline" className="w-full" disabled>Admin Access</Button>
                     ) : (
-                      <Button 
-                        variant="outline" 
-                        className="w-full text-red-600 border-red-200 hover:bg-red-50" 
+                      <Button
+                        variant="outline"
+                        className="w-full text-red-600 border-red-200 hover:bg-red-50"
                         onClick={handleCancelSubscription}
                       >
                         Cancel Subscription
@@ -367,8 +367,8 @@ export default function BillingPage() {
                         Admin Access
                       </Button>
                     ) : (
-                      <Button 
-                        className="w-full" 
+                      <Button
+                        className="w-full"
                         onClick={() => handleSubscriptionUpgrade('basic')}
                         disabled={isPurchasing}
                       >
@@ -412,8 +412,8 @@ export default function BillingPage() {
                         Admin Access
                       </Button>
                     ) : (
-                      <Button 
-                        className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600" 
+                      <Button
+                        className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
                         onClick={() => handleSubscriptionUpgrade('pro')}
                         disabled={isPurchasing}
                       >
@@ -457,8 +457,8 @@ export default function BillingPage() {
                         )}
                       </div>
                       <div className="pt-2">
-                        <Button 
-                          className="w-full" 
+                        <Button
+                          className="w-full"
                           size="sm"
                           onClick={() => handleRechargePackPurchase(pack?.generation_count || 0)}
                           disabled={isPurchasing}

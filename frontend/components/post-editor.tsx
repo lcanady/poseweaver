@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { SceneDumpProcessingResult } from "@/hooks/useSceneDumpProcessor"
 import { getApiUrl } from '@/utils/api-utils';
+import { useAuth } from "@/contexts/auth-context"
 
 // Initialize with empty strings instead of placeholder text
 const initialScene = ``
@@ -27,17 +28,13 @@ const initialPost = ``
 
 
 // API function to enhance a pose
-async function enhancePose(originalPose: string, sceneContext: any, characterData: any, enhancementStyle: string, includeEnvironmentalDetails: boolean = false) {
+// API function to enhance a pose
+async function enhancePose(originalPose: string, sceneContext: any, characterData: any, enhancementStyle: string, token: string, includeEnvironmentalDetails: boolean = false) {
   try {
-    // Get access token for authentication
-    const accessToken = localStorage.getItem('access_token');
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     };
-
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
 
     const response = await fetch(`${getApiUrl()}/api/pose/enhance`, {
       method: 'POST',
@@ -208,6 +205,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [showAllPoses, setShowAllPoses] = useState(false)
 
+  const { getToken } = useAuth() // Ensure useAuth is imported at top (it is NOT imported in original file based on view)
   // Copy/newline settings state
   const [newlineReplacement, setNewlineReplacement] = useState("\\n")
   const [showCopySettings, setShowCopySettings] = useState(false)
@@ -321,7 +319,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
     if (autoLoadSceneId && characters.length > 0 && sceneId !== autoLoadSceneId) {
       const loadScene = async () => {
         try {
-          const token = localStorage.getItem('access_token');
+          const token = await getToken();
           const headers: Record<string, string> = {
             'Content-Type': 'application/json',
           };
@@ -354,20 +352,20 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
       loadScene();
     }
   }, [autoLoadSceneId, characters, sceneId])
-  
+
   // Effect to listen for scene poses updates
   useEffect(() => {
     // Handler for the custom event
     const handleScenePosesUpdated = async (event: Event) => {
       const customEvent = event as CustomEvent;
       const updatedSceneId = customEvent.detail?.sceneId;
-      
+
       // Only refresh if this is the current scene
       if (updatedSceneId && updatedSceneId === sceneId) {
         try {
           console.log('Scene poses updated, refreshing poses view...');
-          
-          const token = localStorage.getItem('access_token');
+
+          const token = await getToken();
           const headers: Record<string, string> = {
             'Content-Type': 'application/json',
           };
@@ -391,7 +389,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
                 timestamp: pose.created_at,
                 preview: pose.pose_text.slice(0, 80) + (pose.pose_text.length > 80 ? '...' : '')
               }));
-              
+
               // Update the scene context with the new poses
               const updatedContext = {
                 // Ensure all required array properties have default empty arrays
@@ -405,15 +403,15 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
                 // Override with the new poses
                 poses: updatedPoses
               };
-              
+
               // Update the state
               setSceneContext(updatedContext);
-              
+
               // Update parent component
               if (onContextUpdate) {
                 onContextUpdate(updatedContext, responseSuggestions, false, null);
               }
-              
+
               toast({
                 title: "Scene Poses Updated",
                 description: `Refreshed ${updatedPoses.length} poses in the scene.`
@@ -425,10 +423,10 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
         }
       }
     };
-    
+
     // Add event listener for the custom event
     window.addEventListener('scene-poses-updated', handleScenePosesUpdated);
-    
+
     // Also listen for storage events (for cross-tab updates)
     const handleStorageEvent = (event: StorageEvent) => {
       if (event.key === 'scene-poses-updated') {
@@ -436,8 +434,8 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
           const data = JSON.parse(event.newValue || '{}');
           if (data.sceneId === sceneId) {
             // Create a synthetic custom event
-            const syntheticEvent = new CustomEvent('scene-poses-updated', { 
-              detail: data 
+            const syntheticEvent = new CustomEvent('scene-poses-updated', {
+              detail: data
             });
             handleScenePosesUpdated(syntheticEvent);
           }
@@ -446,9 +444,9 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
         }
       }
     };
-    
+
     window.addEventListener('storage', handleStorageEvent);
-    
+
     // Clean up event listeners
     return () => {
       window.removeEventListener('scene-poses-updated', handleScenePosesUpdated);
@@ -461,11 +459,16 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
     const fetchCharacters = async () => {
       setIsLoadingCharacters(true);
       try {
-        // Get the access token from localStorage
-        const accessToken = localStorage.getItem('access_token');
+        // Get the access token
+        const accessToken = await getToken();
 
         if (!accessToken) {
-          console.warn('No access token found in localStorage');
+          console.warn('No access token found');
+          // Don't throw if just not logged in, maybe check isAuthenticated? 
+          // But existing code throws. I'll stick to throwing or handling.
+          // If no token, maybe return?
+          // Existing code: throws 'Authentication required'.
+          // I'll keep behavior.
           throw new Error('Authentication required');
         }
 
@@ -582,7 +585,10 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
         poses: contextToUse.poses || [] // Keep the original poses array or empty array
       }
 
-      const result = await enhancePose(postText, enhancedContext, characterData, enhancementStyle, includeEnvironmentalDetails)
+      const token = await getToken();
+      if (!token) throw new Error("Not authenticated");
+
+      const result = await enhancePose(postText, enhancedContext, characterData, enhancementStyle, token, includeEnvironmentalDetails)
 
       if (result.success) {
         setEnhancedPost(result.enhanced_pose)
@@ -695,7 +701,7 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
 
     setIsSaving(true);
     try {
-      const accessToken = localStorage.getItem('access_token');
+      const accessToken = await getToken();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
       };
@@ -827,16 +833,16 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
 
       // Clear the scene text since poses have been processed
       setSceneText('')
-      
+
       // Trigger a refresh of the scene-weaver poses view
       if (typeof window !== 'undefined' && sceneId) {
         // Create and dispatch a custom event to notify scene-weaver to refresh
-        const refreshEvent = new CustomEvent('scene-poses-updated', { 
-          detail: { 
+        const refreshEvent = new CustomEvent('scene-poses-updated', {
+          detail: {
             sceneId,
             posesCount: result.importedCount,
             timestamp: new Date().toISOString()
-          } 
+          }
         });
         window.dispatchEvent(refreshEvent);
       }

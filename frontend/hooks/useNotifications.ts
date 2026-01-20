@@ -21,7 +21,7 @@ export interface NotificationState {
 }
 
 export const useNotifications = () => {
-  const { user } = useAuth()
+  const { user, getToken } = useAuth()
   const [state, setState] = useState<NotificationState>({
     notifications: [],
     unreadCount: 0,
@@ -29,20 +29,22 @@ export const useNotifications = () => {
     error: null
   })
 
-  const getAuthHeaders = useCallback(() => {
-    const token = localStorage.getItem('access_token')
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
-  }, [])
+  // We need to resolve getToken async, so getAuthHeaders becomes async 
+  // or we call getToken inside the fetch functions.
+  // Let's modify fetch calls to get token directly.
 
   const fetchNotifications = useCallback(async (limit = 50, unreadOnly = false) => {
-    if (!user?._id) return
+    if (!user?.uid) return
 
     setState(prev => ({ ...prev, loading: true, error: null }))
 
     try {
+      const token = await getToken()
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+
       const params = new URLSearchParams({
         limit: limit.toString(),
         unread_only: unreadOnly.toString()
@@ -52,7 +54,7 @@ export const useNotifications = () => {
         `${getApiUrl()}/api/notifications?${params}`,
         {
           method: 'GET',
-          headers: getAuthHeaders(),
+          headers,
           credentials: 'include'
         }
       )
@@ -81,17 +83,21 @@ export const useNotifications = () => {
         error: error instanceof Error ? error.message : 'Failed to fetch notifications'
       }))
     }
-  }, [user?._id, getAuthHeaders])
+  }, [user?.uid, getToken])
 
   const fetchUnreadCount = useCallback(async () => {
-    if (!user?._id) return
+    if (!user?.uid) return
 
     try {
+      const token = await getToken()
       const response = await fetch(
         `${getApiUrl()}/api/notifications/unread-count`,
         {
           method: 'GET',
-          headers: getAuthHeaders(),
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
           credentials: 'include'
         }
       )
@@ -105,17 +111,21 @@ export const useNotifications = () => {
     } catch (error) {
       console.error('Error fetching unread count:', error)
     }
-  }, [user?._id, getAuthHeaders])
+  }, [user?.uid, getToken])
 
   const markAsRead = useCallback(async (notificationId: string) => {
-    if (!user?._id) return false
+    if (!user?.uid) return false
 
     try {
+      const token = await getToken()
       const response = await fetch(
         `${getApiUrl()}/api/notifications/${notificationId}/read`,
         {
           method: 'POST',
-          headers: getAuthHeaders(),
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
           credentials: 'include'
         }
       )
@@ -138,17 +148,21 @@ export const useNotifications = () => {
       console.error('Error marking notification as read:', error)
       return false
     }
-  }, [user?._id, getAuthHeaders])
+  }, [user?.uid, getToken])
 
   const markAllAsRead = useCallback(async () => {
-    if (!user?._id) return false
+    if (!user?.uid) return false
 
     try {
+      const token = await getToken()
       const response = await fetch(
         `${getApiUrl()}/api/notifications/read-all`,
         {
           method: 'POST',
-          headers: getAuthHeaders(),
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
           credentials: 'include'
         }
       )
@@ -169,17 +183,21 @@ export const useNotifications = () => {
       console.error('Error marking all notifications as read:', error)
       return false
     }
-  }, [user?._id, getAuthHeaders])
+  }, [user?.uid, getToken])
 
   const deleteNotification = useCallback(async (notificationId: string) => {
-    if (!user?._id) return false
+    if (!user?.uid) return false
 
     try {
+      const token = await getToken()
       const response = await fetch(
         `${getApiUrl()}/api/notifications/${notificationId}`,
         {
           method: 'DELETE',
-          headers: getAuthHeaders(),
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
           credentials: 'include'
         }
       )
@@ -200,17 +218,21 @@ export const useNotifications = () => {
       console.error('Error deleting notification:', error)
       return false
     }
-  }, [user?._id, getAuthHeaders])
+  }, [user?.uid, getToken])
 
   const clearAllNotifications = useCallback(async () => {
-    if (!user?._id) return false
+    if (!user?.uid) return false
 
     try {
+      const token = await getToken()
       const response = await fetch(
         `${getApiUrl()}/api/notifications/clear-all`,
         {
           method: 'DELETE',
-          headers: getAuthHeaders(),
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
           credentials: 'include'
         }
       )
@@ -231,26 +253,27 @@ export const useNotifications = () => {
       console.error('Error clearing all notifications:', error)
       return false
     }
-  }, [user?._id, getAuthHeaders])
+
+  }, [user?.uid, getToken])
 
   // Auto-fetch notifications and unread count when user changes
   useEffect(() => {
-    if (user?._id) {
+    if (user?.uid) {
       fetchNotifications()
       fetchUnreadCount()
     }
-  }, [user?._id, fetchNotifications, fetchUnreadCount])
+  }, [user?.uid, fetchNotifications, fetchUnreadCount])
 
   // Refresh unread count periodically (every 30 seconds)
   useEffect(() => {
-    if (!user?._id) return
+    if (!user?.uid) return
 
     const interval = setInterval(() => {
       fetchUnreadCount()
     }, 30000) // 30 seconds
 
     return () => clearInterval(interval)
-  }, [user?._id, fetchUnreadCount])
+  }, [user?.uid, fetchUnreadCount])
 
   return {
     ...state,

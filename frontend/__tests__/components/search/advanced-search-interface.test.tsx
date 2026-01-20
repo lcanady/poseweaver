@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { vi } from 'vitest'
+const vi = jest;
 import { AdvancedSearchInterface } from '../../../components/search/advanced-search-interface'
 
 // Mock the custom hooks and utilities
@@ -276,7 +276,7 @@ describe('AdvancedSearchInterface', () => {
       await waitFor(() => {
         const checkboxes = screen.getAllByRole('checkbox')
         // Find result checkboxes (not the filter checkboxes)
-        const resultCheckbox = checkboxes.find(cb => 
+        const resultCheckbox = checkboxes.find((cb: HTMLElement) => 
           cb.getAttribute('aria-describedby') === null &&
           cb.closest('[data-testid]') === null
         )
@@ -338,7 +338,7 @@ describe('AdvancedSearchInterface', () => {
       // Select a result first
       await waitFor(() => {
         const checkboxes = screen.getAllByRole('checkbox')
-        const resultCheckbox = checkboxes.find(cb => 
+        const resultCheckbox = checkboxes.find((cb: HTMLElement) => 
           cb.getAttribute('aria-describedby') === null
         )
         if (resultCheckbox) {
@@ -368,7 +368,7 @@ describe('AdvancedSearchInterface', () => {
       // Select a result and export
       await waitFor(() => {
         const checkboxes = screen.getAllByRole('checkbox')
-        const resultCheckbox = checkboxes.find(cb => 
+        const resultCheckbox = checkboxes.find((cb: HTMLElement) => 
           cb.getAttribute('aria-describedby') === null
         )
         if (resultCheckbox) {

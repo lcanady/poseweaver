@@ -124,7 +124,7 @@ create_env_file() {
         
         print_success "Backend environment file created"
         print_info "⚠️  IMPORTANT: You need to edit /home/$APP_USER/poseweaver/backend/.env"
-        print_info "Add your API keys: VENICE_API_KEY, MONGODB_URI, STRIPE keys"
+        print_info "Add your API keys: OPENROUTER_API_KEY, MONGODB_URI, STRIPE keys"
     else
         print_success "Backend environment file already exists"
     fi
@@ -453,7 +453,7 @@ display_summary() {
     echo ""
     echo -e "${YELLOW}⚠️  NEXT STEPS:${NC}"
     echo -e "  1. Edit backend environment: nano /home/$APP_USER/poseweaver/backend/.env"
-    echo -e "  2. Add your API keys (Venice AI, MongoDB, Stripe)"
+    echo -e "  2. Add your API keys (OpenRouter AI, MongoDB, Stripe)"
     echo -e "  3. Restart services: $APP_DIR/restart.sh"
     echo -e "  4. Test full app: curl http://$SERVER_IP"
     echo -e "  5. Test API: curl http://$SERVER_IP/api/health"

@@ -38,10 +38,10 @@ services:
     type: SECRET
   - key: MONGODB_DB
     value: poseweaver
-  - key: VENICE_API_KEY
+  - key: OPENROUTER_API_KEY
     scope: RUN_TIME
     type: SECRET
-  - key: VENICE_TIMEOUT
+  - key: OPENROUTER_TIMEOUT
     value: "300"
   - key: STRIPE_SECRET_KEY
     scope: RUN_TIME

@@ -15,7 +15,8 @@ import { Crown } from "lucide-react"
 import { getApiUrl } from '@/utils/api-utils';
 
 export default function SignupPage() {
-  const { signup, isLoading, user } = useAuth()
+  const { signupHelper, loading, user, getToken } = useAuth()
+  const isLoading = loading;
   const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -62,8 +63,8 @@ export default function SignupPage() {
     }
 
     try {
-      await signup(email, password, displayName)
-      
+      await signupHelper(email, password, displayName)
+
       // After successful signup, check if we need to redirect to Stripe
       // The auth context will have the user data available after signup
       if (selectedPlan && selectedPlan !== 'free') {
@@ -82,12 +83,13 @@ export default function SignupPage() {
 
   const handlePaidPlanRedirect = async (plan: string) => {
     try {
+      const token = await getToken();
       // Get current user info from API since auth context might not be fully updated
       const userResponse = await fetch(`${getApiUrl()}/api/auth/me`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${token}`
         },
         credentials: 'include'
       })
@@ -215,8 +217,8 @@ export default function SignupPage() {
                 disabled={isLoading}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating Account..." : selectedPlan ? `Create Account & Choose ${getPlanDetails(selectedPlan)?.name}` : "Create Account"}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Creating Account..." : selectedPlan ? `Create Account & Choose ${getPlanDetails(selectedPlan)?.name}` : "Create Account"}
             </Button>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -226,7 +228,7 @@ export default function SignupPage() {
                 <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
               </div>
             </div>
-            <Button variant="outline" className="w-full bg-transparent" type="button" disabled={isLoading}>
+            <Button variant="outline" className="w-full bg-transparent" type="button" disabled={loading}>
               <Icons.google className="mr-2 h-4 w-4" />
               Sign up with Google
             </Button>

@@ -34,7 +34,7 @@ export default function PoseEnhancerPage() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>("");
   const [isLoadingCharacters, setIsLoadingCharacters] = useState(true);
-  
+
   // Enhancement control states
   const [enhancementStyle, setEnhancementStyle] = useState("balanced");
   const [detailLevel, setDetailLevel] = useState(50);
@@ -47,17 +47,17 @@ export default function PoseEnhancerPage() {
   const [preserveOriginalTone, setPreserveOriginalTone] = useState(true);
   const [addEnvironmentalDetails, setAddEnvironmentalDetails] = useState(false);
   const [characterControlCheck, setCharacterControlCheck] = useState(true);
-  
+
   // Copy format options
   const [copyFormat, setCopyFormat] = useState("standard");
-  
+
   // Version control and edit suggestions
   const [poseVersions, setPoseVersions] = useState<PoseVersion[]>([]);
   const [currentVersionIndex, setCurrentVersionIndex] = useState(0);
   const [editSuggestion, setEditSuggestion] = useState("");
   const [isRefining, setIsRefining] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  
+
   // Usage tracking and paywall states
   const [usageInfo, setUsageInfo] = useState<any>({
     available_generations: 15,
@@ -68,19 +68,19 @@ export default function PoseEnhancerPage() {
   });
   const [showPaywall, setShowPaywall] = useState(false);
   // Get authenticated user from auth context
-  const { user } = useAuth();
-  const currentUserId = user?._id || null;
-  
+  const { user, getToken } = useAuth();
+  const currentUserId = user?.uid || null;
+
   const { toast } = useToast();
-  
+
   // Character settings integration
   const { settings: characterSettings, getSettingsForEnhancement } = useCharacterSettings(selectedCharacterId);
-  
+
   // Apply character settings when character is selected
   useEffect(() => {
     if (selectedCharacterId && characterSettings) {
       const enhancementSettings = getSettingsForEnhancement();
-      
+
       // Apply character-specific settings to pose enhancer state
       setEnhancementStyle(enhancementSettings.enhancementStyle);
       setNarrativeTone(enhancementSettings.narrativeTone);
@@ -93,7 +93,7 @@ export default function PoseEnhancerPage() {
       setPreserveOriginalTone(enhancementSettings.preserveOriginalTone);
       setAddEnvironmentalDetails(enhancementSettings.addEnvironmentalDetails);
       setCharacterControlCheck(enhancementSettings.characterControlCheck);
-      
+
       console.log(`Applied settings for character ${selectedCharacterId}:`, enhancementSettings);
     }
   }, [selectedCharacterId, characterSettings, getSettingsForEnhancement]);
@@ -105,25 +105,26 @@ export default function PoseEnhancerPage() {
   useEffect(() => {
     const fetchCharacters = async () => {
       setIsLoadingCharacters(true);
-      
+
       try {
-        const accessToken = localStorage.getItem('access_token');
-        
-        if (!accessToken) {
+        const token = await getToken();
+
+        if (!token) {
           throw new Error('No access token found. Please log in.');
         }
-        
-        const response = await apiRequest('/api/characters/mgmt');
-        
+
+        const headers: HeadersInit = { 'Authorization': `Bearer ${token}` };
+        const response = await apiRequest('/api/characters/mgmt', { headers });
+
         if (!response.ok) {
           throw new Error(`Failed to fetch characters: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        
+
         // Handle different response formats
         const charactersData = data.data || data.characters || (Array.isArray(data) ? data : []);
-        
+
         // Transform the data to match our Character interface
         const formattedCharacters = charactersData.map((char: any) => ({
           id: char._id || char.id,
@@ -137,7 +138,7 @@ export default function PoseEnhancerPage() {
           relationships: char.relationships || '',
           voice_notes: char.voice_notes || ''
         }));
-        
+
         setCharacters(formattedCharacters);
       } catch (err) {
         console.error('Error fetching characters:', err);
@@ -146,7 +147,7 @@ export default function PoseEnhancerPage() {
         setIsLoadingCharacters(false);
       }
     };
-    
+
     fetchCharacters();
   }, []);
 
@@ -167,7 +168,7 @@ export default function PoseEnhancerPage() {
     try {
       const selectedCharacter = characters.find(char => char.id === selectedCharacterId);
       const accessToken = localStorage.getItem('access_token');
-      
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
       };
@@ -180,17 +181,17 @@ export default function PoseEnhancerPage() {
       const characterData = selectedCharacter ? {
         name: selectedCharacter.name,
         background: selectedCharacter.metadata?.background || '',
-        personality: Array.isArray(selectedCharacter.metadata?.personality) 
-          ? selectedCharacter.metadata.personality 
+        personality: Array.isArray(selectedCharacter.metadata?.personality)
+          ? selectedCharacter.metadata.personality
           : (selectedCharacter.metadata?.personality ? [selectedCharacter.metadata.personality] : []),
-        skills: Array.isArray(selectedCharacter.metadata?.skills) 
-          ? selectedCharacter.metadata.skills 
+        skills: Array.isArray(selectedCharacter.metadata?.skills)
+          ? selectedCharacter.metadata.skills
           : (selectedCharacter.metadata?.skills ? [selectedCharacter.metadata.skills] : []),
-        goals: Array.isArray(selectedCharacter.metadata?.goals) 
-          ? selectedCharacter.metadata.goals 
+        goals: Array.isArray(selectedCharacter.metadata?.goals)
+          ? selectedCharacter.metadata.goals
           : (selectedCharacter.metadata?.goals ? [selectedCharacter.metadata.goals] : []),
         relationships: typeof selectedCharacter.metadata?.relationships === 'object' && selectedCharacter.metadata?.relationships !== null
-          ? selectedCharacter.metadata.relationships 
+          ? selectedCharacter.metadata.relationships
           : {},
         voice_notes: selectedCharacter.metadata?.voice_notes || ''
       } : null;
@@ -231,10 +232,10 @@ export default function PoseEnhancerPage() {
         },
         user_id: currentUserId // Add user ID for usage tracking
       };
-      
+
       console.log('Sending request with user_id:', currentUserId);
       console.log('Full request payload:', requestPayload);
-      
+
       const response = await apiRequest('/api/pose/enhance', {
         method: 'POST',
         body: JSON.stringify(requestPayload)
@@ -252,12 +253,12 @@ export default function PoseEnhancerPage() {
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         setEnhancedPose(data.enhanced_pose);
         addPoseVersion(data.enhanced_pose);
         setError(null);
-        
+
         // Update usage info from response
         if (data.usage_info) {
           setUsageInfo(data.usage_info);
@@ -344,7 +345,7 @@ export default function PoseEnhancerPage() {
     try {
       const currentCharacter = characters.find(char => char.id === selectedCharacterId);
       const accessToken = localStorage.getItem('access_token');
-      
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
       };
@@ -357,17 +358,17 @@ export default function PoseEnhancerPage() {
       const characterData = currentCharacter ? {
         name: currentCharacter.name,
         background: currentCharacter.metadata?.background || '',
-        personality: Array.isArray(currentCharacter.metadata?.personality) 
-          ? currentCharacter.metadata.personality 
+        personality: Array.isArray(currentCharacter.metadata?.personality)
+          ? currentCharacter.metadata.personality
           : (currentCharacter.metadata?.personality ? [currentCharacter.metadata.personality] : []),
-        skills: Array.isArray(currentCharacter.metadata?.skills) 
-          ? currentCharacter.metadata.skills 
+        skills: Array.isArray(currentCharacter.metadata?.skills)
+          ? currentCharacter.metadata.skills
           : (currentCharacter.metadata?.skills ? [currentCharacter.metadata.skills] : []),
-        goals: Array.isArray(currentCharacter.metadata?.goals) 
-          ? currentCharacter.metadata.goals 
+        goals: Array.isArray(currentCharacter.metadata?.goals)
+          ? currentCharacter.metadata.goals
           : (currentCharacter.metadata?.goals ? [currentCharacter.metadata.goals] : []),
         relationships: typeof currentCharacter.metadata?.relationships === 'object' && currentCharacter.metadata?.relationships !== null
-          ? currentCharacter.metadata.relationships 
+          ? currentCharacter.metadata.relationships
           : {},
         voice_notes: currentCharacter.metadata?.voice_notes || ''
       } : null;
@@ -384,8 +385,12 @@ export default function PoseEnhancerPage() {
         narrative_tone: 'neutral'
       };
 
+      const token = await getToken();
+      const authHeaders: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
+
       const response = await apiRequest('/api/pose/refine', {
         method: 'POST',
+        headers: authHeaders,
         body: JSON.stringify({
           current_pose: getCurrentPose(), // Backend expects current_pose, not original_pose
           edit_suggestion: editSuggestion,
@@ -407,13 +412,13 @@ export default function PoseEnhancerPage() {
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         setEnhancedPose(data.refined_pose);
         addPoseVersion(data.refined_pose, editSuggestion);
         setEditSuggestion(""); // Clear the suggestion after successful refinement
         setError(null);
-        
+
         // Update usage info from response
         if (data.usage_info) {
           setUsageInfo(data.usage_info);
@@ -459,7 +464,7 @@ export default function PoseEnhancerPage() {
     if (currentUserId) {
       fetchUsageInfo();
     }
-    
+
     toast({
       title: "Purchase Successful!",
       description: `${generationsAdded} generations added to your account`,
@@ -469,12 +474,12 @@ export default function PoseEnhancerPage() {
   // Fetch current usage info
   const fetchUsageInfo = async () => {
     if (!currentUserId) return;
-    
+
     try {
       const response = await apiRequest(
         `/api/purchase/usage-status?user_id=${currentUserId}`
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -499,7 +504,7 @@ export default function PoseEnhancerPage() {
       <div className="flex-1 p-4 md:p-8">
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 text-center">
-            <button 
+            <button
               onClick={() => setShowPaywall(false)}
               className="text-sm text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-2"
             >
@@ -533,12 +538,12 @@ export default function PoseEnhancerPage() {
           />
         </div>
       </div>
-      
+
       <div className="mx-auto grid w-full max-w-7xl items-start gap-8 xl:grid-cols-[1fr_350px]">
-        
+
         {/* Main Content Area (Left) */}
         <div className="grid auto-rows-max items-start gap-8">
-          
+
           {/* Character Selection */}
           <CharacterSelection
             characters={characters}
@@ -594,7 +599,7 @@ export default function PoseEnhancerPage() {
             onCopyFormatChange={setCopyFormat}
             onCopy={handleCopy}
           />
-          
+
           {/* Enhancement Analysis - Moved to main area */}
           <EnhancementAnalysis
             enhancedPose={getCurrentPose()}
@@ -613,7 +618,7 @@ export default function PoseEnhancerPage() {
 
         {/* Sidebar (Right) - Streamlined */}
         <div className="grid auto-rows-max items-start gap-6 sticky top-8">
-          
+
           {/* Refinement - Most important for workflow */}
           <Refinement
             editSuggestion={editSuggestion}
@@ -622,7 +627,7 @@ export default function PoseEnhancerPage() {
             onRefineWithSuggestion={handleRefineWithSuggestion}
             hasEnhancedPose={!!getCurrentPose()}
           />
-          
+
           {/* Version History - Compact */}
           <VersionHistory
             poseVersions={poseVersions}

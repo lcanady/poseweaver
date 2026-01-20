@@ -5,7 +5,7 @@ Provides endpoints for pose context analysis and response suggestions.
 """
 from flask import Blueprint, request, jsonify
 from app.services.context_service import ContextService
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 
 # Create blueprint
 context_bp = Blueprint('context', __name__)
@@ -50,11 +50,11 @@ def get_context_service():
     global context_service
     if context_service is None:
         import os
-        api_key = os.getenv('VENICE_API_KEY')
+        api_key = os.getenv('OPENROUTER_API_KEY')
         if not api_key:
-            raise ValueError("VENICE_API_KEY environment variable is required")
-        venice_client = VeniceClient(api_key=api_key)
-        context_service = ContextService(venice_client)
+            raise ValueError("OPENROUTER_API_KEY environment variable is required")
+        openrouter_client = OpenRouterClient(api_key=api_key)
+        context_service = ContextService(openrouter_client)
     return context_service
 
 
@@ -145,7 +145,7 @@ def analyze_pose_context():
             'suggestions': suggestions
         })
         
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
         return jsonify({
             'success': False,
             'error': f'AI processing failed: {str(e)}'
@@ -218,7 +218,7 @@ def analyze_multiple_poses():
             'results': results
         })
         
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
         return jsonify({
             'success': False,
             'error': f'AI processing failed: {str(e)}'

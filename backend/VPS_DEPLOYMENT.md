@@ -8,7 +8,7 @@ This guide walks you through deploying the PoseWeaver backend to a DigitalOcean 
 2. **Domain name** (optional but recommended)
 3. **MongoDB Atlas** or managed MongoDB instance
 4. **Stripe Account** for payments
-5. **Venice AI API Key**
+5. **OpenRouter AI API Key**
 
 ## Step 1: VPS Setup
 
@@ -75,9 +75,9 @@ nano .env
 
 Configure your `.env` file:
 ```bash
-# Venice AI Configuration
-VENICE_API_KEY=your_venice_api_key_here
-VENICE_TIMEOUT=120
+# OpenRouter AI Configuration
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_TIMEOUT=120
 
 # Flask Configuration
 FLASK_ENV=production

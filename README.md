@@ -8,7 +8,7 @@ Your AI co-writer for immersive roleplay. PoseWeaver transforms simple poses int
 - **AI Pose Enhancement**: Transform simple poses into rich, engaging narratives with character-aware AI
 - **Image Description Writer**: Upload images and generate detailed, vivid descriptions for characters and scenes
 - **Advanced Customization**: Three enhancement styles, refinement tools, version history, and advanced settings
-- **Smart AI Integration**: Powered by Venice AI's multimodal models with MUSH roleplay etiquette validation
+- **Smart AI Integration**: Powered by OpenRouter AI's multimodal models with MUSH roleplay etiquette validation
 - **Flexible Pricing**: Start free (20 generations/month), upgrade to Basic ($9.99 - 200/month) or Pro ($19.99 - 500/month)
 - **Mobile-Responsive Design**: Works seamlessly across desktop and mobile devices
 
@@ -16,7 +16,7 @@ Your AI co-writer for immersive roleplay. PoseWeaver transforms simple poses int
 
 ### Backend
 - **Flask** - Python web framework
-- **Venice.ai API** - AI model integration (Dolphin uncensored thinking)
+- **OpenRouter.ai API** - AI model integration (Dolphin uncensored thinking)
 - **pytest** - Testing framework
 - **Docker** - Containerization
 
@@ -33,7 +33,7 @@ Your AI co-writer for immersive roleplay. PoseWeaver transforms simple poses int
 - Docker and Docker Compose
 - Node.js 18+ (for local development)
 - Python 3.11+ (for local development)
-- Venice.ai API key
+- OpenRouter.ai API key
 
 ### Using Docker (Recommended)
 
@@ -46,7 +46,7 @@ Your AI co-writer for immersive roleplay. PoseWeaver transforms simple poses int
 2. **Set up environment variables**
    ```bash
    cp backend/env.example backend/.env
-   # Edit backend/.env with your Venice.ai API key
+   # Edit backend/.env with your OpenRouter.ai API key
    ```
 
 3. **Start the development environment**
@@ -65,7 +65,7 @@ Your AI co-writer for immersive roleplay. PoseWeaver transforms simple poses int
    cd backend
    pip install -r requirements.txt
    cp env.example .env
-   # Edit .env with your Venice.ai API key
+   # Edit .env with your OpenRouter.ai API key
    python app.py
    ```
 
@@ -167,8 +167,8 @@ mush-pose-editor/
 Create a `.env` file in the `backend/` directory:
 
 ```env
-# Venice AI Configuration
-VENICE_API_KEY=your_venice_api_key_here
+# OpenRouter AI Configuration
+OPENROUTER_API_KEY=your_openrouter_api_key_here
 
 # Flask Configuration
 FLASK_ENV=development
@@ -182,7 +182,7 @@ DEFAULT_MAX_TOKENS=1000
 
 ### Model Configuration
 
-The application uses Venice.ai's Dolphin uncensored thinking model by default. You can configure:
+The application uses OpenRouter.ai's Dolphin uncensored thinking model by default. You can configure:
 
 - **Temperature**: Controls creativity (0.0 - 1.0)
 - **Max Tokens**: Maximum response length
@@ -243,7 +243,7 @@ For issues, questions, or contributions:
 ## Roadmap
 
 - [x] Project setup and infrastructure
-- [ ] Venice.ai integration
+- [ ] OpenRouter.ai integration
 - [ ] Character brain dump processing
 - [ ] Pose context analysis
 - [ ] Pose enhancement engine

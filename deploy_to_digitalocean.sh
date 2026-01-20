@@ -390,7 +390,7 @@ echo "🔄 Restart: \$APP_DIR/scripts/restart.sh"
 echo ""
 echo "⚠️  Next steps:"
 echo "1. Edit: nano \$APP_DIR/backend/.env"
-echo "2. Add API keys (Venice AI, MongoDB, Stripe)"
+echo "2. Add API keys (OpenRouter AI, MongoDB, Stripe)"
 echo "3. Restart: \$APP_DIR/scripts/restart.sh"
 
 EOFINSTALL
@@ -458,7 +458,7 @@ display_summary() {
     echo -e "${YELLOW}⚠️  Next Steps:${NC}"
     echo -e "  1. SSH to VPS: ssh $VPS_USER@$VPS_IP"
     echo -e "  2. Edit environment: nano $APP_DIR/backend/.env"
-    echo -e "  3. Add your API keys (Venice AI, MongoDB, Stripe)"
+    echo -e "  3. Add your API keys (OpenRouter AI, MongoDB, Stripe)"
     echo -e "  4. Restart services: $APP_DIR/scripts/restart.sh"
     echo ""
     echo -e "${CYAN}🔍 Quick Tests:${NC}"

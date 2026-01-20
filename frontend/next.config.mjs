@@ -8,9 +8,12 @@ const __dirname = path.dirname(__filename);
 
 const nextConfig = {
   output: 'standalone',
+  // Fix for "Next.js inferred your workspace root" warning
+  // pointing to the root package-lock.json
+  outputFileTracingRoot: path.join(__dirname, '../'),
   allowedDevOrigins: [
     'http://localhost:3000',
-    'http://127.0.0.1:3000', 
+    'http://127.0.0.1:3000',
     'http://192.168.12.123:3000',
     'https://poseweaver.com'
   ],

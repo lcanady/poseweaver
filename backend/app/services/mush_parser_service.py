@@ -81,13 +81,13 @@ class MushParserService:
         # Use the data extraction service to parse the text with LLM
         if not hasattr(self, 'data_extraction_service') or not self.data_extraction_service:
             from app.services.data_extraction_service import DataExtractionService
-            from app.services.venice_client import VeniceClient
+            from app.services.openrouter_client import OpenRouterClient
             from flask import current_app
             
-            # Get the Venice API key from Flask app config
-            api_key = current_app.config.get('VENICE_API_KEY', 'test_key_12345')
-            venice_client = VeniceClient(api_key)
-            self.data_extraction_service = DataExtractionService(venice_client)
+            # Get the OpenRouter API key from Flask app config
+            api_key = current_app.config.get('OPENROUTER_API_KEY', 'test_key_12345')
+            openrouter_client = OpenRouterClient(api_key)
+            self.data_extraction_service = DataExtractionService(openrouter_client)
             
         # Prepare the prompt for the LLM
         prompt = f"""

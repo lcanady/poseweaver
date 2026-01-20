@@ -9,10 +9,10 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { formatDistanceToNow } from "date-fns"
 import { getApiUrl } from '@/utils/api-utils';
-import { 
-  Users, 
-  Clock, 
-  TrendingUp, 
+import {
+  Users,
+  Clock,
+  TrendingUp,
   Zap,
   ArrowUpRight,
   Plus,
@@ -54,7 +54,7 @@ interface ManagementTool {
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth()
+  const { user, getToken } = useAuth()
   const [stats, setStats] = useState<DashboardStats>({
     totalCharacters: 0,
     recentActivity: "Never",
@@ -65,11 +65,11 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const token = localStorage.getItem('access_token')
+        const token = await getToken()
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         }
-        
+
         if (token) {
           headers['Authorization'] = `Bearer ${token}`
         }
@@ -80,12 +80,12 @@ export default function DashboardPage() {
         try {
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 60000)
-          
+
           const charactersResponse = await fetch(`${getApiUrl()}/api/characters/mgmt`, {
             headers,
             signal: controller.signal
           })
-          
+
           clearTimeout(timeoutId)
 
           if (charactersResponse.ok) {
@@ -103,16 +103,16 @@ export default function DashboardPage() {
 
         // Fetch usage/subscription status
         try {
-          if (user?._id) {
+          if (user?.uid) {
             const usageResponse = await fetch(
-              `${getApiUrl()}/api/purchase/usage-status?user_id=${user._id}`,
+              `${getApiUrl()}/api/purchase/usage-status?user_id=${user.uid}`,
               {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include'
               }
             )
-            
+
             if (usageResponse.ok) {
               const usageData = await usageResponse.json()
               if (usageData.success && usageData.usage_info) {
@@ -239,7 +239,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center">
-              {getGreeting()}, {user?.display_name || 'Storyteller'}
+              {getGreeting()}, {user?.displayName || 'Storyteller'}
               {getSubscriptionBadge()}
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -322,21 +322,19 @@ export default function DashboardPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
             {aiTools.map((tool, index) => {
               const isDisabled = tool.status === 'coming-soon' || (tool.status === 'premium' && stats.subscriptionStatus === 'free')
-              
+
               return (
-                <Card key={index} className={`group transition-all duration-200 ${
-                  isDisabled 
-                    ? 'opacity-60 cursor-not-allowed' 
-                    : 'hover:shadow-lg hover:scale-[1.02] cursor-pointer'
-                }`}>
+                <Card key={index} className={`group transition-all duration-200 ${isDisabled
+                  ? 'opacity-60 cursor-not-allowed'
+                  : 'hover:shadow-lg hover:scale-[1.02] cursor-pointer'
+                  }`}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${
-                          tool.status === 'available' ? 'bg-primary/10 text-primary' :
+                        <div className={`p-2 rounded-lg ${tool.status === 'available' ? 'bg-primary/10 text-primary' :
                           tool.status === 'premium' ? 'bg-purple-500/10 text-purple-500' :
-                          'bg-muted text-muted-foreground'
-                        }`}>
+                            'bg-muted text-muted-foreground'
+                          }`}>
                           {tool.icon}
                         </div>
                         <div>

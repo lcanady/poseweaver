@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import Mock, patch
 from app import create_app
 from app.services.character_service import CharacterProfile
-from app.services.venice_client import VeniceAPIError
+from app.services.openrouter_client import OpenRouterAPIError
 
 
 class TestCharacterAPI:
@@ -126,9 +126,9 @@ class TestCharacterAPI:
         assert 'Invalid existing character data' in data['error']
     
     @patch('app.api.characters.character_service')
-    def test_process_brain_dump_venice_api_error(self, mock_service, client):
-        """Test handling of Venice API errors."""
-        mock_service.process_brain_dump.side_effect = VeniceAPIError(
+    def test_process_brain_dump_openrouter_api_error(self, mock_service, client):
+        """Test handling of OpenRouter API errors."""
+        mock_service.process_brain_dump.side_effect = OpenRouterAPIError(
             "API Error", 500
         )
         

@@ -57,15 +57,15 @@ export function FeaturedCharacters() {
     try {
       setIsLoading(true)
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/characters/mgmt/featured?limit=12`
+        '/api/characters/mgmt/featured?limit=12'
       )
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch featured characters')
       }
 
       const data: FeaturedCharactersResponse = await response.json()
-      
+
       if (data.success && data.data.length > 0) {
         setCharacters(data.data)
         setError(null)

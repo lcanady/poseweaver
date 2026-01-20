@@ -14,20 +14,20 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
 
 export function UserNav() {
-  const { user, logout } = useAuth()
+  const { user, logoutHelper } = useAuth()
 
   if (!user) {
     return null
   }
 
-  const initials = user.display_name
+  const initials = (user.displayName || user.email || 'U')
     .split(' ')
     .map(name => name[0])
     .join('')
     .toUpperCase()
 
   const handleLogout = () => {
-    logout()
+    logoutHelper()
   }
 
   return (
@@ -35,7 +35,7 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user.avatar_url || "/placeholder.svg?width=32&height=32"} alt={user.display_name} />
+            <AvatarImage src={user.photoURL || "/placeholder.svg?width=32&height=32"} alt={user.displayName || "User"} />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
         </Button>
@@ -43,7 +43,7 @@ export function UserNav() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.display_name}</p>
+            <p className="text-sm font-medium leading-none">{user.displayName || "User"}</p>
             <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
           </div>
         </DropdownMenuLabel>

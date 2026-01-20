@@ -90,7 +90,7 @@ export default function PrivacyPage() {
             <p className="mb-2">We share information with trusted partners who assist in operating our platform:</p>
             
             <div className="mb-4">
-              <p className="font-medium">AI Services (Venice AI)</p>
+              <p className="font-medium">AI Services (OpenRouter AI)</p>
               <ul className="list-disc pl-6 mt-1">
                 <li>Text and image inputs for processing</li>
                 <li>Generated content for quality assurance</li>

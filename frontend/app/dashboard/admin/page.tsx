@@ -9,14 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  ChevronLeft, 
-  ChevronRight, 
-  Settings, 
-  Shield, 
+import {
+  Users,
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  Settings,
+  Shield,
   Activity,
   TrendingUp,
   UserCheck,
@@ -28,7 +28,7 @@ import {
   Download,
   FileText,
   User,
-  DollarSign, 
+  DollarSign,
   BarChart3,
   UserPlus,
   AlertCircle,
@@ -45,7 +45,7 @@ import { useRouter } from 'next/navigation';
 import { UserDetailModal } from '@/components/admin/user-detail-modal';
 import { getApiUrl } from '@/utils/api-utils';
 
-interface User {
+interface AdminUser {
   id: string;
   email: string;
   display_name: string;
@@ -82,9 +82,9 @@ interface Analytics {
 }
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
   const router = useRouter();
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [systemData, setSystemData] = useState<any>(null);
   const [systemLogs, setSystemLogs] = useState<any[]>([]);
@@ -99,17 +99,18 @@ export default function AdminDashboard() {
 
   // Check admin access
   useEffect(() => {
-    if (user && !user.is_admin) {
-      toast.error('Admin access required');
-      router.push('/dashboard');
-      return;
+    // TODO: Implement proper admin check with custom claims
+    if (user && !(user as any).is_admin) {
+      // toast.error('Admin access required');
+      // router.push('/dashboard');
+      // return;
     }
   }, [user, router]);
 
   // Fetch system data
   const fetchSystemData = async () => {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = await getToken();
       const response = await fetch(
         `${getApiUrl()}/api/admin/system/stats`,
         {
@@ -138,7 +139,7 @@ export default function AdminDashboard() {
   // Fetch system logs
   const fetchSystemLogs = async () => {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = await getToken();
       const response = await fetch(
         `${getApiUrl()}/api/admin/system/logs`,
         {
@@ -166,7 +167,7 @@ export default function AdminDashboard() {
   // System maintenance actions
   const performSystemCleanup = async () => {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = await getToken();
       const response = await fetch(
         `${getApiUrl()}/api/admin/system/maintenance/cleanup`,
         {
@@ -196,7 +197,7 @@ export default function AdminDashboard() {
 
   const resetAllUsage = async () => {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = await getToken();
       const response = await fetch(
         `${getApiUrl()}/api/admin/system/maintenance/reset-usage`,
         {
@@ -228,7 +229,7 @@ export default function AdminDashboard() {
   // Fetch analytics data
   const fetchAnalytics = async () => {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = await getToken();
       const response = await fetch(
         `${getApiUrl()}/api/admin/analytics/overview`,
         {
@@ -264,7 +265,7 @@ export default function AdminDashboard() {
         ...(statusFilter && statusFilter !== 'all' && { status: statusFilter }),
       });
 
-      const token = localStorage.getItem('access_token');
+      const token = await getToken();
       const response = await fetch(
         `${getApiUrl()}/api/admin/users?${params}`,
         {
@@ -307,7 +308,7 @@ export default function AdminDashboard() {
 
   // Refetch users when filters change
   useEffect(() => {
-    if (user?.is_admin) {
+    if ((user as any)?.is_admin) {
       fetchUsers();
     }
   }, [searchTerm, subscriptionFilter, statusFilter]);
@@ -352,7 +353,7 @@ export default function AdminDashboard() {
     );
   };
 
-  if (!user?.is_admin) {
+  if (!(user as any)?.is_admin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="w-96">
@@ -485,9 +486,8 @@ export default function AdminDashboard() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Database</span>
                   <div className="flex items-center gap-1">
-                    <div className={`w-2 h-2 rounded-full ${
-                      systemData?.health?.database_connected ? 'bg-green-500' : 'bg-red-500'
-                    }`} />
+                    <div className={`w-2 h-2 rounded-full ${systemData?.health?.database_connected ? 'bg-green-500' : 'bg-red-500'
+                      }`} />
                     <span className="text-sm font-medium">
                       {systemData?.health?.database_connected ? 'Connected' : 'Disconnected'}
                     </span>
@@ -554,9 +554,9 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button 
+                <Button
                   onClick={performSystemCleanup}
-                  variant="outline" 
+                  variant="outline"
                   className="flex items-center gap-2 h-auto p-4"
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -565,9 +565,9 @@ export default function AdminDashboard() {
                     <div className="text-sm text-muted-foreground">Remove inactive data</div>
                   </div>
                 </Button>
-                <Button 
+                <Button
                   onClick={resetAllUsage}
-                  variant="outline" 
+                  variant="outline"
                   className="flex items-center gap-2 h-auto p-4"
                 >
                   <RotateCcw className="h-4 w-4" />
@@ -576,9 +576,9 @@ export default function AdminDashboard() {
                     <div className="text-sm text-muted-foreground">Reset pose limits</div>
                   </div>
                 </Button>
-                <Button 
+                <Button
                   onClick={fetchSystemLogs}
-                  variant="outline" 
+                  variant="outline"
                   className="flex items-center gap-2 h-auto p-4"
                 >
                   <FileText className="h-4 w-4" />
@@ -604,11 +604,10 @@ export default function AdminDashboard() {
                 {systemLogs && systemLogs.length > 0 ? (
                   systemLogs.slice(0, 5).map((log, index) => (
                     <div key={index} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
-                      <div className={`w-2 h-2 rounded-full ${
-                        log.level === 'ERROR' ? 'bg-red-500' :
+                      <div className={`w-2 h-2 rounded-full ${log.level === 'ERROR' ? 'bg-red-500' :
                         log.level === 'WARNING' ? 'bg-yellow-500' :
-                        'bg-green-500'
-                      }`} />
+                          'bg-green-500'
+                        }`} />
                       <span className="text-xs text-muted-foreground">{log.timestamp}</span>
                       <span className="text-xs font-medium">[{log.component}]</span>
                       <span className="text-sm flex-1 truncate">{log.message}</span>
@@ -690,7 +689,7 @@ export default function AdminDashboard() {
                           <p className="text-sm text-muted-foreground">{user.email}</p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-4">
                         {getSubscriptionBadge(user.subscription_status)}
                         <div className="text-right text-sm">
@@ -828,17 +827,17 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button 
+                <Button
                   onClick={performSystemCleanup}
-                  variant="outline" 
+                  variant="outline"
                   className="flex items-center gap-2"
                 >
                   <RefreshCw className="h-4 w-4" />
                   System Cleanup
                 </Button>
-                <Button 
+                <Button
                   onClick={resetAllUsage}
-                  variant="outline" 
+                  variant="outline"
                   className="flex items-center gap-2"
                 >
                   <RotateCcw className="h-4 w-4" />
@@ -909,11 +908,10 @@ export default function AdminDashboard() {
                 {systemLogs && systemLogs.length > 0 ? (
                   systemLogs.map((log, index) => (
                     <div key={index} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
-                      <div className={`w-2 h-2 rounded-full ${
-                        log.level === 'ERROR' ? 'bg-red-500' :
+                      <div className={`w-2 h-2 rounded-full ${log.level === 'ERROR' ? 'bg-red-500' :
                         log.level === 'WARNING' ? 'bg-yellow-500' :
-                        'bg-green-500'
-                      }`} />
+                          'bg-green-500'
+                        }`} />
                       <span className="text-xs text-muted-foreground">{log.timestamp}</span>
                       <span className="text-xs font-medium">[{log.component}]</span>
                       <span className="text-sm">{log.message}</span>
@@ -926,8 +924,8 @@ export default function AdminDashboard() {
                 )}
               </div>
               <div className="pt-4">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full flex items-center gap-2"
                   onClick={fetchSystemLogs}
                 >

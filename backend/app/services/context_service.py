@@ -7,7 +7,7 @@ that should influence character responses.
 import json
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 from app.services.model_config import ModelConfig
 
 
@@ -70,13 +70,13 @@ class PoseContext:
 class ContextService:
     """Service for analyzing pose context and extracting response elements."""
     
-    def __init__(self, venice_client: VeniceClient):
+    def __init__(self, openrouter_client: OpenRouterClient):
         """Initialize the context service.
         
         Args:
-            venice_client: Venice.ai client for AI processing
+            openrouter_client: OpenRouter.ai client for AI processing
         """
-        self.venice_client = venice_client
+        self.openrouter_client = openrouter_client
     
     def analyze_pose_context(
         self, 
@@ -93,7 +93,7 @@ class ContextService:
             PoseContext: Structured context analysis
             
         Raises:
-            VeniceAPIError: If AI processing fails
+            OpenRouterAPIError: If AI processing fails
             ValueError: If the AI response is invalid
         """
         try:
@@ -112,8 +112,8 @@ class ContextService:
             # Create and return pose context
             return PoseContext.from_dict(context_data)
             
-        except VeniceAPIError:
-            # Re-raise Venice API errors
+        except OpenRouterAPIError:
+            # Re-raise OpenRouter API errors
             raise
         except Exception as e:
             raise ValueError(f"Invalid context data: {str(e)}")
@@ -133,7 +133,7 @@ class ContextService:
             PoseContext: Structured context analysis
             
         Raises:
-            VeniceAPIError: If AI processing fails
+            OpenRouterAPIError: If AI processing fails
             ValueError: If the AI response is invalid
         """
         try:
@@ -161,8 +161,8 @@ class ContextService:
             # Create and return pose context
             return PoseContext.from_dict(context_data)
             
-        except VeniceAPIError:
-            # Re-raise Venice API errors
+        except OpenRouterAPIError:
+            # Re-raise OpenRouter API errors
             raise
         except Exception as e:
             raise ValueError(f"Invalid context data: {str(e)}")
@@ -256,8 +256,8 @@ class ContextService:
         - narrative_tone: The overall tone (serious, playful, tense, etc.)
         """
         
-        # Generate completion using Venice.ai
-        response = self.venice_client.generate_completion(
+        # Generate completion using OpenRouter.ai
+        response = self.openrouter_client.generate_completion(
             model="qwen3-235b",
             messages=[
                 {"role": "system", "content": system_message},
@@ -418,7 +418,7 @@ class ContextService:
             try:
                 context = self.analyze_pose_context(pose, character_name)
                 results[f"pose_{i}"] = context
-            except (VeniceAPIError, ValueError) as e:
+            except (OpenRouterAPIError, ValueError) as e:
                 # Log error but continue with other poses
                 preview_text = pose[:100] + "..." if len(pose) > 100 else pose
                 results[f"pose_{i}"] = {

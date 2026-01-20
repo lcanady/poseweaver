@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from app import create_app
 from app.services.context_service import PoseContext
-from app.services.venice_client import VeniceAPIError
+from app.services.openrouter_client import OpenRouterAPIError
 
 
 class TestContextAPI:
@@ -161,11 +161,11 @@ class TestContextAPI:
         assert 'pose_text is required and cannot be empty' in result['error']
 
     @patch('app.api.context.get_context_service')
-    def test_analyze_pose_context_venice_api_error(self, mock_get_service, client):
-        """Test pose context analysis with Venice API error."""
-        # Mock the service to raise VeniceAPIError
+    def test_analyze_pose_context_openrouter_api_error(self, mock_get_service, client):
+        """Test pose context analysis with OpenRouter API error."""
+        # Mock the service to raise OpenRouterAPIError
         mock_service = MagicMock()
-        mock_service.analyze_pose_context.side_effect = VeniceAPIError("API quota exceeded")
+        mock_service.analyze_pose_context.side_effect = OpenRouterAPIError("API quota exceeded")
         mock_get_service.return_value = mock_service
         
         data = {'pose_text': 'Alice examines the artifact.'}
@@ -280,11 +280,11 @@ class TestContextAPI:
         assert 'poses must be a non-empty list' in result['error']
 
     @patch('app.api.context.get_context_service')
-    def test_analyze_multiple_poses_venice_api_error(self, mock_get_service, client):
-        """Test multiple pose analysis with Venice API error."""
-        # Mock the service to raise VeniceAPIError
+    def test_analyze_multiple_poses_openrouter_api_error(self, mock_get_service, client):
+        """Test multiple pose analysis with OpenRouter API error."""
+        # Mock the service to raise OpenRouterAPIError
         mock_service = MagicMock()
-        mock_service.analyze_multiple_poses.side_effect = VeniceAPIError("API quota exceeded")
+        mock_service.analyze_multiple_poses.side_effect = OpenRouterAPIError("API quota exceeded")
         mock_get_service.return_value = mock_service
         
         data = {'poses': ['Alice examines the artifact.']}
@@ -359,11 +359,11 @@ class TestContextAPI:
         # If HTML response, that's also acceptable for 405
 
     # Test service initialization
-    @patch('app.api.context.VeniceClient')
+    @patch('app.api.context.OpenRouterClient')
     @patch('app.api.context.ContextService')
-    @patch.dict('os.environ', {'VENICE_API_KEY': 'test_key_12345'})
+    @patch.dict('os.environ', {'OPENROUTER_API_KEY': 'test_key_12345'})
     def test_get_context_service_initialization(self, mock_context_service, 
-                                              mock_venice_client):
+                                              mock_openrouter_client):
         """Test context service initialization."""
         from app.api.context import get_context_service
         
@@ -375,8 +375,8 @@ class TestContextAPI:
         service = get_context_service()
         
         # Verify initialization
-        mock_venice_client.assert_called_once_with(api_key="test_key_12345")
-        mock_context_service.assert_called_once_with(mock_venice_client.return_value)
+        mock_openrouter_client.assert_called_once_with(api_key="test_key_12345")
+        mock_context_service.assert_called_once_with(mock_openrouter_client.return_value)
         
         # Verify service is returned
         assert service == mock_context_service.return_value
@@ -385,6 +385,6 @@ class TestContextAPI:
         service2 = get_context_service()
         assert service2 == service
         
-        # Venice client should only be called once
-        assert mock_venice_client.call_count == 1
+        # OpenRouter client should only be called once
+        assert mock_openrouter_client.call_count == 1
         assert mock_context_service.call_count == 1 

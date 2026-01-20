@@ -5,7 +5,7 @@ Provides endpoints for character brain dump processing and management.
 """
 from flask import Blueprint, request, jsonify
 from app.services.character_service import CharacterService, CharacterProfile
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 from app.middleware.auth_middleware import require_auth
 
 # Create blueprint
@@ -22,11 +22,11 @@ def get_character_service():
     if character_service is None:
         try:
             import os
-            api_key = os.getenv('VENICE_API_KEY')
+            api_key = os.getenv('OPENROUTER_API_KEY')
             if not api_key:
-                raise ValueError("VENICE_API_KEY environment variable is required")
-            venice_client = VeniceClient(api_key=api_key)
-            character_service = CharacterService(venice_client)
+                raise ValueError("OPENROUTER_API_KEY environment variable is required")
+            openrouter_client = OpenRouterClient(api_key=api_key)
+            character_service = CharacterService(openrouter_client)
         except Exception as e:
             # If service creation fails, raise a more specific error
             raise ValueError(
@@ -104,7 +104,7 @@ def process_brain_dump():
             'character': character.to_dict()
         }), 200
         
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
         return jsonify({
             'success': False,
             'error': f'AI processing failed: {str(e)}'

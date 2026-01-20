@@ -2,9 +2,9 @@
 
 ## Overview
 
-The Scene Memory & Continuity Tracking system is designed as a comprehensive data management and analysis layer that sits between the existing MUSH Pose Editor and the Venice.ai integration. It provides persistent storage, intelligent analysis, and real-time continuity checking for MUSH roleplay sessions.
+The Scene Memory & Continuity Tracking system is designed as a comprehensive data management and analysis layer that sits between the existing MUSH Pose Editor and the OpenRouter.ai integration. It provides persistent storage, intelligent analysis, and real-time continuity checking for MUSH roleplay sessions.
 
-The system leverages the existing Venice.ai Dolphin model for content analysis while introducing new data models, services, and APIs to handle scene persistence, character state tracking, and continuity validation.
+The system leverages the existing OpenRouter.ai Dolphin model for content analysis while introducing new data models, services, and APIs to handle scene persistence, character state tracking, and continuity validation.
 
 ## Architecture
 
@@ -39,7 +39,7 @@ graph TB
     end
     
     subgraph "External Services"
-        VeniceAI[Venice.ai API]
+        OpenRouterAI[OpenRouter.ai API]
     end
     
     UI --> SceneAPI
@@ -52,7 +52,7 @@ graph TB
     
     SceneService --> SceneDB
     ContinuityService --> AnalysisService
-    AnalysisService --> VeniceAI
+    AnalysisService --> OpenRouterAI
     SearchService --> SearchIndex
     
     SceneService --> Cache
@@ -165,7 +165,7 @@ class SceneService:
 
 **Integration Points:**
 - Existing pose enhancement APIs
-- Venice.ai for content analysis
+- OpenRouter.ai for content analysis
 - Search indexing service
 
 ### 2. Continuity Analysis Service
@@ -183,7 +183,7 @@ class ContinuityService:
 ```
 
 **AI Integration:**
-- Uses Venice.ai Dolphin model for content analysis
+- Uses OpenRouter.ai Dolphin model for content analysis
 - Specialized prompts for continuity checking
 - Character voice consistency validation
 - Plot element extraction and tracking
@@ -356,7 +356,7 @@ class Severity(Enum):
    - Invalid pose data
 
 2. **AI Processing Errors**
-   - Venice.ai API failures
+   - OpenRouter.ai API failures
    - Analysis timeout
    - Invalid AI responses
 
@@ -417,7 +417,7 @@ def analyze_pose_with_fallback(pose: Pose, scene_context: SceneContext) -> Conti
    - Database operations
 
 3. **AI Integration Tests**
-   - Venice.ai API mocking
+   - OpenRouter.ai API mocking
    - Response parsing
    - Error handling
 
@@ -523,6 +523,6 @@ def analyze_pose_with_fallback(pose: Pose, scene_context: SceneContext) -> Conti
    - Result caching for repeated patterns
 
 2. **Resource Management**
-   - Request queuing for Venice.ai API
+   - Request queuing for OpenRouter.ai API
    - Timeout handling
    - Graceful degradation under load

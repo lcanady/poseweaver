@@ -8,7 +8,7 @@ import json
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, asdict
 from flask import current_app
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 
 
 @dataclass
@@ -30,13 +30,13 @@ class CharacterProfile:
 class CharacterService:
     """Service for processing character brain dumps into structured profiles."""
     
-    def __init__(self, venice_client: VeniceClient):
+    def __init__(self, openrouter_client: OpenRouterClient):
         """Initialize the character service.
         
         Args:
-            venice_client: Venice.ai client for AI processing
+            openrouter_client: OpenRouter.ai client for AI processing
         """
-        self.venice_client = venice_client
+        self.openrouter_client = openrouter_client
     
     def process_brain_dump(
         self, 
@@ -53,7 +53,7 @@ class CharacterService:
             CharacterProfile: Structured character data
             
         Raises:
-            VeniceAPIError: If AI processing fails
+            OpenRouterAPIError: If AI processing fails
             ValueError: If the AI response is invalid
         """
         try:
@@ -68,8 +68,8 @@ class CharacterService:
             # Create and return character profile
             return CharacterProfile(**character_data)
             
-        except VeniceAPIError:
-            # Re-raise Venice API errors
+        except OpenRouterAPIError:
+            # Re-raise OpenRouter API errors
             raise
         except Exception as e:
             raise ValueError(f"Invalid character data: {str(e)}")
@@ -102,8 +102,8 @@ class CharacterService:
         Please respond with a valid JSON object containing the character data.
         """
         
-        # Generate completion using Venice.ai
-        response = self.venice_client.generate_completion(
+        # Generate completion using OpenRouter.ai
+        response = self.openrouter_client.generate_completion(
             model="qwen3-235b",
             messages=[
                 {"role": "system", "content": system_message},

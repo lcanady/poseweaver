@@ -15,7 +15,7 @@ from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 from datetime import datetime
 
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 from app.services.model_config import ModelConfig
 
 
@@ -34,9 +34,9 @@ class DescriptionResult:
 class DescriptionService:
     """Service for generating detailed physical descriptions from images."""
     
-    def __init__(self, venice_client: VeniceClient):
-        """Initialize the description service with a Venice client."""
-        self.venice_client = venice_client
+    def __init__(self, openrouter_client: OpenRouterClient):
+        """Initialize the description service with a OpenRouter client."""
+        self.openrouter_client = openrouter_client
         
     def generate_description(
         self,
@@ -59,7 +59,7 @@ class DescriptionService:
             DescriptionResult with the generated description and metadata
             
         Raises:
-            VeniceAPIError: If AI processing fails
+            OpenRouterAPIError: If AI processing fails
             ValueError: If the input data is invalid
         """
         start_time = datetime.now()
@@ -100,8 +100,12 @@ class DescriptionService:
         model = self._get_vision_model()
         
         try:
-            # Generate description using Venice AI
-            response = self.venice_client.generate_completion(
+            # Generate description using OpenRouter AI
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Generating description with model={model}")
+            
+            response = self.openrouter_client.generate_completion(
                 messages=[
                     {"role": "system", "content": system_message},
                     user_message
@@ -131,10 +135,10 @@ class DescriptionService:
                 processing_time_ms=processing_time_ms
             )
             
-        except VeniceAPIError:
+        except OpenRouterAPIError:
             raise
         except Exception as e:
-            raise VeniceAPIError(f"Failed to generate description: {str(e)}")
+            raise OpenRouterAPIError(f"Failed to generate description: {str(e)}")
     
     def _create_system_message(self, style: str, focus_areas: Optional[List[str]] = None) -> str:
         """Create system message with quality standards and style guidelines."""
@@ -201,9 +205,9 @@ Ensure these areas receive detailed coverage in your description."""
         return f"{base_requirements}\n{style_guidelines[style]}{focus_section}"
     
     def _get_vision_model(self) -> str:
-        """Get a vision-capable model from Venice AI."""
-        # Use qwen-2.5-vl which actually supports vision according to Venice AI API
-        return "qwen-2.5-vl"  # Qwen 2.5 VL 72B - specifically designed for vision tasks
+        """Get a vision-capable model from OpenRouter AI."""
+        # Use Gemini 2.0 Flash which is fast, reliable and has excellent vision support
+        return "google/gemini-2.0-flash-001"
     
     def _get_temperature_for_style(self, style: str) -> float:
         """Get appropriate temperature setting for description style."""

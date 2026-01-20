@@ -11,7 +11,8 @@ import {
   ExternalLink,
   Calendar,
   Clock,
-  Settings
+  Settings,
+  User
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -54,9 +55,9 @@ export function CharacterCard({ character }: CharacterCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start gap-4">
           <Avatar className="h-16 w-16 border-2 border-border/20">
-            <AvatarImage src={character.avatarUrl || "/placeholder.svg"} alt={character.name} />
-            <AvatarFallback className="text-lg font-semibold">
-              {character.name.charAt(0)}
+            <AvatarImage src={character.avatarUrl} alt={character.name} />
+            <AvatarFallback className="bg-muted">
+              <User className="h-2/3 w-2/3 text-muted-foreground" />
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">

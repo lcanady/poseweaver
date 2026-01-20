@@ -28,7 +28,7 @@ export function SceneSelector({ onSceneSelected }: SceneSelectorProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
-  const { refreshToken } = useAuth()
+  const { getToken } = useAuth()
 
   // Fetch saved scenes when dialog is opened
   useEffect(() => {
@@ -37,47 +37,26 @@ export function SceneSelector({ onSceneSelected }: SceneSelectorProps) {
     }
   }, [open])
 
-  // Helper function to handle API calls with token refresh
-  const fetchWithRefresh = async (url: string, options = {}, retryCount = 0) => {
-    try {
-      // Get token from localStorage
-      const token = localStorage.getItem('access_token')
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      }
-
-      // Add token to headers if available
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
-
-      const response = await fetch(url, {
-        ...options,
-        headers
-      })
-
-      // If unauthorized and we haven't retried yet, refresh token and retry
-      if (response.status === 401 && retryCount < 1) {
-        await refreshToken()
-        return fetchWithRefresh(url, options, retryCount + 1)
-      }
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch from ${url}: ${response.status}`)
-      }
-
-      return await response.json()
-    } catch (error) {
-      console.error(`Error in fetchWithRefresh (${url}):`, error)
-      throw error
-    }
-  }
-
   const fetchSavedScenes = async () => {
     setIsLoading(true)
     try {
+      const token = await getToken()
+      if (!token) throw new Error("No authentication token")
+
       const scenesUrl = `${getApiUrl()}/api/scenes?limit=50&sort=updated_at&order=desc`
-      const data = await fetchWithRefresh(scenesUrl)
+
+      const response = await fetch(scenesUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch scenes: ${response.status}`)
+      }
+
+      const data = await response.json()
 
       if (data.success && data.data) {
         console.log(`Loaded ${data.data.length} scenes for scene selector`);
@@ -103,26 +82,39 @@ export function SceneSelector({ onSceneSelected }: SceneSelectorProps) {
 
   const handleSceneSelect = async (sceneId: string, title: string) => {
     try {
+      const token = await getToken()
+      if (!token) throw new Error("No authentication token")
+
       // Fetch the full scene data
       const sceneUrl = `${getApiUrl()}/api/scenes/${sceneId}`
-      const data = await fetchWithRefresh(sceneUrl)
-      
+
+      const response = await fetch(sceneUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) throw new Error("Failed to load scene data")
+
+      const data = await response.json()
+
       if (data.success && data.data) {
         // Extract scene context, character ID, and title from the fetched data
         const { context, character_id, name } = data.data
-        
+
         // Use the title from the fetched data to ensure it's current
         const sceneTitle = name || title
-        
+
         // Call the parent component's callback with scene data
         onSceneSelected(sceneId, sceneTitle, context || {}, character_id || "")
         setOpen(false)
-        
+
         toast({
           title: "Scene Loaded",
           description: `"${sceneTitle}" has been loaded successfully.`,
         })
-        
+
         // Trigger refresh of recent scenes to update "last updated" times
         localStorage.setItem('sceneUpdated', 'true');
         // Trigger storage event for same-tab updates
@@ -165,7 +157,7 @@ export function SceneSelector({ onSceneSelected }: SceneSelectorProps) {
             Select a saved scene to continue working on it.
           </DialogDescription>
         </DialogHeader>
-        
+
         <ScrollArea className="h-[300px] mt-4 rounded-md border p-2">
           {isLoading ? (
             <div className="flex justify-center items-center h-full">
@@ -178,7 +170,7 @@ export function SceneSelector({ onSceneSelected }: SceneSelectorProps) {
           ) : (
             <div className="space-y-2">
               {scenes.map((scene) => (
-                <div 
+                <div
                   key={scene._id}
                   className="p-3 rounded-md border hover:bg-accent cursor-pointer transition-colors"
                   onClick={() => handleSceneSelect(scene._id, scene.name)}
@@ -192,7 +184,7 @@ export function SceneSelector({ onSceneSelected }: SceneSelectorProps) {
             </div>
           )}
         </ScrollArea>
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel

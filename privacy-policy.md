@@ -64,7 +64,7 @@ We collect information you provide directly to us:
 ### 4.1 Third-Party Service Providers
 We share information with trusted partners who assist in operating our platform:
 
-**AI Services (Venice AI)**
+**AI Services (OpenRouter AI)**
 - Text and image inputs for processing
 - Generated content for quality assurance
 - Usage metrics for service optimization

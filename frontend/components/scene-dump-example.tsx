@@ -1,11 +1,11 @@
 "use client"
 
 import { StandaloneSceneDumpProcessor } from './standalone-scene-dump-processor'
-import { type ProcessedPose } from '../lib/venice-client'
+import { type ProcessedPose } from '@/hooks/useSceneDumpProcessor'
 
 interface SceneDumpExampleProps {
   // Pass these props from your parent component/page
-  veniceApiKey: string
+  openrouterApiKey: string
   currentUser: {
     id: string
     display_name: string
@@ -16,12 +16,12 @@ interface SceneDumpExampleProps {
   }
 }
 
-export function SceneDumpExample({ veniceApiKey, currentUser, currentScene }: SceneDumpExampleProps) {
+export function SceneDumpExample({ openrouterApiKey, currentUser, currentScene }: SceneDumpExampleProps) {
   // Optional: Save poses to your backend
   const handleSaveToScene = async (poses: ProcessedPose[], sceneId: string): Promise<boolean> => {
     try {
       const token = localStorage.getItem('access_token')
-      
+
       // Call your backend API to save poses
       const response = await fetch(`/api/scenes/${sceneId}/poses/bulk`, {
         method: 'POST',
@@ -59,16 +59,16 @@ export function SceneDumpExample({ veniceApiKey, currentUser, currentScene }: Sc
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Scene Dump Processor</h1>
-      
-      {!veniceApiKey && (
+
+      {!openrouterApiKey && (
         <div className="bg-yellow-50 border border-yellow-200 rounded p-4 mb-4">
-          <h3 className="font-medium text-yellow-800">Missing Venice API Key</h3>
-          <p className="text-yellow-700">Please provide a Venice.ai API key to enable processing.</p>
+          <h3 className="font-medium text-yellow-800">Missing OpenRouter API Key</h3>
+          <p className="text-yellow-700">Please provide a OpenRouter.ai API key to enable processing.</p>
         </div>
       )}
 
       <StandaloneSceneDumpProcessor
-        veniceApiKey={veniceApiKey}
+        openrouterApiKey={openrouterApiKey}
         userId={currentUser.id}
         userDisplayName={currentUser.display_name}
         sceneId={currentScene?.id}

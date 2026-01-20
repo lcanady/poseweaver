@@ -7,12 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { 
-  PlusCircle, 
-  Loader2, 
-  Crown, 
-  AlertTriangle, 
-  Search, 
+import {
+  PlusCircle,
+  Loader2,
+  Crown,
+  AlertTriangle,
+  Search,
   Filter,
   Users,
   Calendar,
@@ -39,7 +39,10 @@ interface SubscriptionMeta {
   needs_upgrade: boolean;
 }
 
+import { useAuth } from '@/contexts/auth-context';
+
 export default function CharactersPage() {
+  const { getToken } = useAuth();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [filteredCharacters, setFilteredCharacters] = useState<Character[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,74 +51,39 @@ export default function CharactersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');
 
-  // Function to fetch with token refresh capabilities
-  const fetchWithRefresh = async (url: string, options: RequestInit = {}) => {
-    // Get access token from localStorage
-    const accessToken = localStorage.getItem('access_token');
-    
-    if (!accessToken) {
-      throw new Error('No access token found. Please log in.');
-    }
-    
-    // Prepare headers with authorization
-    const headers = {
-      ...options.headers,
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
-    };
-    
-    // First attempt with current token
-    let response = await fetch(url, { ...options, headers });
-    
-    // If unauthorized, try refreshing token
-    if (response.status === 401) {
-      console.log('Access token expired. Attempting to refresh...');
-      const refreshToken = localStorage.getItem('refresh_token');
-      
-      if (!refreshToken) {
-        throw new Error('No refresh token found. Please log in again.');
+  // Function to fetch with authentication
+  const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+    try {
+      const token = await getToken();
+
+      if (!token) {
+        throw new Error('No access token found. Please log in.');
       }
-      
-      // Call refresh endpoint
-      const refreshResponse = await fetch(`${getApiUrl()}/api/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${refreshToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!refreshResponse.ok) {
-        // If refresh fails, clear tokens and redirect to login
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
-        throw new Error('Session expired. Please log in again.');
+
+      const headers = {
+        ...options.headers,
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      };
+
+      const response = await fetch(url, { ...options, headers });
+
+      if (response.status === 401) {
+        // Token might be invalid despite getting it from SDK? 
+        // SDK usually handles refresh. If 401, maybe user disabled/deleted?
+        throw new Error('Authentication failed');
       }
-      
-      // Get new tokens from refresh response
-      const tokens = await refreshResponse.json();
-      localStorage.setItem('access_token', tokens.access_token);
-      
-      // Retry original request with new token
-      headers.Authorization = `Bearer ${tokens.access_token}`;
-      response = await fetch(url, { ...options, headers });
+
+      return response;
+    } catch (error) {
+      console.error("Fetch error:", error);
+      throw error;
     }
-    
-    // If still unauthorized after refresh attempt, redirect to login
-    if (response.status === 401) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      window.location.href = '/login';
-      throw new Error('Authentication failed. Please log in again.');
-    }
-    
-    return response;
   };
 
   // Filter and sort characters based on search and sort criteria
   useEffect(() => {
-    let filtered = characters.filter(character => 
+    let filtered = characters.filter(character =>
       character.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       character.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -149,43 +117,43 @@ export default function CharactersPage() {
     const fetchCharacters = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
         // Use JWT token authentication
-        const response = await fetchWithRefresh(
+        const response = await fetchWithAuth(
           `${getApiUrl()}/api/characters/mgmt`
         );
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch characters: ${response.status}`);
         }
-        
+
         const data = await response.json();
-    
-    // Debug: Log the raw response data
-    console.log('API Response:', data);
-    
-    // Handle different response formats
-    if (data.success === false) {
-      console.error('API response indicates failure:', data);
-      throw new Error(data.message || 'Failed to fetch characters');
-    }
-    
-    // Check if we have character data in the expected format
-    const charactersData = data.data || data.characters || (Array.isArray(data) ? data : []);
-    console.log('Characters data to process:', charactersData);
-    
+
+        // Debug: Log the raw response data
+        console.log('API Response:', data);
+
+        // Handle different response formats
+        if (data.success === false) {
+          console.error('API response indicates failure:', data);
+          throw new Error(data.message || 'Failed to fetch characters');
+        }
+
+        // Check if we have character data in the expected format
+        const charactersData = data.data || data.characters || (Array.isArray(data) ? data : []);
+        console.log('Characters data to process:', charactersData);
+
         // Transform the data to match our Character interface
         const formattedCharacters = charactersData.map((char: any) => ({
           id: char._id || char.id,
           name: char.name,
           description: char.description,
-          avatarUrl: char.profile_image || '/placeholder.svg?width=40&height=40',
+          avatarUrl: char.profile_image || '',
           // Format the date to a relative time string
           lastUsed: char.last_used ? new Date(char.last_used).toLocaleDateString() : 'Never used',
           created_at: char.created_at
         }));
-        
+
         setCharacters(formattedCharacters);
       } catch (err) {
         console.error('Error fetching characters:', err);
@@ -199,7 +167,7 @@ export default function CharactersPage() {
         setIsLoading(false);
       }
     };
-    
+
     fetchCharacters();
   }, []);
 
@@ -220,8 +188,8 @@ export default function CharactersPage() {
                 )}
               </div>
             </div>
-            <Button 
-              asChild 
+            <Button
+              asChild
               disabled={subscriptionMeta?.needs_upgrade && characters.length >= (subscriptionMeta?.character_limit || 3)}
             >
               <Link href="/dashboard/characters/create">
@@ -311,8 +279,8 @@ export default function CharactersPage() {
               <div className="flex items-center gap-2">
                 <Crown className="h-5 w-5 text-amber-600" />
                 <CardTitle className="text-amber-900">
-                  {subscriptionMeta.subscription_status === 'expired' 
-                    ? 'Premium Subscription Expired' 
+                  {subscriptionMeta.subscription_status === 'expired'
+                    ? 'Premium Subscription Expired'
                     : 'Unlock Unlimited Characters'
                   }
                 </CardTitle>
@@ -366,8 +334,8 @@ export default function CharactersPage() {
             <p className="text-muted-foreground mb-4">
               No characters match your search criteria. Try adjusting your search terms.
             </p>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setSearchQuery('');
                 setSortBy('recent');

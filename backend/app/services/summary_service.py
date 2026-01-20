@@ -11,7 +11,7 @@ import os
 from dataclasses import dataclass
 from ..models.scene import Scene
 from ..models.character import Character
-from ..services.venice_client import VeniceClient
+from ..services.openrouter_client import OpenRouterClient
 
 
 @dataclass
@@ -441,13 +441,13 @@ class SummaryService:
             Generated summary text
         """
         # Get API key from environment variable
-        api_key = os.getenv('VENICE_API_KEY')
+        api_key = os.getenv('OPENROUTER_API_KEY')
         if not api_key:
             # Fallback for testing/development
-            return f"This is a placeholder summary for scene '{context['scene_name']}'. AI integration requires a valid VENICE_API_KEY."
+            return f"This is a placeholder summary for scene '{context['scene_name']}'. AI integration requires a valid OPENROUTER_API_KEY."
         
-        # Initialize Venice client
-        venice_client = VeniceClient(api_key=api_key)
+        # Initialize OpenRouter client
+        openrouter_client = OpenRouterClient(api_key=api_key)
         
         # Create system message with summary generation instructions
         system_message = SummaryService._create_system_prompt(options)
@@ -461,7 +461,7 @@ class SummaryService:
             {"role": "user", "content": user_message}
         ]
         
-        # Call the Venice API
+        # Call the OpenRouter API
         try:
             # Configure parameters based on summary type
             temperature = 0.7  # Default temperature
@@ -476,12 +476,12 @@ class SummaryService:
             # Estimate tokens based on word count (approximation)
             max_tokens = options.max_length * 2
             
-            # Generate the summary using Venice.ai
-            summary = venice_client.generate_completion(
+            # Generate the summary using OpenRouter.ai
+            summary = openrouter_client.generate_completion(
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                model="qwen3-235b"  # Venice Large model for high-quality summaries
+                model="qwen3-235b"  # OpenRouter Large model for high-quality summaries
             )
             
             return summary.strip()

@@ -1,22 +1,22 @@
 """
-Service for extracting structured data from unstructured text using Venice LLM.
+Service for extracting structured data from unstructured text using OpenRouter LLM.
 """
 from typing import Dict, Any, Optional, List
 
-from app.services.venice_client import VeniceClient
+from app.services.openrouter_client import OpenRouterClient
 
 
 class DataExtractionService:
     """Service for extracting structured data from unstructured text."""
 
-    def __init__(self, venice_client: VeniceClient):
+    def __init__(self, openrouter_client: OpenRouterClient):
         """
         Initialize the data extraction service.
         
         Args:
-            venice_client: VeniceClient instance for making LLM API calls
+            openrouter_client: OpenRouterClient instance for making LLM API calls
         """
-        self.venice_client = venice_client
+        self.openrouter_client = openrouter_client
 
     def extract_scene_context(self, text: str, character_names: Optional[List[str]] = None, include_poses: bool = False) -> Dict[str, Any]:
         """
@@ -56,9 +56,9 @@ class DataExtractionService:
         else:
             schema_intro = ""
             
-        # Extract structured data using the Venice LLM
+        # Extract structured data using the OpenRouter LLM
         try:
-            return self.venice_client.extract_structured_data(
+            return self.openrouter_client.extract_structured_data(
                 unstructured_text=text,
                 schema=schema,
                 temperature=0.3  # Lower temperature for more deterministic outputs
@@ -104,9 +104,9 @@ class DataExtractionService:
             "speaking_style": "string - description of how the character typically speaks"
         }
         
-        # Extract structured data using the Venice LLM
+        # Extract structured data using the OpenRouter LLM
         try:
-            return self.venice_client.extract_structured_data(
+            return self.openrouter_client.extract_structured_data(
                 unstructured_text=text,
                 schema=schema,
                 temperature=0.3
@@ -147,9 +147,9 @@ class DataExtractionService:
             "emotional_arcs": "list of strings - emotional journeys or developments"
         }
         
-        # Extract structured data using the Venice LLM
+        # Extract structured data using the OpenRouter LLM
         try:
-            return self.venice_client.extract_structured_data(
+            return self.openrouter_client.extract_structured_data(
                 unstructured_text=text,
                 schema=schema,
                 temperature=0.4,

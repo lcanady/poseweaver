@@ -228,7 +228,7 @@ export const DescriptionInput = ({
         {/* Generate Button */}
         <Button
           onClick={onGenerate}
-          disabled={!prompt.trim() || isGenerating || disabled}
+          disabled={isGenerating || disabled}
           className="w-full"
           size="lg"
         >

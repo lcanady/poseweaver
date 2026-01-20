@@ -33,12 +33,13 @@ interface DescriptionMetadata {
   processing_time_ms: number
   model_used: string
   timestamp: string
+  prompt_used?: string
 }
 
 export default function DescriptionWriterPage() {
-  const { user } = useAuth()
-  const currentUserId = user?._id || null
-  
+  const { user, getToken } = useAuth()
+  const currentUserId = user?.uid || null
+
   // WebSocket connection
   const {
     isConnected,
@@ -52,16 +53,16 @@ export default function DescriptionWriterPage() {
     clearResult,
     clearError
   } = useWebSocket()
-  
+
   // Image state
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  
+
   // Input state
   const [prompt, setPrompt] = useState('')
   const [style, setStyle] = useState('balanced')
   const [focusArea, setFocusArea] = useState('overall')
-  
+
   // Advanced settings
   const [detailLevel, setDetailLevel] = useState(70)
   const [creativity, setCreativity] = useState(50)
@@ -69,20 +70,20 @@ export default function DescriptionWriterPage() {
   const [includeEmotions, setIncludeEmotions] = useState(false)
   const [includeTechnicalDetails, setIncludeTechnicalDetails] = useState(false)
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
-  
+
   // Generation state (using WebSocket status)
   const isGenerating = wsIsGenerating
   const [currentDescription, setCurrentDescription] = useState('')
   const [descriptionVersions, setDescriptionVersions] = useState<DescriptionVersion[]>([])
   const [currentVersionIndex, setCurrentVersionIndex] = useState(-1)
-  
+
   // Refinement state
   const [refinementSuggestion, setRefinementSuggestion] = useState('')
   const [isRefining, setIsRefining] = useState(false)
-  
+
   // Copy format state
   const [copyFormat, setCopyFormat] = useState('standard')
-  
+
   // Usage state - real usage info from backend
   const [usageInfo, setUsageInfo] = useState<any>({
     available_generations: 15,
@@ -91,19 +92,19 @@ export default function DescriptionWriterPage() {
     extra_generations: 0,
     subscription_status: 'free'
   })
-  
+
   // Check if user has access to description writer (paid users only)
   const hasAccess = usageInfo?.subscription_status && ['basic', 'pro', 'premium', 'admin'].includes(usageInfo.subscription_status)
-  
+
   // Fetch current usage info
   const fetchUsageInfo = useCallback(async () => {
     if (!currentUserId) return
-    
+
     try {
       const response = await fetch(
         `${getApiUrl()}/api/purchase/usage-status?user_id=${currentUserId}`
       )
-      
+
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
@@ -114,12 +115,12 @@ export default function DescriptionWriterPage() {
       console.error('Error fetching usage info:', error)
     }
   }, [currentUserId])
-  
+
   // Fetch usage info on mount and when user changes
   useEffect(() => {
     fetchUsageInfo()
   }, [fetchUsageInfo])
-  
+
   // Handle WebSocket results
   useEffect(() => {
     if (wsResult) {
@@ -129,9 +130,10 @@ export default function DescriptionWriterPage() {
         word_count: wsResult.word_count,
         processing_time_ms: wsResult.processing_time_ms,
         model_used: wsResult.model_used,
-        timestamp: wsResult.timestamp
+        timestamp: wsResult.timestamp,
+        prompt_used: wsResult.prompt_used
       }
-      
+
       const newVersion: DescriptionVersion = {
         id: Date.now().toString(),
         description: wsResult.description,
@@ -140,23 +142,23 @@ export default function DescriptionWriterPage() {
         focusArea,
         metadata
       }
-      
+
       setCurrentDescription(wsResult.description)
       setDescriptionVersions(prev => [newVersion, ...prev])
       setCurrentVersionIndex(0)
-      
+
       // Update usage info (decrement available generations)
       setUsageInfo((prev: any) => ({
         ...prev,
         available_generations: Math.max(0, prev.available_generations - 1),
         current_usage: prev.current_usage + 1
       }))
-      
+
       toast.success('Description generated successfully!')
       clearResult()
     }
   }, [wsResult, focusArea, clearResult])
-  
+
   // Handle WebSocket errors
   useEffect(() => {
     if (wsError) {
@@ -164,14 +166,14 @@ export default function DescriptionWriterPage() {
       clearError()
     }
   }, [wsError, clearError])
-  
+
   // Handle connection errors
   useEffect(() => {
     if (connectionError) {
       toast.error(`Connection error: ${connectionError}`)
     }
   }, [connectionError])
-  
+
   // Handle image selection
   const handleImageSelect = useCallback((file: File) => {
     setSelectedImage(file)
@@ -181,29 +183,29 @@ export default function DescriptionWriterPage() {
     }
     reader.readAsDataURL(file)
   }, [])
-  
+
   const handleImageRemove = useCallback(() => {
     setSelectedImage(null)
     setImagePreview(null)
   }, [])
-  
+
   // Generate description using WebSocket
   const generateDescription = useCallback(async () => {
-    if (!selectedImage || !prompt.trim()) {
-      toast.error('Please select an image and enter instructions')
+    if (!selectedImage) {
+      toast.error('Please select an image')
       return
     }
-    
+
     if (!isConnected) {
       toast.error('WebSocket not connected. Please wait and try again.')
       return
     }
-    
+
     if (usageInfo.subscription_status === 'free' && usageInfo.available_generations <= 0) {
       toast.error('Usage limit reached. Please upgrade to continue.')
       return
     }
-    
+
     try {
       // Convert image to base64
       const imageBase64 = await new Promise<string>((resolve, reject) => {
@@ -217,7 +219,7 @@ export default function DescriptionWriterPage() {
         reader.onerror = reject
         reader.readAsDataURL(selectedImage)
       })
-      
+
       // Map focus area to backend expected format
       let focusAreas: string[] = []
       switch (focusArea) {
@@ -236,14 +238,14 @@ export default function DescriptionWriterPage() {
         default:
           focusAreas = ['overall', 'general']
       }
-      
+
       // Get image format from file type
       const imageFormat = selectedImage.type.split('/')[1] || 'jpeg'
-      
+
       // Clear previous results
       clearResult()
       clearError()
-      
+
       // Send WebSocket request
       await wsGenerateDescription({
         image_data: imageBase64,
@@ -252,28 +254,31 @@ export default function DescriptionWriterPage() {
         description_style: style as 'minimal' | 'balanced' | 'elaborate',
         focus_areas: focusAreas
       })
-      
+
     } catch (error) {
       console.error('Error preparing description request:', error)
       toast.error('Failed to prepare request. Please try again.')
     }
   }, [selectedImage, prompt, style, focusArea, usageInfo, isConnected, wsGenerateDescription, clearResult, clearError])
-  
+
   // Handle refinement
   const handleRefineDescription = useCallback(async () => {
     if (!currentDescription || !refinementSuggestion.trim()) {
       toast.error('Please enter refinement instructions')
       return
     }
-    
+
     setIsRefining(true)
-    
+
     try {
       const formData = new FormData()
       if (selectedImage) formData.append('image', selectedImage)
-      formData.append('prompt', `${currentDescription}\n\nRefinement request: ${refinementSuggestion}`)
+      const currentMetadata = descriptionVersions[currentVersionIndex]?.metadata
+      const originalPrompt = currentMetadata?.prompt_used ? `Original Request: ${currentMetadata.prompt_used}\n\n` : ''
+
+      formData.append('prompt', `${originalPrompt}Current Description: ${currentDescription}\n\nRefinement request: ${refinementSuggestion}`)
       formData.append('style', style)
-      
+
       // Map focus area to backend expected format
       let focusAreas = ''
       switch (focusArea) {
@@ -293,31 +298,31 @@ export default function DescriptionWriterPage() {
           focusAreas = 'overall,general'
       }
       formData.append('focus_areas', focusAreas)
-      
+
       const apiUrl = getApiUrl()
-      const accessToken = localStorage.getItem('access_token')
-      
+      const accessToken = await getToken()
+
       const headers: Record<string, string> = {}
       if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`
       }
-      
+
       const response = await fetch(`${apiUrl}/api/description/generate`, {
         method: 'POST',
         body: formData,
         headers,
       })
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      
+
       const data = await response.json()
       const refinedDescription = data.description
-      
+
       // Calculate metadata
       const wordCount = refinedDescription.split(' ').length
-      
+
       const metadata: DescriptionMetadata = {
         style,
         word_count: wordCount,
@@ -325,7 +330,7 @@ export default function DescriptionWriterPage() {
         model_used: 'qwen-2.5-vl',
         timestamp: new Date().toISOString()
       }
-      
+
       // Create refined version
       const refinedVersion: DescriptionVersion = {
         id: Date.now().toString(),
@@ -335,17 +340,17 @@ export default function DescriptionWriterPage() {
         focusArea,
         metadata
       }
-      
+
       setCurrentDescription(refinedDescription)
       setDescriptionVersions(prev => [refinedVersion, ...prev])
       setCurrentVersionIndex(0)
       setRefinementSuggestion('')
-      
+
       // Update usage info from response if available
       if (data.usage_info) {
         setUsageInfo(data.usage_info)
       }
-      
+
       toast.success('Description refined successfully!')
     } catch (error) {
       console.error('Error refining description:', error)
@@ -354,7 +359,7 @@ export default function DescriptionWriterPage() {
       setIsRefining(false)
     }
   }, [currentDescription, refinementSuggestion, selectedImage, style, focusArea, detailLevel, creativity, formality, currentUserId])
-  
+
   // Handle version selection
   const handleVersionSelect = useCallback((index: number) => {
     const version = descriptionVersions[index]
@@ -363,13 +368,13 @@ export default function DescriptionWriterPage() {
       setCurrentVersionIndex(index)
     }
   }, [descriptionVersions])
-  
+
   // Handle copy
   const handleCopy = useCallback(async () => {
     if (!currentDescription) return
-    
+
     let textToCopy = currentDescription
-    
+
     switch (copyFormat) {
       case 'markdown':
         textToCopy = `# Image Description\n\n${currentDescription}`
@@ -384,7 +389,7 @@ export default function DescriptionWriterPage() {
         textToCopy = currentDescription.replace(/\n/g, '%r')
         break
     }
-    
+
     try {
       await navigator.clipboard.writeText(textToCopy)
       toast.success('Copied to clipboard!')
@@ -392,11 +397,11 @@ export default function DescriptionWriterPage() {
       toast.error('Failed to copy to clipboard')
     }
   }, [currentDescription, copyFormat])
-  
+
   // Handle download
   const handleDownload = useCallback(() => {
     if (!currentDescription) return
-    
+
     const blob = new Blob([currentDescription], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -406,18 +411,18 @@ export default function DescriptionWriterPage() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    
+
     toast.success('Description downloaded!')
   }, [currentDescription])
-  
+
   // Handle upgrade click
   const handleUpgradeClick = useCallback(() => {
     // Navigate to upgrade page or show upgrade modal
     toast.info('Upgrade functionality would be implemented here')
   }, [])
-  
+
   const currentMetadata = descriptionVersions[currentVersionIndex]?.metadata
-  
+
   // If user doesn't have access, show paywall
   if (!hasAccess) {
     return (
@@ -429,7 +434,7 @@ export default function DescriptionWriterPage() {
             Generate detailed descriptions of your images using AI
           </p>
         </div>
-        
+
         {/* Paywall */}
         <InlinePaywall
           subscriptionStatus={usageInfo?.subscription_status || 'free'}
@@ -450,12 +455,12 @@ export default function DescriptionWriterPage() {
           </p>
         </div>
         <div className="lg:col-span-1">
-          <UsageDisplay 
+          <UsageDisplay
             usageInfo={usageInfo}
           />
         </div>
       </div>
-      
+
       {/* Main Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Main Content */}
@@ -468,7 +473,7 @@ export default function DescriptionWriterPage() {
             imagePreview={imagePreview}
             disabled={isGenerating || isRefining}
           />
-          
+
           {/* WebSocket Connection Status */}
           <Card>
             <CardContent className="p-4">
@@ -485,7 +490,7 @@ export default function DescriptionWriterPage() {
                     {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : 'Disconnected'}
                   </span>
                 </div>
-                
+
                 {/* Progress Display */}
                 {wsProgress && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -494,7 +499,7 @@ export default function DescriptionWriterPage() {
                   </div>
                 )}
               </div>
-              
+
               {connectionError && (
                 <div className="mt-2 text-sm text-red-600">
                   {connectionError}
@@ -502,7 +507,7 @@ export default function DescriptionWriterPage() {
               )}
             </CardContent>
           </Card>
-          
+
           {/* Description Input */}
           <DescriptionInput
             prompt={prompt}
@@ -529,7 +534,7 @@ export default function DescriptionWriterPage() {
             hasAccess={usageInfo.subscription_status !== 'free'}
             onUpgradeClick={handleUpgradeClick}
           />
-          
+
           {/* Output */}
           {currentDescription && (
             <DescriptionOutput
@@ -542,7 +547,7 @@ export default function DescriptionWriterPage() {
             />
           )}
         </div>
-        
+
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6 sticky top-0">
           {/* Version History */}
@@ -553,7 +558,7 @@ export default function DescriptionWriterPage() {
               onVersionSelect={handleVersionSelect}
             />
           )}
-          
+
           {/* Refinement */}
           {currentDescription && (
             <DescriptionRefinement
@@ -565,7 +570,7 @@ export default function DescriptionWriterPage() {
               disabled={isGenerating || isRefining}
             />
           )}
-          
+
           {/* Tips */}
           <Card>
             <CardHeader>
@@ -580,7 +585,7 @@ export default function DescriptionWriterPage() {
           </Card>
         </div>
       </div>
-      
+
       {/* Paywall */}
       {usageInfo.subscription_status === 'free' && usageInfo.available_generations <= 0 && (
         <InlinePaywall

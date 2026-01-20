@@ -4,7 +4,7 @@ Tests for character brain dump processing service.
 import pytest
 from unittest.mock import Mock
 from app.services.character_service import CharacterService, CharacterProfile
-from app.services.venice_client import VeniceAPIError
+from app.services.openrouter_client import OpenRouterAPIError
 
 
 class TestCharacterProfile:
@@ -58,23 +58,23 @@ class TestCharacterService:
     """Test the CharacterService class."""
     
     @pytest.fixture
-    def mock_venice_client(self):
-        """Create a mock Venice client."""
+    def mock_openrouter_client(self):
+        """Create a mock OpenRouter client."""
         mock_client = Mock()
         return mock_client
     
     @pytest.fixture
-    def character_service(self, mock_venice_client):
+    def character_service(self, mock_openrouter_client):
         """Create a CharacterService instance with mocked dependencies."""
-        return CharacterService(venice_client=mock_venice_client)
+        return CharacterService(openrouter_client=mock_openrouter_client)
     
-    def test_character_service_initialization(self, mock_venice_client):
+    def test_character_service_initialization(self, mock_openrouter_client):
         """Test CharacterService can be initialized."""
-        service = CharacterService(venice_client=mock_venice_client)
-        assert service.venice_client == mock_venice_client
+        service = CharacterService(openrouter_client=mock_openrouter_client)
+        assert service.openrouter_client == mock_openrouter_client
     
     def test_process_brain_dump_success(self, character_service, 
-                                       mock_venice_client):
+                                       mock_openrouter_client):
         """Test successful brain dump processing."""
         # Mock AI response
         mock_response = {
@@ -87,7 +87,7 @@ class TestCharacterService:
             "voice_notes": "Uses colorful street slang"
         }
         
-        mock_venice_client.generate_completion.return_value = mock_response
+        mock_openrouter_client.generate_completion.return_value = mock_response
         
         brain_dump = "Lyra is a half-elf bard from Waterdeep"
         
@@ -103,10 +103,10 @@ class TestCharacterService:
         assert "street slang" in result.voice_notes
         
         # Verify the AI was called
-        mock_venice_client.generate_completion.assert_called_once()
+        mock_openrouter_client.generate_completion.assert_called_once()
     
     def test_process_brain_dump_with_existing_character(self, character_service,
-                                                       mock_venice_client):
+                                                       mock_openrouter_client):
         """Test brain dump processing with existing character."""
         existing_profile = CharacterProfile(
             name="Lyra Nightwhisper",
@@ -128,7 +128,7 @@ class TestCharacterService:
             "voice_notes": "Uses colorful street slang"
         }
         
-        mock_venice_client.generate_completion.return_value = mock_response
+        mock_openrouter_client.generate_completion.return_value = mock_response
         
         brain_dump = "Lyra learned from Old Tom and wants to help kids."
         
@@ -142,22 +142,22 @@ class TestCharacterService:
         assert result.relationships["Old Tom"] == "mentor figure"
     
     def test_process_brain_dump_api_error(self, character_service, 
-                                         mock_venice_client):
-        """Test handling of Venice API errors."""
-        mock_venice_client.generate_completion.side_effect = VeniceAPIError(
+                                         mock_openrouter_client):
+        """Test handling of OpenRouter API errors."""
+        mock_openrouter_client.generate_completion.side_effect = OpenRouterAPIError(
             "API Error", 500
         )
         
         brain_dump = "Test character description"
         
-        with pytest.raises(VeniceAPIError):
+        with pytest.raises(OpenRouterAPIError):
             character_service.process_brain_dump(brain_dump)
     
     def test_process_brain_dump_invalid_response(self, character_service,
-                                                mock_venice_client):
+                                                mock_openrouter_client):
         """Test handling of invalid AI response format."""
         # Mock invalid response (missing required fields)
-        mock_venice_client.generate_completion.return_value = {
+        mock_openrouter_client.generate_completion.return_value = {
             "invalid": "response"
         }
         
@@ -207,7 +207,7 @@ class TestCharacterService:
             character_service._validate_character_data(invalid_data)
     
     def test_extract_character_info_success(self, character_service,
-                                           mock_venice_client):
+                                           mock_openrouter_client):
         """Test successful character information extraction."""
         mock_response = {
             "name": "Test Character",
@@ -219,13 +219,13 @@ class TestCharacterService:
             "voice_notes": "Test voice"
         }
         
-        mock_venice_client.generate_completion.return_value = mock_response
+        mock_openrouter_client.generate_completion.return_value = mock_response
         
         brain_dump = "Test character description"
         result = character_service._extract_character_info(brain_dump)
         
         assert result == mock_response
-        mock_venice_client.generate_completion.assert_called_once()
+        mock_openrouter_client.generate_completion.assert_called_once()
     
     def test_merge_character_data(self, character_service):
         """Test merging existing character data with new information."""

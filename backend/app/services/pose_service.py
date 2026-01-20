@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, asdict
 import logging
 from datetime import datetime
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 from app.services.model_config import ModelConfig
 from app.services.character_service import CharacterProfile
 from app.services.context_service import PoseContext
@@ -49,15 +49,15 @@ class PoseEnhancement:
 class PoseService:
     """Service for generating and enhancing character poses"""
     
-    def __init__(self, venice_client: VeniceClient):
-        """Initialize the pose service with a Venice client."""
-        self.venice_client = venice_client
-        self.data_extraction_service = DataExtractionService(venice_client)
+    def __init__(self, openrouter_client: OpenRouterClient):
+        """Initialize the pose service with a OpenRouter client."""
+        self.openrouter_client = openrouter_client
+        self.data_extraction_service = DataExtractionService(openrouter_client)
         self.mush_parser = MushParserService(self.data_extraction_service)
         # Initialize continuity services
         self.scene_management_service = SceneManagementService()
-        self.character_state_service = CharacterStateService(venice_client)
-        self.environment_state_service = EnvironmentStateService(venice_client)
+        self.character_state_service = CharacterStateService(openrouter_client)
+        self.environment_state_service = EnvironmentStateService(openrouter_client)
     
     def enhance_pose(
         self,
@@ -79,7 +79,7 @@ class PoseService:
             Dict[str, Any]: Enhanced pose data with validation warnings
             
         Raises:
-            VeniceAPIError: If AI processing fails
+            OpenRouterAPIError: If AI processing fails
             ValueError: If the AI response is invalid
         """
         try:
@@ -91,8 +91,8 @@ class PoseService:
             # Return the enhancement data directly
             return enhancement_data
             
-        except VeniceAPIError:
-            # Re-raise Venice API errors
+        except OpenRouterAPIError:
+            # Re-raise OpenRouter API errors
             raise
         except Exception as e:
             raise ValueError(f"Invalid enhancement data: {str(e)}")
@@ -116,7 +116,7 @@ class PoseService:
             PoseEnhancement: Enhanced pose with metadata
             
         Raises:
-            VeniceAPIError: If AI processing fails
+            OpenRouterAPIError: If AI processing fails
             ValueError: If the AI response is invalid
         """
         try:
@@ -131,8 +131,8 @@ class PoseService:
             # Create and return pose enhancement
             return PoseEnhancement(**enhancement_data)
             
-        except VeniceAPIError:
-            # Re-raise Venice API errors
+        except OpenRouterAPIError:
+            # Re-raise OpenRouter API errors
             raise
         except Exception as e:
             raise ValueError(f"Invalid enhancement data: {str(e)}")
@@ -427,8 +427,8 @@ class PoseService:
         - Start your response immediately with the enhanced pose
         """
         
-        # Generate completion using Venice.ai
-        response = self.venice_client.generate_completion(
+        # Generate completion using OpenRouter.ai
+        response = self.openrouter_client.generate_completion(
             model="qwen3-235b",
             messages=[
                 {"role": "system", "content": system_message},
@@ -646,8 +646,8 @@ class PoseService:
         - Start your response immediately with the enhanced pose
         """
         
-        # Generate completion using Venice.ai
-        response = self.venice_client.generate_completion(
+        # Generate completion using OpenRouter.ai
+        response = self.openrouter_client.generate_completion(
             model="qwen3-235b",
             messages=[
                 {"role": "system", "content": system_message},
@@ -796,7 +796,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
 """
             
             # Generate the refined pose
-            refined_pose = self.venice_client.generate_completion(
+            refined_pose = self.openrouter_client.generate_completion(
                 model="qwen3-235b",
                 messages=[
                     {"role": "system", "content": system_message},
@@ -807,7 +807,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
             )
             
             if not refined_pose or not refined_pose.strip():
-                raise VeniceAPIError("No response from AI service")
+                raise OpenRouterAPIError("No response from AI service")
             
             # Apply validation and formatting
             refined_pose, validation_warnings = self._validate_character_control_with_retry(
@@ -827,7 +827,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
             
         except Exception as e:
             logging.error(f"Error refining pose: {str(e)}")
-            raise VeniceAPIError(f"Failed to refine pose: {str(e)}")
+            raise OpenRouterAPIError(f"Failed to refine pose: {str(e)}")
 
     def _get_style_guidance(self, style: str) -> str:
         """Get style-specific guidance for enhancement.
@@ -1045,7 +1045,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
                 """
                 
                 try:
-                    corrected_response = self.venice_client.generate_completion(
+                    corrected_response = self.openrouter_client.generate_completion(
                         model="qwen3-235b",
                         messages=[
                             {"role": "user", "content": fix_prompt}
@@ -1146,7 +1146,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
             """
             
             try:
-                response = self.venice_client.generate_completion(
+                response = self.openrouter_client.generate_completion(
                     model="qwen3-235b",
                     messages=[
                         {"role": "system", "content": system_message},
@@ -1337,7 +1337,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
                     enhancement_style=styles[i]
                 )
                 variations.append(enhancement)
-            except (VeniceAPIError, ValueError) as e:
+            except (OpenRouterAPIError, ValueError) as e:
                 # Log error but continue with other variations
                 error_enhancement = PoseEnhancement(
                     original_pose=original_pose,
@@ -1744,9 +1744,9 @@ Please refine the pose according to the user's suggestion while maintaining qual
         {scene_context}
         """
         
-        # Generate completion using Venice.ai
+        # Generate completion using OpenRouter.ai
         try:
-            response = self.venice_client.generate_completion(
+            response = self.openrouter_client.generate_completion(
                 model="qwen3-235b",
                 messages=[
                     {"role": "system", "content": system_message},

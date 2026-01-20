@@ -8,7 +8,7 @@ from app.services.character_state_service import (
     CharacterStateService, StateChange, Interaction
 )
 from app.models.scene_memory import CharacterState, Pose, SceneMemory, PoseType
-from app.services.venice_client import VeniceAPIError
+from app.services.openrouter_client import OpenRouterAPIError
 
 
 class TestStateChange:
@@ -82,20 +82,20 @@ class TestCharacterStateService:
     """Test the CharacterStateService class."""
     
     @pytest.fixture
-    def mock_venice_client(self):
-        """Create a mock Venice client."""
+    def mock_openrouter_client(self):
+        """Create a mock OpenRouter client."""
         mock_client = Mock()
         return mock_client
     
     @pytest.fixture
-    def character_state_service(self, mock_venice_client):
+    def character_state_service(self, mock_openrouter_client):
         """Create a CharacterStateService instance with mocked dependencies."""
-        return CharacterStateService(venice_client=mock_venice_client)
+        return CharacterStateService(openrouter_client=mock_openrouter_client)
     
     @pytest.fixture
     def character_state_service_no_ai(self):
         """Create a CharacterStateService instance without AI client."""
-        return CharacterStateService(venice_client=None)
+        return CharacterStateService(openrouter_client=None)
     
     @pytest.fixture
     def mock_scene(self):
@@ -148,15 +148,15 @@ class TestCharacterStateService:
         pose.timestamp = datetime.utcnow()
         return pose
     
-    def test_character_state_service_initialization(self, mock_venice_client):
+    def test_character_state_service_initialization(self, mock_openrouter_client):
         """Test CharacterStateService can be initialized."""
-        service = CharacterStateService(venice_client=mock_venice_client)
-        assert service.venice_client == mock_venice_client
+        service = CharacterStateService(openrouter_client=mock_openrouter_client)
+        assert service.openrouter_client == mock_openrouter_client
     
     def test_character_state_service_initialization_no_ai(self):
         """Test CharacterStateService can be initialized without AI client."""
-        service = CharacterStateService(venice_client=None)
-        assert service.venice_client is None
+        service = CharacterStateService(openrouter_client=None)
+        assert service.openrouter_client is None
     
     @patch('app.services.character_state_service.SceneMemory')
     @patch('app.services.character_state_service.CharacterState')
@@ -285,7 +285,7 @@ class TestCharacterStateService:
         )
         assert result == mock_character_state
     
-    def test_detect_state_changes_with_ai(self, character_state_service, mock_venice_client,
+    def test_detect_state_changes_with_ai(self, character_state_service, mock_openrouter_client,
                                          mock_pose):
         """Test state change detection using AI."""
         # Mock AI response
@@ -306,12 +306,12 @@ class TestCharacterStateService:
             }
         ]
         
-        mock_venice_client.generate_completion.return_value = mock_ai_response
+        mock_openrouter_client.generate_completion.return_value = mock_ai_response
         
         result = character_state_service.detect_state_changes(mock_pose)
         
         # Verify AI was called
-        mock_venice_client.generate_completion.assert_called_once()
+        mock_openrouter_client.generate_completion.assert_called_once()
         
         # Verify results
         assert len(result) == 2
@@ -325,10 +325,10 @@ class TestCharacterStateService:
         assert result[1].confidence == 0.7
     
     def test_detect_state_changes_ai_failure_fallback(self, character_state_service,
-                                                     mock_venice_client, mock_pose):
+                                                     mock_openrouter_client, mock_pose):
         """Test state change detection falls back to patterns when AI fails."""
         # Mock AI failure
-        mock_venice_client.generate_completion.side_effect = VeniceAPIError("API Error", 500)
+        mock_openrouter_client.generate_completion.side_effect = OpenRouterAPIError("API Error", 500)
         
         result = character_state_service.detect_state_changes(mock_pose)
         

@@ -1,10 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Settings } from "lucide-react";
+import { PlusCircle, Settings } from "lucide-react";
 import { Character } from "@/hooks/useCharacter";
 import { useCharacterSettings } from "@/hooks/useCharacterSettings";
+import { useRouter } from "next/navigation";
 
 interface CharacterSelectionProps {
   characters: Character[];
@@ -19,9 +21,10 @@ export const CharacterSelection = ({
   onCharacterSelect,
   isLoadingCharacters
 }: CharacterSelectionProps) => {
+  const router = useRouter();
   const selectedCharacter = characters.find(char => char.id === selectedCharacterId);
   const { settings: characterSettings } = useCharacterSettings(selectedCharacterId);
-  
+
   // Check if character has custom settings (different from defaults)
   const hasCustomSettings = selectedCharacterId && (
     characterSettings.default_enhancement_style !== 'balanced' ||
@@ -49,7 +52,18 @@ export const CharacterSelection = ({
               {isLoadingCharacters ? (
                 <SelectItem value="loading" disabled>Loading characters...</SelectItem>
               ) : characters.length === 0 ? (
-                <SelectItem value="none" disabled>No characters found</SelectItem>
+                <div className="flex flex-col items-center gap-2 p-4 text-center">
+                  <p className="text-xs text-muted-foreground">No characters found</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-2 text-xs"
+                    onClick={() => router.push('/dashboard/characters/create')}
+                  >
+                    <PlusCircle className="h-3.5 w-3.5" />
+                    Create your first character
+                  </Button>
+                </div>
               ) : (
                 characters.map((character) => (
                   <SelectItem key={character.id} value={character.id}>
@@ -60,15 +74,15 @@ export const CharacterSelection = ({
             </SelectContent>
           </Select>
         </div>
-        
+
         {/* Character Preview */}
         {selectedCharacter && (
           <div className="bg-muted/50 rounded-lg p-4 border border-border/50">
             <div className="flex items-center mb-3">
               <div className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center mr-3 overflow-hidden">
                 {selectedCharacter.profile_image ? (
-                  <img 
-                    src={selectedCharacter.profile_image} 
+                  <img
+                    src={selectedCharacter.profile_image}
                     alt={selectedCharacter.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -100,7 +114,7 @@ export const CharacterSelection = ({
                 <div className="text-sm text-muted-foreground">Selected for pose enhancement</div>
                 {hasCustomSettings && (
                   <div className="text-xs text-muted-foreground mt-1">
-                    Style: {characterSettings.default_enhancement_style} • 
+                    Style: {characterSettings.default_enhancement_style} •
                     Tone: {characterSettings.default_narrative_tone}
                   </div>
                 )}

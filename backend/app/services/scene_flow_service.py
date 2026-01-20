@@ -11,19 +11,19 @@ import uuid
 import re
 
 from app.models.scene_flow import SceneFlow, ScenePose, PoseType, SceneContext
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 
 
 class SceneFlowService:
     """Service for managing scene flows and pose context."""
     
-    def __init__(self, venice_client: VeniceClient):
+    def __init__(self, openrouter_client: OpenRouterClient):
         """Initialize the scene flow service.
         
         Args:
-            venice_client: Venice.ai client for AI processing
+            openrouter_client: OpenRouter.ai client for AI processing
         """
-        self.venice_client = venice_client
+        self.openrouter_client = openrouter_client
         self.active_scenes: Dict[str, SceneFlow] = {}
     
     def create_scene(self, name: str, character_name: str) -> SceneFlow:
@@ -130,13 +130,13 @@ class SceneFlowService:
             # Import and use the MUSH parser service for LLM-based parsing
             from app.services.mush_parser_service import MushParserService
             from app.services.data_extraction_service import DataExtractionService
-            from app.services.venice_client import VeniceClient
+            from app.services.openrouter_client import OpenRouterClient
             from flask import current_app
             
             # Initialize the MUSH parser with LLM support
-            api_key = current_app.config.get('VENICE_API_KEY', 'test_key_12345')
-            venice_client = VeniceClient(api_key)
-            data_extraction_service = DataExtractionService(venice_client)
+            api_key = current_app.config.get('OPENROUTER_API_KEY', 'test_key_12345')
+            openrouter_client = OpenRouterClient(api_key)
+            data_extraction_service = DataExtractionService(openrouter_client)
             mush_parser = MushParserService(data_extraction_service)
             
             # Parse using LLM
@@ -298,7 +298,7 @@ class SceneFlowService:
             
         Raises:
             ValueError: If scene not found
-            VeniceAPIError: If AI enhancement fails
+            OpenRouterAPIError: If AI enhancement fails
         """
         if scene_id not in self.active_scenes:
             raise ValueError(f"Scene {scene_id} not found")
@@ -338,7 +338,7 @@ class SceneFlowService:
         """
         
         try:
-            response = self.venice_client.generate_completion(
+            response = self.openrouter_client.generate_completion(
                 model="qwen3-235b",
                 messages=[
                     {"role": "system", "content": system_message},
@@ -354,7 +354,7 @@ class SceneFlowService:
                 return str(response).strip()
                 
         except Exception as e:
-            raise VeniceAPIError(f"Failed to enhance pose with scene context: {str(e)}")
+            raise OpenRouterAPIError(f"Failed to enhance pose with scene context: {str(e)}")
     
     def _detect_pose_type(self, pose_text: str) -> PoseType:
         """Auto-detect the type of pose based on content.

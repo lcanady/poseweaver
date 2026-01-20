@@ -107,11 +107,11 @@ export default function CharacterDetailPage({ params }: { params: Promise<{ id: 
                 <div className="flex items-start gap-6">
                   <Avatar className="h-24 w-24">
                     <AvatarImage 
-                      src={character.profile_image || "/placeholder.svg?width=96&height=96"} 
+                      src={character.profile_image} 
                       alt={character.name} 
                     />
-                    <AvatarFallback className="text-2xl">
-                      {character.name.charAt(0)}
+                    <AvatarFallback className="bg-muted">
+                      <User className="h-1/2 w-1/2 text-muted-foreground" />
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">

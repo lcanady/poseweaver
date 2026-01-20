@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from "@/components/ui/use-toast";
+import { useAuth } from '@/contexts/auth-context';
 import { getApiUrl } from '@/utils/api-utils';
 
 export interface Character {
@@ -23,21 +24,22 @@ export function useCharacter(characterId: string) {
   const [character, setCharacter] = useState<Character | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getToken } = useAuth();
 
   useEffect(() => {
     const fetchCharacter = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
-        const accessToken = localStorage.getItem('access_token');
-        
+        const accessToken = await getToken();
+
         if (!accessToken) {
           throw new Error('No access token found. Please log in again.');
         }
-        
+
         const response = await fetch(
-          `${getApiUrl()}/api/characters/mgmt/${characterId}`, 
+          `${getApiUrl()}/api/characters/mgmt/${characterId}`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -45,17 +47,17 @@ export function useCharacter(characterId: string) {
             }
           }
         );
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch character');
         }
-        
+
         const data = await response.json();
-        
+
         if (!data.success) {
           throw new Error(data.message || 'Failed to fetch character');
         }
-        
+
         setCharacter(data.data);
       } catch (err) {
         console.error('Error fetching character:', err);
@@ -70,7 +72,7 @@ export function useCharacter(characterId: string) {
         setIsLoading(false);
       }
     };
-    
+
     if (characterId) {
       fetchCharacter();
     }

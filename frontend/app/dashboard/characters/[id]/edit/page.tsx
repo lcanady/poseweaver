@@ -25,10 +25,13 @@ interface CharacterFormData {
   brainDump?: string;
 }
 
+import { useAuth } from '@/contexts/auth-context';
+
 export default function EditCharacterPage({ params }: { params: Promise<{ id: string }> }) {
   // Unwrap params using React.use to fix Next.js warnings
   const unwrappedParams = React.use(params);
   const router = useRouter();
+  const { getToken } = useAuth();
   const [formData, setFormData] = useState<CharacterFormData>({
     name: '',
     description: '',
@@ -48,35 +51,34 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
     const fetchCharacter = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
-        // Get access token from localStorage
-        const accessToken = localStorage.getItem('access_token');
-        
-        if (!accessToken) {
+        const token = await getToken();
+
+        if (!token) {
           throw new Error('No access token found. Please log in again.');
         }
-        
+
         const response = await fetch(
-          `${getApiUrl()}/api/characters/mgmt/${unwrappedParams.id}`, 
+          `${getApiUrl()}/api/characters/mgmt/${unwrappedParams.id}`,
           {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`
+              'Authorization': `Bearer ${token}`
             }
           }
         );
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch character');
         }
-        
+
         const data = await response.json();
-        
+
         if (!data.success) {
           throw new Error(data.message || 'Failed to fetch character');
         }
-        
+
         const character = data.data;
         const metadata = character.metadata || {};
         setFormData({
@@ -102,7 +104,7 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
         setIsLoading(false);
       }
     };
-    
+
     fetchCharacter();
   }, [unwrappedParams.id, router]);
 
@@ -113,7 +115,7 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
       [name]: value
     }));
   };
-  
+
   const handleListItemChange = (type: 'personality' | 'skills' | 'goals', index: number, value: string) => {
     setFormData(prev => {
       const newItems = [...(prev[type] || [''])];
@@ -124,14 +126,14 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
       };
     });
   };
-  
+
   const addListItem = (type: 'personality' | 'skills' | 'goals') => {
     setFormData(prev => ({
       ...prev,
       [type]: [...(prev[type] || []), '']
     }));
   };
-  
+
   const removeListItem = (type: 'personality' | 'skills' | 'goals', index: number) => {
     const items = formData[type] || [];
     if (items.length <= 1) return;
@@ -143,7 +145,7 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       toast({
         title: "Error",
@@ -154,7 +156,7 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
     }
 
     setIsSaving(true);
-    
+
     try {
       // Prepare the update data
       const updateData = {
@@ -173,19 +175,19 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
       // If brain dump is provided, process it first
       if (formData.brainDump && formData.brainDump.trim()) {
         try {
-          const accessToken = localStorage.getItem('access_token');
-          
-          if (!accessToken) {
+          const token = await getToken();
+
+          if (!token) {
             throw new Error('No access token found. Please log in again.');
           }
-          
+
           const processResponse = await fetch(
-            `${getApiUrl()}/api/characters/process`, 
+            `${getApiUrl()}/api/characters/process`,
             {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
+                'Authorization': `Bearer ${token}`
               },
               body: JSON.stringify({
                 character_id: unwrappedParams.id,
@@ -193,17 +195,17 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
               })
             }
           );
-          
+
           if (!processResponse.ok) {
             throw new Error('Failed to process character brain dump');
           }
-          
+
           const processData = await processResponse.json();
-          
+
           if (!processData.success) {
             throw new Error(processData.message || 'Failed to process character brain dump');
           }
-          
+
           // Add the processed metadata to the update data
           Object.assign(updateData, { metadata: processData.data });
         } catch (err) {
@@ -215,42 +217,42 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
           });
         }
       }
-      
-      // Get access token from localStorage
-      const accessToken = localStorage.getItem('access_token');
-      
-      if (!accessToken) {
+
+      // Get access token
+      const token = await getToken();
+
+      if (!token) {
         throw new Error('No access token found. Please log in again.');
       }
-      
+
       // Update the character
       const updateResponse = await fetch(
-        `${getApiUrl()}/api/characters/mgmt/${unwrappedParams.id}`, 
+        `${getApiUrl()}/api/characters/mgmt/${unwrappedParams.id}`,
         {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify(updateData)
         }
       );
-      
+
       if (!updateResponse.ok) {
         throw new Error('Failed to update character');
       }
-      
+
       const data = await updateResponse.json();
-      
+
       if (!data.success) {
         throw new Error(data.message || 'Failed to update character');
       }
-      
+
       toast({
         title: "Success",
         description: "Character updated successfully"
       });
-      
+
       // Navigate back to character detail page
       router.push(`/dashboard/characters/${unwrappedParams.id}`);
     } catch (err) {
@@ -278,7 +280,7 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
             <h1 className="text-3xl font-bold tracking-tight">Edit Character</h1>
           </div>
         </div>
-        
+
         {isLoading ? (
           <div className="flex justify-center items-center py-12">
             <Loader2 className="h-8 w-8 animate-spin mr-2" />
@@ -296,7 +298,7 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
                   <div className="md:col-span-1 flex flex-col items-center gap-4">
                     <Label>Character Avatar</Label>
                     <AvatarUpload
-                      initialImage={formData.profileImage || "/placeholder.svg?width=128&height=128"}
+                      initialImage={formData.profileImage}
                       name={formData.name}
                       onImageUploaded={(imageUrl) => {
                         setFormData(prev => ({
@@ -305,15 +307,16 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
                         }));
                       }}
                       size="lg"
+                      characterId={unwrappedParams.id}
                     />
                   </div>
                   <div className="md:col-span-2 space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Character Name</Label>
-                      <Input 
-                        id="name" 
-                        name="name" 
-                        placeholder="Enter character name" 
+                      <Input
+                        id="name"
+                        name="name"
+                        placeholder="Enter character name"
                         value={formData.name}
                         onChange={handleChange}
                         required
@@ -321,10 +324,10 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="description">Short Description</Label>
-                      <Textarea 
-                        id="description" 
-                        name="description" 
-                        placeholder="A brief description of your character" 
+                      <Textarea
+                        id="description"
+                        name="description"
+                        placeholder="A brief description of your character"
                         value={formData.description}
                         onChange={handleChange}
                         rows={3}
@@ -332,14 +335,14 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Background */}
                 <div className="mt-6 space-y-2">
                   <Label htmlFor="background">Background</Label>
-                  <Textarea 
-                    id="background" 
-                    name="background" 
-                    placeholder="Character's background story" 
+                  <Textarea
+                    id="background"
+                    name="background"
+                    placeholder="Character's background story"
                     value={formData.background}
                     onChange={handleChange}
                     rows={6}
@@ -356,21 +359,21 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
                         onChange={(e) => handleListItemChange('personality', index, e.target.value)}
                         placeholder="Add a personality trait"
                       />
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
+                      <Button
+                        type="button"
+                        variant="ghost"
                         size="icon"
                         onClick={() => removeListItem('personality', index)}
                         disabled={(formData.personality || []).length <= 1}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                       </Button>
                     </div>
                   ))}
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     className="mt-2"
                     onClick={() => addListItem('personality')}
                   >
@@ -388,21 +391,21 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
                         onChange={(e) => handleListItemChange('skills', index, e.target.value)}
                         placeholder="Add a skill"
                       />
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
+                      <Button
+                        type="button"
+                        variant="ghost"
                         size="icon"
                         onClick={() => removeListItem('skills', index)}
                         disabled={(formData.skills || []).length <= 1}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                       </Button>
                     </div>
                   ))}
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     className="mt-2"
                     onClick={() => addListItem('skills')}
                   >
@@ -420,21 +423,21 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
                         onChange={(e) => handleListItemChange('goals', index, e.target.value)}
                         placeholder="Add a goal"
                       />
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
+                      <Button
+                        type="button"
+                        variant="ghost"
                         size="icon"
                         onClick={() => removeListItem('goals', index)}
                         disabled={(formData.goals || []).length <= 1}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                       </Button>
                     </div>
                   ))}
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     className="mt-2"
                     onClick={() => addListItem('goals')}
                   >
@@ -445,10 +448,10 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
                 {/* Voice Notes */}
                 <div className="mt-6 space-y-2">
                   <Label htmlFor="voiceNotes">Voice Notes</Label>
-                  <Textarea 
-                    id="voiceNotes" 
-                    name="voiceNotes" 
-                    placeholder="How your character speaks, tone, phrases, etc." 
+                  <Textarea
+                    id="voiceNotes"
+                    name="voiceNotes"
+                    placeholder="How your character speaks, tone, phrases, etc."
                     value={formData.voiceNotes}
                     onChange={handleChange}
                     rows={4}
@@ -458,10 +461,10 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
                 {/* Brain Dump (optional) */}
                 <div className="mt-6 space-y-2">
                   <Label htmlFor="brainDump">Generate New Details with AI (Optional)</Label>
-                  <Textarea 
-                    id="brainDump" 
-                    name="brainDump" 
-                    placeholder="Add new details for the AI to process and enhance your character's profile." 
+                  <Textarea
+                    id="brainDump"
+                    name="brainDump"
+                    placeholder="Add new details for the AI to process and enhance your character's profile."
                     value={formData.brainDump}
                     onChange={handleChange}
                     rows={6}
@@ -470,7 +473,7 @@ export default function EditCharacterPage({ params }: { params: Promise<{ id: st
                     This will generate new AI-enhanced details for your character. Leave blank to keep your manually edited details above.
                   </p>
                 </div>
-                
+
                 <div className="mt-6 flex justify-end gap-4">
                   <Button variant="outline" asChild>
                     <Link href={`/dashboard/characters/${unwrappedParams.id}`}>Cancel</Link>

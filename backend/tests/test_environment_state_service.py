@@ -15,26 +15,26 @@ from app.services.environment_state_service import (
 from app.models.scene_memory import (
     EnvironmentState, Pose, ContinuityFlag, PoseType, FlagType, Severity
 )
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 
 
 class TestEnvironmentStateService:
     """Test cases for EnvironmentStateService."""
     
     @pytest.fixture
-    def mock_venice_client(self):
-        """Create a mock Venice client."""
-        return Mock(spec=VeniceClient)
+    def mock_openrouter_client(self):
+        """Create a mock OpenRouter client."""
+        return Mock(spec=OpenRouterClient)
     
     @pytest.fixture
-    def environment_service(self, mock_venice_client):
-        """Create EnvironmentStateService with mock Venice client."""
-        return EnvironmentStateService(venice_client=mock_venice_client)
+    def environment_service(self, mock_openrouter_client):
+        """Create EnvironmentStateService with mock OpenRouter client."""
+        return EnvironmentStateService(openrouter_client=mock_openrouter_client)
     
     @pytest.fixture
     def environment_service_no_ai(self):
         """Create EnvironmentStateService without AI client."""
-        return EnvironmentStateService(venice_client=None)
+        return EnvironmentStateService(openrouter_client=None)
     
     @pytest.fixture
     def sample_pose(self):
@@ -94,7 +94,7 @@ class TestEnvironmentStateService:
             "atmosphere": "cozy"
         })
         
-        environment_service.venice_client.generate_completion.return_value = ai_response
+        environment_service.openrouter_client.generate_completion.return_value = ai_response
         
         result = environment_service.extract_environmental_details(sample_pose)
         
@@ -106,15 +106,15 @@ class TestEnvironmentStateService:
         assert result["atmosphere"] == "cozy"
         
         # Verify AI was called with correct parameters
-        environment_service.venice_client.generate_completion.assert_called_once()
-        call_args = environment_service.venice_client.generate_completion.call_args
+        environment_service.openrouter_client.generate_completion.assert_called_once()
+        call_args = environment_service.openrouter_client.generate_completion.call_args
         assert "environmental detail extraction" in call_args[1]["system_message"].lower()
         assert sample_pose.content in call_args[1]["prompt"]
     
     def test_extract_environmental_details_ai_error_fallback(self, environment_service, sample_pose):
         """Test fallback to basic extraction when AI fails."""
         # Mock AI error
-        environment_service.venice_client.generate_completion.side_effect = VeniceAPIError("API Error")
+        environment_service.openrouter_client.generate_completion.side_effect = OpenRouterAPIError("API Error")
         
         result = environment_service.extract_environmental_details(sample_pose)
         
@@ -150,7 +150,7 @@ class TestEnvironmentStateService:
             "time_context": {"time_of_day": "noon"},
             "lighting": "bright"
         })
-        environment_service.venice_client.generate_completion.return_value = ai_response
+        environment_service.openrouter_client.generate_completion.return_value = ai_response
         
         result = environment_service.detect_environment_changes(pose, sample_environment)
         
@@ -171,7 +171,7 @@ class TestEnvironmentStateService:
         ai_response = json.dumps({
             "weather": {"condition": "partly cloudy", "previous": "rainy"}
         })
-        environment_service.venice_client.generate_completion.return_value = ai_response
+        environment_service.openrouter_client.generate_completion.return_value = ai_response
         
         result = environment_service.detect_environment_changes(pose, sample_environment)
         
@@ -238,7 +238,7 @@ class TestEnvironmentStateService:
             "details": "Weather inconsistency detected"
         })
         
-        environment_service.venice_client.generate_completion.return_value = ai_response
+        environment_service.openrouter_client.generate_completion.return_value = ai_response
         
         result = environment_service.check_environmental_consistency(sample_pose, sample_environment)
         
@@ -258,7 +258,7 @@ class TestEnvironmentStateService:
             "details": "No environmental inconsistencies detected"
         })
         
-        environment_service.venice_client.generate_completion.return_value = ai_response
+        environment_service.openrouter_client.generate_completion.return_value = ai_response
         
         result = environment_service.check_environmental_consistency(sample_pose, sample_environment)
         

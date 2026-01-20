@@ -15,7 +15,7 @@
 
 ### ✅ 3. Required Service Accounts
 - [ ] **MongoDB Atlas**: Database connection string
-- [ ] **Venice AI**: API key for AI functionality
+- [ ] **OpenRouter AI**: API key for AI functionality
 - [ ] **Stripe**: Secret key, publishable key, webhook secret
 - [ ] **Frontend URL**: Your Vercel deployment URL
 
@@ -40,9 +40,9 @@ sudo nano /home/poseweaver/poseweaver/backend/.env
 
 **Required Variables:**
 ```bash
-# Venice AI Configuration
-VENICE_API_KEY=your_venice_api_key_here
-VENICE_TIMEOUT=120
+# OpenRouter AI Configuration
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_TIMEOUT=120
 
 # Flask Configuration
 FLASK_ENV=production

@@ -17,9 +17,9 @@ export function SceneCard({ scene }: SceneCardProps) {
           <Badge variant={scene.status === "Ongoing" ? "default" : "outline"}>{scene.status}</Badge>
         </div>
         <CardDescription>
-          {scene.characters.length > 0 && (
+          {(scene.characters?.length ?? 0) > 0 && (
             <span className="mr-4">
-              Characters: {scene.characters.join(", ")}
+              Characters: {scene.characters?.join(", ")}
             </span>
           )}
           Last updated: {scene.lastUpdated}

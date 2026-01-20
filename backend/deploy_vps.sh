@@ -83,7 +83,7 @@ print_status "Creating environment configuration..."
 if [ ! -f ".env" ]; then
     sudo -u $APP_USER cp .env.example .env
     print_status "Please edit /home/$APP_USER/poseweaver/backend/.env with your configuration"
-    print_status "Required variables: VENICE_API_KEY, MONGODB_URI, SECRET_KEY, JWT_SECRET_KEY, STRIPE_SECRET_KEY"
+    print_status "Required variables: OPENROUTER_API_KEY, MONGODB_URI, SECRET_KEY, JWT_SECRET_KEY, STRIPE_SECRET_KEY"
 else
     print_success "Environment file already exists"
 fi

@@ -39,7 +39,7 @@ import {
   Wand2,
   History,
   Share,
-  Template,
+  LayoutTemplate,
   Palette,
   Filter,
   BarChart,
@@ -432,7 +432,7 @@ export function AdvancedSummaryInterface({
                   <CardContent className="p-4">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <Template className="h-4 w-4" />
+                        <LayoutTemplate className="h-4 w-4" />
                         <span className="font-medium">{template.name}</span>
                       </div>
                       <p className="text-xs text-muted-foreground">

@@ -11,22 +11,22 @@ import json
 
 from app.services.environment_state_service import EnvironmentStateService
 from app.models.scene_memory import EnvironmentState, Pose, PoseType, ContinuityFlag, FlagType
-from app.services.venice_client import VeniceClient
+from app.services.openrouter_client import OpenRouterClient
 
 
 class TestEnvironmentStateIntegration:
     """Integration tests for complete environment state workflows."""
     
     @pytest.fixture
-    def mock_venice_client(self):
-        """Create a mock Venice client with realistic responses."""
-        client = Mock(spec=VeniceClient)
+    def mock_openrouter_client(self):
+        """Create a mock OpenRouter client with realistic responses."""
+        client = Mock(spec=OpenRouterClient)
         return client
     
     @pytest.fixture
-    def environment_service(self, mock_venice_client):
-        """Create EnvironmentStateService with mock Venice client."""
-        return EnvironmentStateService(venice_client=mock_venice_client)
+    def environment_service(self, mock_openrouter_client):
+        """Create EnvironmentStateService with mock OpenRouter client."""
+        return EnvironmentStateService(openrouter_client=mock_openrouter_client)
     
     def test_complete_environment_tracking_workflow(self, environment_service):
         """Test complete workflow from pose to environment tracking."""
@@ -42,7 +42,7 @@ class TestEnvironmentStateIntegration:
         )
         
         # Mock AI response for first pose (establishing environment)
-        environment_service.venice_client.generate_completion.return_value = json.dumps({
+        environment_service.openrouter_client.generate_completion.return_value = json.dumps({
             "location_name": "tavern",
             "weather": {"condition": "rainy", "intensity": "light"},
             "time_context": {"time_of_day": "evening"},
@@ -88,7 +88,7 @@ class TestEnvironmentStateIntegration:
                     "atmosphere": "warm"
                 })
         
-        environment_service.venice_client.generate_completion.side_effect = mock_ai_response
+        environment_service.openrouter_client.generate_completion.side_effect = mock_ai_response
         
         # Mock getting current environment
         with patch.object(environment_service, 'get_current_environment', return_value=env):
@@ -152,7 +152,7 @@ class TestEnvironmentStateIntegration:
                     "lighting": "bright"
                 })
         
-        environment_service.venice_client.generate_completion.side_effect = mock_ai_response
+        environment_service.openrouter_client.generate_completion.side_effect = mock_ai_response
         
         # Mock database operations
         with patch.object(environment_service, 'get_current_environment', return_value=established_env):
@@ -195,7 +195,7 @@ class TestEnvironmentStateIntegration:
         )
         
         # Mock AI response for location change
-        environment_service.venice_client.generate_completion.return_value = json.dumps({
+        environment_service.openrouter_client.generate_completion.return_value = json.dumps({
             "location_name": "marketplace",
             "weather": {"condition": "clear"},
             "time_context": {"time_of_day": "night"},
@@ -251,7 +251,7 @@ class TestEnvironmentStateIntegration:
                     "physical_details": {"ground": "darkening"}
                 })
         
-        environment_service.venice_client.generate_completion.side_effect = mock_weather_response
+        environment_service.openrouter_client.generate_completion.side_effect = mock_weather_response
         
         # Mock database operations
         with patch.object(environment_service, 'get_current_environment', return_value=initial_env):
@@ -270,7 +270,7 @@ class TestEnvironmentStateIntegration:
     def test_fallback_without_ai(self):
         """Test that the service works without AI client (fallback mode)."""
         # Create service without AI client
-        service = EnvironmentStateService(venice_client=None)
+        service = EnvironmentStateService(openrouter_client=None)
         scene_id = "test_scene_123"
         
         # Test pose with clear environmental keywords

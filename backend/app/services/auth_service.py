@@ -76,7 +76,7 @@ class AuthService:
             identity = decoded_token['sub']
             
             # Verify user still exists and is active
-            user = User.find_by_id(int(identity))
+            user = User.find_by_id(identity)
             if not user or not user.is_active:
                 return None
             
@@ -331,4 +331,19 @@ class AuthService:
         # Update password
         user.set_password(new_password)
         user.save()
-        return True 
+        return True
+
+    @staticmethod
+    def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user by ID (for WebSocket authentication).
+        
+        Args:
+            user_id: ID of the user to find
+            
+        Returns:
+            User dictionary if found, None otherwise
+        """
+        user = User.find_by_id(user_id)
+        if user:
+            return user.to_dict()
+        return None

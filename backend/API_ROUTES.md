@@ -623,7 +623,7 @@ All endpoints may return the following error responses:
 
 ### Environment Variables
 Required environment variables (see `env.example`):
-- `VENICE_API_KEY`: Venice.ai API key for AI processing
+- `OPENROUTER_API_KEY`: OpenRouter.ai API key for AI processing
 - `FLASK_ENV`: Environment mode (development/production)
 - `FLASK_DEBUG`: Debug mode flag
 - `SECRET_KEY`: Flask secret key
@@ -643,7 +643,7 @@ The backend is configured to accept requests from:
 - Pose variations limited to 3 variations per request
 
 ### AI Processing
-All AI-enhanced endpoints use Venice.ai's Dolphin uncensored thinking model for:
+All AI-enhanced endpoints use OpenRouter.ai's Dolphin uncensored thinking model for:
 - Character brain dump processing
 - Pose enhancement and generation
 - Context analysis and suggestions

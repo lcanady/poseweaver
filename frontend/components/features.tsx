@@ -30,7 +30,7 @@ const features = [
     icon: <BrainCircuit className="w-8 h-8 text-primary" />,
     title: "Smart AI Integration",
     description:
-      "Powered by Venice AI's multimodal models with built-in character control validation and MUSH roleplay etiquette.",
+      "Powered by OpenRouter AI's multimodal models with built-in character control validation and MUSH roleplay etiquette.",
   },
   {
     icon: <Crown className="w-8 h-8 text-primary" />,

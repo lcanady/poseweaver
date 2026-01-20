@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from "@/components/ui/use-toast";
+import { useAuth } from '@/contexts/auth-context';
 import { getApiUrl } from '@/utils/api-utils';
 
 export function useCharacterActions() {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
+  const { getToken } = useAuth();
 
   const deleteCharacter = async (characterId: string) => {
     if (!confirm('Are you sure you want to delete this character? This action cannot be undone.')) {
@@ -13,16 +15,16 @@ export function useCharacterActions() {
     }
 
     setIsDeleting(true);
-    
+
     try {
-      const accessToken = localStorage.getItem('access_token');
-      
+      const accessToken = await getToken();
+
       if (!accessToken) {
         throw new Error('No access token found. Please log in again.');
       }
-      
+
       const response = await fetch(
-        `${getApiUrl()}/api/characters/mgmt/${characterId}`, 
+        `${getApiUrl()}/api/characters/mgmt/${characterId}`,
         {
           method: 'DELETE',
           headers: {
@@ -31,16 +33,16 @@ export function useCharacterActions() {
           }
         }
       );
-      
+
       if (!response.ok) {
         throw new Error('Failed to delete character');
       }
-      
+
       toast({
         title: "Character deleted",
         description: "Character has been successfully deleted."
       });
-      
+
       router.push('/dashboard/characters');
       return true;
     } catch (err) {

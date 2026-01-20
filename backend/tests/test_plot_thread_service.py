@@ -14,19 +14,19 @@ from app.services.plot_thread_service import (
 from app.models.scene_memory import (
     PlotThread, Pose, PlotStatus, PoseType
 )
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 
 
 # Global fixtures for all test classes
 @pytest.fixture
-def mock_venice_client():
-    """Create a mock Venice client."""
-    return Mock(spec=VeniceClient)
+def mock_openrouter_client():
+    """Create a mock OpenRouter client."""
+    return Mock(spec=OpenRouterClient)
 
 @pytest.fixture
-def plot_service(mock_venice_client):
+def plot_service(mock_openrouter_client):
     """Create PlotThreadService instance with mocked dependencies."""
-    return PlotThreadService(mock_venice_client)
+    return PlotThreadService(mock_openrouter_client)
 
 @pytest.fixture
 def sample_pose():
@@ -75,7 +75,7 @@ class TestPlotThreadService:
 class TestPlotElementExtraction:
     """Test plot element extraction functionality."""
     
-    def test_extract_plot_elements_success(self, plot_service, sample_pose, mock_venice_client):
+    def test_extract_plot_elements_success(self, plot_service, sample_pose, mock_openrouter_client):
         """Test successful plot element extraction."""
         # Mock AI response
         ai_response = json.dumps({
@@ -105,7 +105,7 @@ class TestPlotElementExtraction:
             ]
         })
         
-        mock_venice_client.generate_completion.return_value = ai_response
+        mock_openrouter_client.generate_completion.return_value = ai_response
         
         # Extract elements
         elements = plot_service.extract_plot_elements_from_pose(sample_pose)
@@ -119,12 +119,12 @@ class TestPlotElementExtraction:
         assert "letter" in elements[0].keywords
         
         # Verify AI was called correctly
-        mock_venice_client.generate_completion.assert_called_once()
-        call_args = mock_venice_client.generate_completion.call_args
+        mock_openrouter_client.generate_completion.assert_called_once()
+        call_args = mock_openrouter_client.generate_completion.call_args
         assert "plot analyst" in call_args[1]['prompt'].lower()
         assert sample_pose.content in call_args[1]['prompt']
     
-    def test_extract_plot_elements_filters_low_importance(self, plot_service, sample_pose, mock_venice_client):
+    def test_extract_plot_elements_filters_low_importance(self, plot_service, sample_pose, mock_openrouter_client):
         """Test that low importance elements are filtered out."""
         # Mock AI response with low importance element
         ai_response = json.dumps({
@@ -154,7 +154,7 @@ class TestPlotElementExtraction:
             ]
         })
         
-        mock_venice_client.generate_completion.return_value = ai_response
+        mock_openrouter_client.generate_completion.return_value = ai_response
         
         # Extract elements
         elements = plot_service.extract_plot_elements_from_pose(sample_pose)
@@ -164,18 +164,18 @@ class TestPlotElementExtraction:
         assert elements[0].title == "High Importance Element"
         assert elements[0].importance_score == 0.8
     
-    def test_extract_plot_elements_venice_error(self, plot_service, sample_pose, mock_venice_client):
-        """Test handling of Venice.ai API errors."""
-        mock_venice_client.generate_completion.side_effect = VeniceAPIError("API Error")
+    def test_extract_plot_elements_openrouter_error(self, plot_service, sample_pose, mock_openrouter_client):
+        """Test handling of OpenRouter.ai API errors."""
+        mock_openrouter_client.generate_completion.side_effect = OpenRouterAPIError("API Error")
         
         # Extract elements should return empty list on error
         elements = plot_service.extract_plot_elements_from_pose(sample_pose)
         
         assert elements == []
     
-    def test_extract_plot_elements_invalid_json(self, plot_service, sample_pose, mock_venice_client):
+    def test_extract_plot_elements_invalid_json(self, plot_service, sample_pose, mock_openrouter_client):
         """Test handling of invalid JSON response."""
-        mock_venice_client.generate_completion.return_value = "Invalid JSON response"
+        mock_openrouter_client.generate_completion.return_value = "Invalid JSON response"
         
         # Extract elements should return empty list on parse error
         elements = plot_service.extract_plot_elements_from_pose(sample_pose)
@@ -338,7 +338,7 @@ class TestPlotThreadRelationships:
     """Test plot thread relationship and linking functionality."""
     
     @patch('app.models.scene_memory.PlotThread.find_by_scene')
-    def test_find_related_plot_threads_success(self, mock_find_by_scene, plot_service, sample_plot_element, mock_venice_client):
+    def test_find_related_plot_threads_success(self, mock_find_by_scene, plot_service, sample_plot_element, mock_openrouter_client):
         """Test finding related plot threads."""
         # Mock existing threads
         existing_threads = [
@@ -374,7 +374,7 @@ class TestPlotThreadRelationships:
                 }
             ]
         })
-        mock_venice_client.generate_completion.return_value = ai_response
+        mock_openrouter_client.generate_completion.return_value = ai_response
         
         # Find related threads
         related = plot_service.find_related_plot_threads("scene_123", sample_plot_element)
@@ -385,7 +385,7 @@ class TestPlotThreadRelationships:
         assert related[0][1] == 0.8  # similarity score
     
     @patch('app.models.scene_memory.PlotThread.find_by_scene')
-    def test_find_related_plot_threads_fallback(self, mock_find_by_scene, plot_service, sample_plot_element, mock_venice_client):
+    def test_find_related_plot_threads_fallback(self, mock_find_by_scene, plot_service, sample_plot_element, mock_openrouter_client):
         """Test fallback matching when AI fails."""
         # Mock existing threads
         existing_threads = [
@@ -401,7 +401,7 @@ class TestPlotThreadRelationships:
         mock_find_by_scene.return_value = existing_threads
         
         # Mock AI failure
-        mock_venice_client.generate_completion.side_effect = VeniceAPIError("API Error")
+        mock_openrouter_client.generate_completion.side_effect = OpenRouterAPIError("API Error")
         
         # Find related threads (should use fallback)
         related = plot_service.find_related_plot_threads("scene_123", sample_plot_element)

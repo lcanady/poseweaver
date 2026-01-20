@@ -10,7 +10,7 @@ from flask_jwt_extended import get_jwt_identity
 import os
 
 from app.services.scene_flow_service import SceneFlowService
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 from app.models.scene_flow import PoseType
 from app.middleware.auth_middleware import require_auth
 
@@ -18,9 +18,9 @@ from app.middleware.auth_middleware import require_auth
 scene_flow_bp = Blueprint('scene_flow', __name__, url_prefix='/api/scene-flow')
 
 # Initialize service with proper API key from environment
-venice_api_key = os.getenv('VENICE_API_KEY', '')
-venice_client = VeniceClient(venice_api_key)
-scene_flow_service = SceneFlowService(venice_client)
+openrouter_api_key = os.getenv('OPENROUTER_API_KEY', '')
+openrouter_client = OpenRouterClient(openrouter_api_key)
+scene_flow_service = SceneFlowService(openrouter_client)
 
 
 @scene_flow_bp.route('/scenes', methods=['POST'])
@@ -320,7 +320,7 @@ def enhance_pose_with_context(scene_id: str):
         
     except ValueError as e:
         return jsonify({'error': str(e)}), 404
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
         return jsonify({'error': f'AI enhancement failed: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500

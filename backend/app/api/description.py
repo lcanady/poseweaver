@@ -7,7 +7,7 @@ import os
 from flask import Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
 from app.services.description_service import DescriptionService
-from app.services.venice_client import VeniceClient, VeniceAPIError
+from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
 from app.services.usage_tracking_service import require_pose_generation_limit, get_usage_info
 
 description_bp = Blueprint('description', __name__)
@@ -20,11 +20,11 @@ def get_description_service():
     """Get description service instance."""
     global description_service
     if description_service is None:
-        api_key = os.getenv('VENICE_API_KEY')
+        api_key = os.getenv('OPENROUTER_API_KEY')
         if not api_key:
-            raise ValueError("VENICE_API_KEY environment variable is required")
-        venice_client = VeniceClient(api_key=api_key)
-        description_service = DescriptionService(venice_client)
+            raise ValueError("OPENROUTER_API_KEY environment variable is required")
+        openrouter_client = OpenRouterClient(api_key=api_key)
+        description_service = DescriptionService(openrouter_client)
     return description_service
 
 
@@ -75,10 +75,8 @@ def generate_description():
         # Get prompt from form data
         prompt = request.form.get('prompt', '').strip()
         if not prompt:
-            return jsonify({
-                'success': False,
-                'error': 'Prompt is required'
-            }), 400
+            # Default constraint for open-ended physical description
+            prompt = "Describe the character's physical appearance, focusing on body type, facial features, hair, and visible traits. Keep the description open-ended and suitable for adding an outfit later."
         
         # Get optional parameters
         style = request.form.get('style', 'balanced').lower()
@@ -136,7 +134,19 @@ def generate_description():
         
         # Get usage information for response
         user_id = request.user_id if hasattr(request, 'user_id') else None
-        usage_info = get_usage_info(user_id) if user_id else None
+        usage_info = None
+        if user_id:
+            from app.services.usage_tracking_service import UsageTrackingService
+            user = User.find_by_id(user_id)
+            if user:
+                usage_status = UsageTrackingService.check_pose_generation_limit(user)
+                usage_info = {
+                    'available_generations': usage_status.get('available_generations', 0),
+                    'monthly_limit': usage_status.get('monthly_limit', 0),
+                    'current_usage': usage_status.get('current_usage', 0),
+                    'extra_generations': usage_status.get('extra_generations', 0),
+                    'subscription_status': usage_status.get('subscription_status', 'free')
+                }
         
         # Build response
         response_data = {
@@ -158,7 +168,10 @@ def generate_description():
         
         return jsonify(response_data)
         
-    except VeniceAPIError as e:
+    except OpenRouterAPIError as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Description API Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'AI processing failed: {str(e)}'
