@@ -142,7 +142,7 @@ setup_frontend() {
     if [ ! -f ".env.local" ]; then
         sudo -u $APP_USER cat > .env.local << EOFFRONT
 NEXT_PUBLIC_API_URL=http://$SERVER_IP
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51Ro3ocPiG9G5Z3VQpKYXwpM0pQ5lGVXXvdhOxEf2HgFoPWQyd2k8V3ApHxj3dqBeBJ51hxvuxjEbNlucnSjigTA200EiKVrmt4
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key_here
 EOFFRONT
         print_success "Frontend environment file created"
     else
