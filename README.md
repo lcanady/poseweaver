@@ -1,35 +1,49 @@
 # PoseWeaver
 
-Your AI co-writer for immersive roleplay. PoseWeaver transforms simple poses into rich narratives and generates vivid descriptions from images. Built specifically for MUSH (Multi-User Shared Hallucination) roleplayers with character-aware AI that follows proper roleplay etiquette.
+Your AI co-writer for immersive roleplay. PoseWeaver transforms simple poses
+into rich narratives and generates vivid descriptions from images. Built
+specifically for MUSH (Multi-User Shared Hallucination) roleplayers with
+character-aware AI that follows proper roleplay etiquette.
 
 ## Features
 
-- **Character Management**: Create and manage multiple characters with detailed profiles (Free: 3, Basic: 10, Pro: unlimited)
-- **AI Pose Enhancement**: Transform simple poses into rich, engaging narratives with character-aware AI
-- **Image Description Writer**: Upload images and generate detailed, vivid descriptions for characters and scenes
-- **Advanced Customization**: Three enhancement styles, refinement tools, version history, and advanced settings
-- **Smart AI Integration**: Powered by OpenRouter AI's multimodal models with MUSH roleplay etiquette validation
-- **Flexible Pricing**: Start free (20 generations/month), upgrade to Basic ($9.99 - 200/month) or Pro ($19.99 - 500/month)
-- **Mobile-Responsive Design**: Works seamlessly across desktop and mobile devices
+- **Character Management**: Create and manage multiple characters with detailed
+  profiles (Free: 3, Basic: 10, Pro: unlimited)
+- **AI Pose Enhancement**: Transform simple poses into rich, engaging narratives
+  with character-aware AI
+- **Image Description Writer**: Upload images and generate detailed, vivid
+  descriptions for characters and scenes
+- **Advanced Customization**: Three enhancement styles, refinement tools,
+  version history, and advanced settings
+- **Smart AI Integration**: Powered by OpenRouter AI's multimodal models with
+  MUSH roleplay etiquette validation
+- **Mobile-Responsive Design**: Works seamlessly across desktop and mobile
+  devices
 
 ## Technology Stack
 
+### Frontend (App Router)
+
+- **Next.js 15.2** - React Framework with Server Components and App Router
+- **React 19** - Latest React features (Server Actions, `useActionState`, etc.)
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling framework with `tailwindcss-animate`
+- **Radix UI** - Accessible UI primitives
+- **Zod** - Schema validation
+
 ### Backend
+
 - **Flask** - Python web framework
-- **OpenRouter.ai API** - AI model integration (Dolphin uncensored thinking)
+- **OpenRouter.ai API** - AI model integration
+- **MongoDB** - Data persistence (via `pymongo`)
+- **Redis** - Caching and session management (Planned)
 - **pytest** - Testing framework
 - **Docker** - Containerization
-
-### Frontend
-- **React 18** - User interface framework
-- **TypeScript** - Type safety
-- **Tailwind CSS** - Styling framework
-- **Vite** - Build tool and development server
-- **Vitest** - Testing framework
 
 ## Quick Start
 
 ### Prerequisites
+
 - Docker and Docker Compose
 - Node.js 18+ (for local development)
 - Python 3.11+ (for local development)
@@ -83,174 +97,35 @@ The project includes a Makefile with convenient development commands:
 ```bash
 make help      # Show all available commands
 make start     # Start development environment
-make stop      # Stop development environment
-make test      # Run all tests
-make clean     # Clean up containers and volumes
 make build     # Build Docker images
 make logs      # Show application logs
-make lint      # Run linting
-make format    # Format code
+make test      # Run all tests
 ```
 
 ## API Endpoints
 
 ### Character Processing
+
 - `POST /api/characters/brain-dump` - Process character descriptions
 - `POST /api/characters/pose-context` - Analyze pose context
 
 ### Pose Generation
+
 - `POST /api/pose/generate` - Generate enhanced poses
 
 ### Health Check
+
 - `GET /health` - Application health status
 
-## Testing
+## Development Workflow
 
-The project follows Test-Driven Development (TDD) principles with comprehensive test coverage:
-
-### Backend Testing
-```bash
-# Run all backend tests
-cd backend && pytest
-
-# Run with coverage
-cd backend && pytest --cov=app --cov-report=html
-```
-
-### Frontend Testing
-```bash
-# Run all frontend tests
-cd frontend && npm test
-
-# Run with coverage
-cd frontend && npm run test:coverage
-```
-
-### End-to-End Testing
-```bash
-# Run E2E tests (coming soon)
-npm run test:e2e
-```
-
-## Project Structure
-
-```
-mush-pose-editor/
-├── backend/                 # Flask backend
-│   ├── app/
-│   │   ├── __init__.py     # Flask app factory
-│   │   ├── api/            # API endpoints
-│   │   ├── services/       # Business logic
-│   │   ├── models/         # Data models
-│   │   └── utils/          # Utility functions
-│   ├── tests/              # Backend tests
-│   ├── requirements.txt    # Python dependencies
-│   └── Dockerfile         # Backend container
-├── frontend/               # React frontend
-│   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── services/       # API services
-│   │   ├── types/          # TypeScript types
-│   │   └── utils/          # Utility functions
-│   ├── tests/              # Frontend tests
-│   ├── package.json        # Node.js dependencies
-│   └── Dockerfile         # Frontend container
-├── docker-compose.yml      # Development environment
-├── Makefile               # Development commands
-└── README.md              # This file
-```
-
-## Configuration
-
-### Environment Variables
-
-Create a `.env` file in the `backend/` directory:
-
-```env
-# OpenRouter AI Configuration
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-
-# Flask Configuration
-FLASK_ENV=development
-FLASK_DEBUG=True
-
-# Model Configuration
-DEFAULT_MODEL=dolphin-2.9-llama3-70b
-DEFAULT_TEMPERATURE=0.7
-DEFAULT_MAX_TOKENS=1000
-```
-
-### Model Configuration
-
-The application uses OpenRouter.ai's Dolphin uncensored thinking model by default. You can configure:
-
-- **Temperature**: Controls creativity (0.0 - 1.0)
-- **Max Tokens**: Maximum response length
-- **Model**: Specific model variant
+1. **Frontend**: We use Next.js App Router. Place pages in `app/`. Use Server
+   Components by default.
+2. **Backend**: Flask API. Follow TDD.
+3. **Git**: Create feature branches.
 
 ## Contributing
 
 1. **Fork the repository**
 2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. **Follow TDD principles**
-   - Write tests first
-   - Implement functionality
-   - Ensure >90% test coverage
-4. **Run tests and linting**
-   ```bash
-   make test
-   make lint
-   ```
-5. **Submit a pull request**
-
-## Development Workflow
-
-1. **Write tests first** (TDD approach)
-2. **Implement functionality** to pass tests
-3. **Refactor** while maintaining test coverage
-4. **Run full test suite** before committing
-5. **Use meaningful commit messages**
-
-## Performance Targets
-
-- **API Response Time**: < 30 seconds for AI processing
-- **UI Interactions**: < 2 seconds
-- **Test Coverage**: > 90%
-- **Uptime**: 99.5%
-
-## Security
-
-- Input validation and sanitization
-- API key protection
-- CORS configuration
-- Content security headers
-- Rate limiting (planned)
-
-## License
-
-[License information to be added]
-
-## Support
-
-For issues, questions, or contributions:
-- Create an issue on GitHub
-- Follow the contributing guidelines
-- Ensure all tests pass
-
-## Roadmap
-
-- [x] Project setup and infrastructure
-- [ ] OpenRouter.ai integration
-- [ ] Character brain dump processing
-- [ ] Pose context analysis
-- [ ] Pose enhancement engine
-- [ ] Frontend components
-- [ ] Testing suite
-- [ ] Production deployment
-
----
-
-**Built with ❤️ for the MUSH roleplay community** 
+3. **Submit a pull request**

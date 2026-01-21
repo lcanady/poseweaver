@@ -279,10 +279,32 @@ def get_current_user():
         # Fall back to JWT token if session doesn't have user_id
         current_app.logger.info('Falling back to JWT token authentication')
         try:
-            from flask_jwt_extended import verify_jwt_in_request
-            verify_jwt_in_request()
-            current_user = AuthService.get_current_user()
-            
+            # Try standard JWT first
+            try:
+                from flask_jwt_extended import verify_jwt_in_request
+                verify_jwt_in_request(optional=True)
+                current_user = AuthService.get_current_user()
+            except Exception:
+                current_user = None
+
+            # If standard JWT failed, try Firebase
+            if not current_user:
+                auth_header = request.headers.get('Authorization')
+                if auth_header and auth_header.startswith('Bearer '):
+                    token = auth_header.split(' ')[1]
+                    try:
+                        from firebase_admin import auth
+                        decoded_token = auth.verify_id_token(token)
+                        uid = decoded_token['uid']
+                        current_user = AuthService.get_user_by_firebase_uid(uid)
+                        if not current_user:
+                            # Try to find by email if firebase uid doesn't match
+                            email = decoded_token.get('email')
+                            if email:
+                                current_user = AuthService.get_user_by_email(email)
+                    except Exception as fe:
+                        current_app.logger.debug(f'Firebase auth failed: {str(fe)}')
+
             if not current_user:
                 current_app.logger.error('User not found or inactive in database')
                 return jsonify({'error': 'User not found or inactive'}), 404
@@ -290,13 +312,13 @@ def get_current_user():
             # Update session with user info
             session['user_id'] = current_user.id
             
-            current_app.logger.info(f'Successfully retrieved user from JWT: {current_user.id}')
+            current_app.logger.info(f'Successfully retrieved user from JWT/Firebase: {current_user.id}')
             return jsonify({
                 'success': True,
                 'user': current_user.to_dict()
             }), 200
         except Exception as e:
-            current_app.logger.error(f'JWT authentication failed: {str(e)}')
+            current_app.logger.error(f'Authentication failed: {str(e)}')
             return jsonify({'error': 'Authentication required'}), 401
         
     except Exception as e:

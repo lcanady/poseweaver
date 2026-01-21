@@ -11,19 +11,19 @@ import uuid
 import re
 
 from app.models.scene_flow import SceneFlow, ScenePose, PoseType, SceneContext
-from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
+from app.services.ai_client import AIClient, OpenRouterAPIError
 
 
 class SceneFlowService:
     """Service for managing scene flows and pose context."""
     
-    def __init__(self, openrouter_client: OpenRouterClient):
+    def __init__(self, ai_client: AIClient):
         """Initialize the scene flow service.
         
         Args:
-            openrouter_client: OpenRouter.ai client for AI processing
+            ai_client: OpenRouter.ai client for AI processing
         """
-        self.openrouter_client = openrouter_client
+        self.ai_client = ai_client
         self.active_scenes: Dict[str, SceneFlow] = {}
     
     def create_scene(self, name: str, character_name: str) -> SceneFlow:
@@ -130,13 +130,13 @@ class SceneFlowService:
             # Import and use the MUSH parser service for LLM-based parsing
             from app.services.mush_parser_service import MushParserService
             from app.services.data_extraction_service import DataExtractionService
-            from app.services.openrouter_client import OpenRouterClient
+            from app.services.ai_client import AIClient
             from flask import current_app
             
             # Initialize the MUSH parser with LLM support
             api_key = current_app.config.get('OPENROUTER_API_KEY', 'test_key_12345')
-            openrouter_client = OpenRouterClient(api_key)
-            data_extraction_service = DataExtractionService(openrouter_client)
+            ai_client = AIClient(api_key)
+            data_extraction_service = DataExtractionService(ai_client)
             mush_parser = MushParserService(data_extraction_service)
             
             # Parse using LLM
@@ -338,7 +338,7 @@ class SceneFlowService:
         """
         
         try:
-            response = self.openrouter_client.generate_completion(
+            response = self.ai_client.generate_completion(
                 model="qwen3-235b",
                 messages=[
                     {"role": "system", "content": system_message},

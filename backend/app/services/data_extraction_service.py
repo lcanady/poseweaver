@@ -3,20 +3,20 @@ Service for extracting structured data from unstructured text using OpenRouter L
 """
 from typing import Dict, Any, Optional, List
 
-from app.services.openrouter_client import OpenRouterClient
+from app.services.ai_client import AIClient
 
 
 class DataExtractionService:
     """Service for extracting structured data from unstructured text."""
 
-    def __init__(self, openrouter_client: OpenRouterClient):
+    def __init__(self, ai_client: AIClient):
         """
         Initialize the data extraction service.
         
         Args:
-            openrouter_client: OpenRouterClient instance for making LLM API calls
+            ai_client: AIClient instance for making LLM API calls
         """
-        self.openrouter_client = openrouter_client
+        self.ai_client = ai_client
 
     def extract_scene_context(self, text: str, character_names: Optional[List[str]] = None, include_poses: bool = False) -> Dict[str, Any]:
         """
@@ -58,7 +58,7 @@ class DataExtractionService:
             
         # Extract structured data using the OpenRouter LLM
         try:
-            return self.openrouter_client.extract_structured_data(
+            return self.ai_client.extract_structured_data(
                 unstructured_text=text,
                 schema=schema,
                 temperature=0.3  # Lower temperature for more deterministic outputs
@@ -106,7 +106,7 @@ class DataExtractionService:
         
         # Extract structured data using the OpenRouter LLM
         try:
-            return self.openrouter_client.extract_structured_data(
+            return self.ai_client.extract_structured_data(
                 unstructured_text=text,
                 schema=schema,
                 temperature=0.3
@@ -149,7 +149,7 @@ class DataExtractionService:
         
         # Extract structured data using the OpenRouter LLM
         try:
-            return self.openrouter_client.extract_structured_data(
+            return self.ai_client.extract_structured_data(
                 unstructured_text=text,
                 schema=schema,
                 temperature=0.4,

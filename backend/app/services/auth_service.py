@@ -288,6 +288,16 @@ class AuthService:
                 return user
             else:
                 # Create new user for Google OAuth
+                # Check if this is the FIRST user in the system
+                from app.extensions import get_db
+                db = get_db()
+                try:
+                    user_count = db.count_documents('users', {})
+                    is_admin = (user_count == 0)
+                except Exception:
+                    # Fallback if count fails (e.g. some DB error), default to False
+                    is_admin = False
+
                 # Generate a random password since Google users don't need it
                 import secrets
                 import string
@@ -299,12 +309,91 @@ class AuthService:
                     display_name=display_name,
                     avatar_url=avatar_url
                 )
+
+                if is_admin:
+                    user.is_admin = True
+                    user.save()
+                    from flask import current_app
+                    current_app.logger.info(f"First user {email} (Google) created as ADMIN")
                 
                 return user
                 
         except Exception as e:
             from flask import current_app
             current_app.logger.error(f"Google OAuth user creation/authentication failed: {str(e)}")
+            return None
+
+    @staticmethod
+    def handle_firebase_login(decoded_token: Dict[str, Any]) -> Optional[User]:
+        """Handle login with verified Firebase token.
+        
+        Args:
+            decoded_token: Decoded Firebase token claims
+            
+        Returns:
+            User instance if successful, None otherwise
+        """
+        try:
+            uid = decoded_token.get('uid')
+            email = decoded_token.get('email')
+            name = decoded_token.get('name', email.split('@')[0] if email else 'User')
+            picture = decoded_token.get('picture')
+            
+            if not email:
+                # Fallback if email not in token (e.g. anonymous auth upgraded?)
+                # ideally we require email
+                return None
+                
+            # Check if user exists
+            user = User.find_by_email(email)
+            
+            if user:
+                # Update existing user
+                updated = False
+                if picture and not user.avatar_url:
+                    user.avatar_url = picture
+                    updated = True
+                
+                # Update firebase uid mapping if needed (could store in extra field)
+                
+                if updated:
+                    user.save()
+                    
+                return user
+            else:
+                # Create new user
+                # Check if this is the FIRST user in the system
+                from app.extensions import get_db
+                db = get_db()
+                try:
+                    user_count = db.count_documents('users', {})
+                    is_admin = (user_count == 0)
+                except Exception:
+                    is_admin = False
+                
+                # Generate random password
+                import secrets
+                import string
+                random_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(24))
+                
+                user = User.create_user(
+                    email=email,
+                    password=random_password,
+                    display_name=name,
+                    avatar_url=picture
+                )
+                
+                if is_admin:
+                    user.is_admin = True
+                    user.save()
+                    from flask import current_app
+                    current_app.logger.info(f"First user {email} created as ADMIN")
+                
+                return user
+                
+        except Exception as e:
+            from flask import current_app
+            current_app.logger.error(f"Firebase login handler error: {str(e)}")
             return None
     
     @staticmethod

@@ -46,15 +46,22 @@ export function useSetupCheck(): SetupStatus {
 
       if (response.ok) {
         const data = await response.json();
+        console.log("Setup check response:", data);
         setNeedsSetup(data.needs_setup);
         
         // If setup is needed and we're not already on the setup page, redirect
         if (data.needs_setup && pathname !== '/setup') {
+          console.log("Redirecting to /setup");
           router.push('/setup');
+        } else if (!data.needs_setup && pathname === '/setup') {
+            // If setup is NOT needed but we ARE on setup page, redirect to home
+            console.log("Setup not needed, redirecting to /");
+            router.push('/');
         }
       } else {
-        console.error('Failed to check setup status');
-        setError('Failed to check setup status');
+        console.error('Failed to check setup status:', response.status, response.statusText);
+        setError(`Failed to check setup status: ${response.status}`);
+        // If we can't check, safe defaults?
       }
     } catch (error) {
       console.error('Error checking setup status:', error);

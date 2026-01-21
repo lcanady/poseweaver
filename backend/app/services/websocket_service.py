@@ -12,7 +12,7 @@ from flask_jwt_extended import decode_token, JWTManager
 import logging
 
 from app.services.description_service import DescriptionService
-from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
+from app.services.ai_client import AIClient, OpenRouterAPIError
 from app.services.usage_tracking_service import UsageTrackingService
 from app.services.auth_service import AuthService
 from app.models.user_mongo import User
@@ -33,8 +33,8 @@ class WebSocketService:
         if not openrouter_api_key:
             raise ValueError("OPENROUTER_API_KEY environment variable is required")
             
-        self.openrouter_client = OpenRouterClient(openrouter_api_key)
-        self.description_service = DescriptionService(self.openrouter_client)
+        self.ai_client = AIClient(openrouter_api_key)
+        self.description_service = DescriptionService(self.ai_client)
         self.usage_service = UsageTrackingService()
         self.auth_service = AuthService()
         
@@ -163,7 +163,22 @@ class WebSocketService:
             return user_id
             
         except Exception as e:
-            logger.error(f"Token authentication error: {str(e)}")
+            logger.debug(f"JWT authentication failed, trying Firebase: {str(e)}")
+            
+            # Try Firebase Token
+            try:
+                from firebase_admin import auth
+                decoded_token = auth.verify_id_token(token)
+                
+                # Handle user login/creation via AuthService
+                user = self.auth_service.handle_firebase_login(decoded_token)
+                
+                if user and user.is_active:
+                    return str(user.id)
+                    
+            except Exception as fe:
+                logger.error(f"Firebase token verification failed: {str(fe)}")
+            
             return None
     
     def _get_user_from_session(self) -> Optional[str]:

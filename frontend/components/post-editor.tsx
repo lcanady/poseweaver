@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
-import { Wand2, Loader2, Copy, Sparkles, Save, ChevronDown, ChevronUp, MessageSquareQuote, GripVertical, X, Plus, Settings } from "lucide-react"
+import { Wand2, Loader2, Copy, Sparkles, Save, ChevronDown, ChevronUp, MessageSquareQuote, GripVertical, X, Plus, Settings, BookOpen } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { SceneAnalysis } from "@/components/scene-analysis"
 import { SceneSelector } from "@/components/scene-selector"
@@ -20,6 +20,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { SceneDumpProcessingResult } from "@/hooks/useSceneDumpProcessor"
 import { getApiUrl } from '@/utils/api-utils';
 import { useAuth } from "@/contexts/auth-context"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 // Initialize with empty strings instead of placeholder text
 const initialScene = ``
@@ -200,6 +208,12 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
   const debouncedSceneText = useDebounce(sceneText, 500)
   const { toast } = useToast()
 
+  // Prose Generation State
+  const [isGeneratingProse, setIsGeneratingProse] = useState(false)
+  const [generatedProse, setGeneratedProse] = useState("")
+  const [proseInstructions, setProseInstructions] = useState("")
+  const [isProseModalOpen, setIsProseModalOpen] = useState(false)
+
   // Drag and drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
@@ -298,6 +312,62 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
       title: "Pose deleted",
       description: "The pose has been removed from the scene.",
     })
+  }
+
+  // Handle prose generation
+  const handleGenerateProse = async () => {
+    if (!sceneId) {
+      toast({
+        title: "Scene not saved",
+        description: "Please save the scene before generating narrative prose.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!sceneContext?.poses || sceneContext.poses.length === 0) {
+      toast({
+        title: "No poses found",
+        description: "Add some poses to the scene first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGeneratingProse(true);
+    try {
+      const token = await getToken();
+      const response = await fetch(`${getApiUrl()}/api/pose/prose/${sceneId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          instructions: proseInstructions
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setGeneratedProse(data.prose);
+        toast({
+          title: "Prose generated!",
+          description: "Your narrative chapter is ready.",
+        });
+      } else {
+        throw new Error(data.error || "Failed to generate prose");
+      }
+    } catch (error: any) {
+      console.error("Error generating prose:", error);
+      toast({
+        title: "Generation failed",
+        description: error.message || "An error occurred while generating prose.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingProse(false);
+    }
   }
 
   // Effect to set current character once characters are loaded
@@ -995,6 +1065,15 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => setIsProseModalOpen(true)}
+                    className="flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    Write Narrative Chapter
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setShowAllPoses(!showAllPoses)}
                     className="text-xs"
                   >
@@ -1038,6 +1117,108 @@ export function PostEditor({ onContextUpdate, autoLoadSceneId, onSeedPostText }:
           </Button>
         </CardFooter>
       </Card>
+
+      {/* Narrative Prose Generator Dialog */}
+      <Dialog open={isProseModalOpen} onOpenChange={setIsProseModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-blue-500" />
+              Generate Narrative Chapter
+            </DialogTitle>
+            <DialogDescription>
+              Transform your collection of poses into coherent narrative prose.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4 flex-1 overflow-auto pr-2">
+            {!generatedProse ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="prose-instructions">Additional Instructions (Optional)</Label>
+                  <Textarea
+                    id="prose-instructions"
+                    placeholder="e.g., 'Focus more on the internal thoughts of the characters' or 'Write in a third-person limited perspective'..."
+                    value={proseInstructions}
+                    onChange={(e) => setProseInstructions(e.target.value)}
+                    className="min-h-[120px]"
+                  />
+                </div>
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md text-sm text-blue-800 dark:text-blue-300">
+                  <p>AI will process all <strong>{sceneContext?.poses?.length || 0}</strong> poses in this scene to weave them into a narrative story.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Generated Prose</Label>
+                  <div className="p-6 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-800 whitespace-pre-wrap font-serif text-lg leading-relaxed shadow-inner">
+                    {generatedProse}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2 mt-4">
+            {generatedProse ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setGeneratedProse("");
+                    setProseInstructions("");
+                  }}
+                  className="mr-auto"
+                >
+                  Start Over
+                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedProse);
+                      toast({
+                        title: "Copied!",
+                        description: "Prose copied to clipboard.",
+                      });
+                    }}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy
+                  </Button>
+                  <Button onClick={() => setIsProseModalOpen(false)}>
+                    Done
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => setIsProseModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleGenerateProse}
+                  disabled={isGeneratingProse || !sceneId}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isGeneratingProse ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Weaving Story...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Generate Prose
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>

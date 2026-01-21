@@ -181,45 +181,45 @@ def create_checkout_session_endpoint():
 @purchase_bp.route('/webhook', methods=['POST'])
 def stripe_webhook():
     """Handle Stripe webhook events (supports both regular and thin payloads)."""
-    print(f"[WEBHOOK DEBUG] Received webhook request")
-    print(f"[WEBHOOK DEBUG] Request method: {request.method}")
-    print(f"[WEBHOOK DEBUG] Content-Type: {request.headers.get('Content-Type')}")
-    print(f"[WEBHOOK DEBUG] Headers: {dict(request.headers)}")
+    logger.debug("Received webhook request")
+    logger.debug(f"Request method: {request.method}")
+    logger.debug(f"Content-Type: {request.headers.get('Content-Type')}")
+    logger.debug(f"Headers: {dict(request.headers)}")
     
     # Get raw payload
     payload = request.get_data(as_text=True)
-    print(f"[WEBHOOK DEBUG] Payload length: {len(payload) if payload else 0}")
-    print(f"[WEBHOOK DEBUG] Payload preview: {payload[:200] if payload else 'None'}...")
+    logger.debug(f"Payload length: {len(payload) if payload else 0}")
+    logger.debug(f"Payload preview: {payload[:200] if payload else 'None'}...")
     
     # Get signature header
     sig_header = request.headers.get('Stripe-Signature')
-    print(f"[WEBHOOK DEBUG] Stripe-Signature header: {sig_header}")
+    logger.debug(f"Stripe-Signature header: {sig_header}")
     
     # Get webhook secret
     endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
-    print(f"[WEBHOOK DEBUG] Webhook secret configured: {bool(endpoint_secret)}")
-    print(f"[WEBHOOK DEBUG] Webhook secret preview: {endpoint_secret[:10] if endpoint_secret else 'None'}...")
+    logger.debug(f"Webhook secret configured: {bool(endpoint_secret)}")
+    logger.debug(f"Webhook secret preview: {endpoint_secret[:10] if endpoint_secret else 'None'}...")
     
     # Check for missing requirements
     if not payload:
-        print(f"[WEBHOOK ERROR] No payload received")
+        logger.error("No payload received")
         return jsonify({'error': 'No payload received'}), 400
     
     if not sig_header:
-        print(f"[WEBHOOK ERROR] No Stripe-Signature header")
+        logger.error("No Stripe-Signature header")
         return jsonify({'error': 'No Stripe-Signature header'}), 400
     
     if not endpoint_secret:
-        print(f"[WEBHOOK ERROR] STRIPE_WEBHOOK_SECRET not configured")
+        logger.error("STRIPE_WEBHOOK_SECRET not configured")
         return jsonify({'error': 'Webhook secret not configured'}), 400
     
     # Initialize Stripe
     try:
         from ..config.stripe_config import _ensure_stripe_initialized
         _ensure_stripe_initialized()
-        print(f"[WEBHOOK DEBUG] Stripe initialized successfully")
+        logger.debug("Stripe initialized successfully")
     except Exception as e:
-        print(f"[WEBHOOK ERROR] Failed to initialize Stripe: {e}")
+        logger.error(f"Failed to initialize Stripe: {e}")
         return jsonify({'error': f'Stripe initialization failed: {str(e)}'}), 400
     
     # Verify webhook signature
@@ -842,38 +842,30 @@ def get_pricing():
         }), 500
 
 
+from ..middleware.auth_middleware import require_auth
+
 @purchase_bp.route('/usage-status', methods=['GET'])
+@require_auth
 def get_usage_status():
     """Get current usage status for a user.
     
     Query params:
-    - user_id: User ID to check usage for
+    - user_id: User ID to check usage for (optional, defaults to authenticated user)
     
     Returns:
     {
         "success": true,
-        "usage_info": {
-            "available_generations": 15,
-            "monthly_limit": 20,
-            "current_usage": 5,
-            "extra_generations": 0,
-            "subscription_status": "free",
-            "can_upgrade": true,
-            "can_purchase_extra": false
-        }
+        "usage_info": { ... }
     }
     """
     try:
-        user_id = request.args.get('user_id')
-        if not user_id:
-            return jsonify({
-                'success': False,
-                'error': 'user_id query parameter is required'
-            }), 400
+        # Use authenticated user from require_auth
+        user = request.current_user
         
-        user = User.find_by_id(user_id)
+        # Fallback/Safety check: if user_id param was passed and doesn't match (for admins viewing others?)
+        # For now, simplistic approach: just use the authenticated user
         if not user:
-            return jsonify({
+             return jsonify({
                 'success': False,
                 'error': 'User not found'
             }), 404
@@ -888,8 +880,8 @@ def get_usage_status():
                 'monthly_limit': usage_status.get('monthly_limit', 0),
                 'current_usage': usage_status.get('current_usage', 0),
                 'extra_generations': usage_status.get('extra_generations', 0),
-                'subscription_status': usage_status.get('subscription_status', 'free'),
-                'can_upgrade': user.needs_upgrade_for_poses(),
+                'subscription_status': 'admin' if user.is_admin else usage_status.get('subscription_status', 'free'),
+                'can_upgrade': False if user.is_admin else user.needs_upgrade_for_poses(),
                 'can_purchase_extra': user.can_purchase_extra_generations(),
                 'reset_date': user.pose_generations_reset_date.isoformat() if user.pose_generations_reset_date else None
             }

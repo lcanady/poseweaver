@@ -19,15 +19,16 @@ import {
   Crown
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/auth-context';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function SetupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [needsSetup, setNeedsSetup] = useState(false);
+  const { getToken } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -67,13 +68,11 @@ export default function SetupPage() {
           router.push('/');
         }
       } else {
-        toast.error('Failed to check setup status');
-        router.push('/');
+        console.error('Failed to check setup status', response.status);
+        // Don't redirect immediately on error, allow retry
       }
     } catch (error) {
       console.error('Error checking setup status:', error);
-      toast.error('Failed to check setup status');
-      router.push('/');
     } finally {
       setChecking(false);
     }
@@ -106,6 +105,30 @@ export default function SetupPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleBackendSync = async (user: any) => {
+    try {
+      const token = await user.getIdToken();
+      // Calling the profile endpoint triggers the backend middleware
+      // to create the MongoDB user and assign Admin privileges (if first user)
+      const response = await fetch(`${getApiUrl()}/api/user/profile`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+         // Force token refresh to pick up any custom claims (like admin) if we add them later
+         await user.getIdToken(true);
+         return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Backend sync error", error);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -115,33 +138,36 @@ export default function SetupPage() {
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `${getApiUrl()}/api/setup/create-admin`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: formData.email.trim(),
-            password: formData.password,
-            display_name: formData.display_name.trim(),
-          }),
-        }
+      // 1. Create User in Firebase
+      const userCredential = await createUserWithEmailAndPassword(
+        auth, 
+        formData.email.trim(), 
+        formData.password
       );
+      const user = userCredential.user;
 
-      const data = await response.json();
+      // 2. Update Profile with Display Name
+      await updateProfile(user, {
+        displayName: formData.display_name.trim()
+      });
 
-      if (response.ok) {
-        toast.success('First admin user created successfully!');
-        // Redirect to login page
-        router.push('/login?message=Admin account created successfully. Please log in.');
-      } else {
-        toast.error(data.error || 'Failed to create admin user');
-      }
-    } catch (error) {
+      // 3. Trigger Backend Sync (creates Mongo user & makes Admin)
+      await handleBackendSync(user);
+
+      toast.success('Admin account created successfully!');
+      router.push('/');
+
+    } catch (error: any) {
       console.error('Error creating admin user:', error);
-      toast.error('Failed to create admin user');
+      
+      let message = 'Failed to create admin user';
+      if (error.code === 'auth/email-already-in-use') {
+        message = 'This email is already registered';
+      } else if (error.code === 'auth/weak-password') {
+        message = 'Password is too weak';
+      }
+      
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -155,32 +181,14 @@ export default function SetupPage() {
       const user = result.user;
 
       if (user) {
-        // Get ID token to send to backend for verification and admin promotion
-        const idToken = await user.getIdToken();
-
-        const response = await fetch(`${getApiUrl()}/api/setup/create-admin`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            idToken: idToken,
-            email: user.email,
-            display_name: user.displayName || 'Admin User'
-          }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          toast.success('Admin account created successfully with Google!');
-          // Force token refresh to get new custom claims (admin role)
-          await user.getIdToken(true);
-          router.push('/dashboard');
+        // Trigger Backend Sync (creates Mongo user & makes Admin)
+        const synced = await handleBackendSync(user);
+        
+        if (synced) {
+             toast.success('Admin account created successfully with Google!');
+             router.push('/');
         } else {
-          toast.error(data.error || 'Failed to promote Google user to admin');
-          // Optional: Delete the user if promotion failed to keep state clean?
-          // For now, let's just show error.
+             toast.error('Account created, but backend sync failed. Please try refreshing.');
         }
       }
     } catch (error: any) {

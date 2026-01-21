@@ -5,7 +5,6 @@ Provides comprehensive endpoints for scene search, pose search, character search
 timeline search, summary generation, and export functionality.
 """
 from flask import Blueprint, request, jsonify, current_app, Response
-from flask_jwt_extended import get_jwt_identity
 from http import HTTPStatus
 from datetime import datetime, timedelta
 import json
@@ -16,8 +15,8 @@ from typing import Dict, Any, List, Optional
 from app.services.search_service import SearchService
 from app.services.summary_service import SummaryService, SummaryOptions
 from app.services.scene_service import SceneService
-from app.services.openrouter_client import OpenRouterClient
-from app.middleware.auth_middleware import require_auth
+from app.services.ai_client import AIClient
+from app.middleware.auth_middleware import require_auth, get_current_identity
 from app.models.scene import Scene
 from app.models.scene_memory import SceneMemory
 
@@ -27,24 +26,24 @@ search_summary_bp = Blueprint('search_summary', __name__)
 # Initialize services with lazy initialization
 
 
-def get_openrouter_client():
+def get_ai_client():
     """Get OpenRouter client with proper API key handling."""
     import os
     api_key = os.getenv('OPENROUTER_API_KEY', 'test-key')
-    return OpenRouterClient(api_key=api_key)
+    return AIClient(api_key=api_key)
 
 
 # Initialize services
-openrouter_client = None
+ai_client = None
 search_service = None
 summary_service = None
 
 
 def init_services():
     """Initialize services lazily."""
-    global openrouter_client, search_service, summary_service
-    if openrouter_client is None:
-        openrouter_client = get_openrouter_client()
+    global ai_client, search_service, summary_service
+    if ai_client is None:
+        ai_client = get_ai_client()
         search_service = SearchService()
         summary_service = SummaryService()
 
@@ -76,7 +75,7 @@ def search_scenes():
     Requirements: 7.1, 7.2 - Full-text search with filtering
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     query = request.args.get('q', '')
@@ -192,7 +191,7 @@ def search_poses():
     Requirements: 7.1, 7.2 - Full-text search across poses
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     query = request.args.get('q', '')
@@ -290,7 +289,7 @@ def search_characters():
     Requirements: 7.2 - Character-specific search
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     query = request.args.get('q', '')
@@ -348,7 +347,7 @@ def search_plot_elements():
     Requirements: 7.3 - Plot keyword search
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     query = request.args.get('q')
@@ -423,7 +422,7 @@ def search_timeline():
     Requirements: 7.4 - Timeline search with date filtering
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     query = request.args.get('q', '')
@@ -531,7 +530,7 @@ def generate_scene_summary(scene_id):
     Requirements: 8.1, 8.2 - Scene summary generation
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data:
@@ -621,7 +620,7 @@ def generate_catchup_brief(scene_id):
     Requirements: 8.3 - Catch-up brief generation
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data:
@@ -709,7 +708,7 @@ def generate_character_summary(scene_id, character_id):
     Requirements: 8.2 - Character-focused summaries
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data:
@@ -785,7 +784,7 @@ def generate_plot_summary(scene_id):
     Requirements: 8.2 - Plot-focused summaries
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data:
@@ -858,7 +857,7 @@ def export_scene_data(scene_id):
     Requirements: 8.4 - Export functionality for scene data
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     export_format = request.args.get('format', 'json').lower()
@@ -1028,7 +1027,7 @@ def export_search_results():
     Requirements: 8.5 - Export functionality for search results
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data:
@@ -1236,7 +1235,7 @@ def health_check():
         services_status = {
             'search_service': 'healthy',
             'summary_service': 'healthy',
-            'openrouter_client': 'healthy' if openrouter_client else 'unavailable'
+            'ai_client': 'healthy' if ai_client else 'unavailable'
         }
         
         # Check database connectivity

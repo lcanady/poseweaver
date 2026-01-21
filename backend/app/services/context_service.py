@@ -7,7 +7,7 @@ that should influence character responses.
 import json
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
-from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
+from app.services.ai_client import AIClient, OpenRouterAPIError
 from app.services.model_config import ModelConfig
 
 
@@ -70,13 +70,13 @@ class PoseContext:
 class ContextService:
     """Service for analyzing pose context and extracting response elements."""
     
-    def __init__(self, openrouter_client: OpenRouterClient):
+    def __init__(self, ai_client: AIClient):
         """Initialize the context service.
         
         Args:
-            openrouter_client: OpenRouter.ai client for AI processing
+            ai_client: OpenRouter.ai client for AI processing
         """
-        self.openrouter_client = openrouter_client
+        self.ai_client = ai_client
     
     def analyze_pose_context(
         self, 
@@ -257,7 +257,7 @@ class ContextService:
         """
         
         # Generate completion using OpenRouter.ai
-        response = self.openrouter_client.generate_completion(
+        response = self.ai_client.generate_completion(
             model="qwen3-235b",
             messages=[
                 {"role": "system", "content": system_message},

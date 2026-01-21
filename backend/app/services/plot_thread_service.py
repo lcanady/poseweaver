@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from ..models.scene_memory import (
     PlotThread, Pose, PlotStatus
 )
-from ..services.openrouter_client import OpenRouterClient, OpenRouterAPIError
+from ..services.ai_client import AIClient, OpenRouterAPIError
 
 logger = logging.getLogger(__name__)
 
@@ -63,14 +63,14 @@ class PlotThreadService:
     - Plot thread status tracking and updates
     """
     
-    def __init__(self, openrouter_client: OpenRouterClient):
+    def __init__(self, ai_client: AIClient):
         """
         Initialize the plot thread service.
         
         Args:
-            openrouter_client: OpenRouter.ai client for AI analysis
+            ai_client: OpenRouter.ai client for AI analysis
         """
-        self.openrouter_client = openrouter_client
+        self.ai_client = ai_client
         self.logger = logging.getLogger(__name__)
         
         # Configuration for plot analysis
@@ -102,7 +102,7 @@ class PlotThreadService:
             plot_prompt = self._build_plot_extraction_prompt(pose)
             
             # Call OpenRouter.ai for analysis
-            response = self.openrouter_client.generate_completion(
+            response = self.ai_client.generate_completion(
                 prompt=plot_prompt,
                 model=self.config['model'],
                 temperature=self.config['temperature'],
@@ -268,7 +268,7 @@ class PlotThreadService:
             # Use AI to find semantic relationships
             similarity_prompt = self._build_thread_similarity_prompt(element, existing_threads)
             
-            response = self.openrouter_client.generate_completion(
+            response = self.ai_client.generate_completion(
                 prompt=similarity_prompt,
                 model=self.config['model'],
                 temperature=0.2,  # Lower temperature for consistent matching

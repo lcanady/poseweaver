@@ -2,7 +2,7 @@
 Notification API endpoints for in-app notifications.
 """
 from flask import Blueprint, request, jsonify
-from app.middleware.auth_middleware import require_auth
+from app.middleware.auth_middleware import require_auth, get_current_identity
 from app.services.notification_service import NotificationService
 
 notifications_bp = Blueprint('notifications', __name__)

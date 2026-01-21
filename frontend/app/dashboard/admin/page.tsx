@@ -99,11 +99,10 @@ export default function AdminDashboard() {
 
   // Check admin access
   useEffect(() => {
-    // TODO: Implement proper admin check with custom claims
-    if (user && !(user as any).is_admin) {
-      // toast.error('Admin access required');
-      // router.push('/dashboard');
-      // return;
+    if (user && !user.is_admin) {
+      toast.error('Admin access required');
+      router.push('/dashboard');
+      return;
     }
   }, [user, router]);
 
@@ -308,7 +307,7 @@ export default function AdminDashboard() {
 
   // Refetch users when filters change
   useEffect(() => {
-    if ((user as any)?.is_admin) {
+    if (user?.is_admin) {
       fetchUsers();
     }
   }, [searchTerm, subscriptionFilter, statusFilter]);
@@ -353,7 +352,7 @@ export default function AdminDashboard() {
     );
   };
 
-  if (!(user as any)?.is_admin) {
+  if (!user?.is_admin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="w-96">

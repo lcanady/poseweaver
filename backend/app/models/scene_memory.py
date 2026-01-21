@@ -135,14 +135,14 @@ class SceneMemory(BaseModel):
     @classmethod
     def initialize_indexes(cls) -> None:
         """Initialize database indexes for scenes."""
-        from ..services.mongodb_service import get_mongodb_service
-        mongodb = get_mongodb_service()
+        from ..extensions import get_db
+        db = get_db()
         
         # Create indexes
-        mongodb.create_index(cls.COLLECTION_NAME, 'owner_id')
-        mongodb.create_index(cls.COLLECTION_NAME, 'status')
-        mongodb.create_index(cls.COLLECTION_NAME, 'last_activity')
-        mongodb.create_index(
+        db.create_index(cls.COLLECTION_NAME, 'owner_id')
+        db.create_index(cls.COLLECTION_NAME, 'status')
+        db.create_index(cls.COLLECTION_NAME, 'last_activity')
+        db.create_index(
             cls.COLLECTION_NAME,
             [('owner_id', 1), ('status', 1)]
         )
@@ -251,18 +251,18 @@ class Pose(BaseModel):
     @classmethod
     def initialize_indexes(cls) -> None:
         """Initialize database indexes for poses."""
-        from ..services.mongodb_service import get_mongodb_service
-        mongodb = get_mongodb_service()
+        from ..extensions import get_db
+        db = get_db()
         
         # Create indexes
-        mongodb.create_index(cls.COLLECTION_NAME, 'scene_id')
-        mongodb.create_index(cls.COLLECTION_NAME, 'character_name')
-        mongodb.create_index(cls.COLLECTION_NAME, 'timestamp')
-        mongodb.create_index(
+        db.create_index(cls.COLLECTION_NAME, 'scene_id')
+        db.create_index(cls.COLLECTION_NAME, 'character_name')
+        db.create_index(cls.COLLECTION_NAME, 'timestamp')
+        db.create_index(
             cls.COLLECTION_NAME,
             [('scene_id', 1), ('timestamp', 1)]
         )
-        mongodb.create_index(
+        db.create_index(
             cls.COLLECTION_NAME,
             [('scene_id', 1), ('character_name', 1)]
         )
@@ -344,13 +344,13 @@ class CharacterState(BaseModel):
     @classmethod
     def initialize_indexes(cls) -> None:
         """Initialize database indexes for character states."""
-        from ..services.mongodb_service import get_mongodb_service
-        mongodb = get_mongodb_service()
+        from ..extensions import get_db
+        db = get_db()
         
         # Create indexes
-        mongodb.create_index(cls.COLLECTION_NAME, 'scene_id')
-        mongodb.create_index(cls.COLLECTION_NAME, 'character_name')
-        mongodb.create_index(
+        db.create_index(cls.COLLECTION_NAME, 'scene_id')
+        db.create_index(cls.COLLECTION_NAME, 'character_name')
+        db.create_index(
             cls.COLLECTION_NAME,
             [('scene_id', 1), ('character_name', 1)],
             unique=True
@@ -419,13 +419,13 @@ class EnvironmentState(BaseModel):
     @classmethod
     def initialize_indexes(cls) -> None:
         """Initialize database indexes for environment states."""
-        from ..services.mongodb_service import get_mongodb_service
-        mongodb = get_mongodb_service()
+        from ..extensions import get_db
+        db = get_db()
         
         # Create indexes
-        mongodb.create_index(cls.COLLECTION_NAME, 'scene_id')
-        mongodb.create_index(cls.COLLECTION_NAME, 'location_name')
-        mongodb.create_index(cls.COLLECTION_NAME, 'established_at')
+        db.create_index(cls.COLLECTION_NAME, 'scene_id')
+        db.create_index(cls.COLLECTION_NAME, 'location_name')
+        db.create_index(cls.COLLECTION_NAME, 'established_at')
 
 
 class PlotThread(BaseModel):
@@ -535,15 +535,14 @@ class PlotThread(BaseModel):
     @classmethod
     def initialize_indexes(cls) -> None:
         """Initialize database indexes for plot threads."""
-        from ..services.mongodb_service import get_mongodb_service
-        mongodb = get_mongodb_service()
+        from ..extensions import get_db
+        db = get_db()
         
         # Create indexes
-        mongodb.create_index(cls.COLLECTION_NAME, 'scene_id')
-        mongodb.create_index(cls.COLLECTION_NAME, 'status')
-        mongodb.create_index(cls.COLLECTION_NAME, 'last_referenced')
-        mongodb.create_index(
+        db.create_index(cls.COLLECTION_NAME, 'scene_id')
+        db.create_index(cls.COLLECTION_NAME, 'status')
+        db.create_index(cls.COLLECTION_NAME, 'last_referenced')
+        db.create_index(
             cls.COLLECTION_NAME,
             [('scene_id', 1), ('status', 1)]
         )
-

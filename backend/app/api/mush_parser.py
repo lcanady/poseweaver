@@ -6,11 +6,11 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 
 from app.services.pose_service import PoseService
-from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
+from app.services.ai_client import AIClient, OpenRouterAPIError
 from app.services.character_service import CharacterProfile
 from app.services.scene_management_service import SceneManagementService, PoseData
 from app.models.scene_memory import PoseType
-from app.middleware.auth_middleware import require_auth
+from app.middleware.auth_middleware import require_auth, get_current_identity
 
 # Create blueprint
 mush_parser_bp = Blueprint('mush_parser', __name__)
@@ -25,8 +25,8 @@ def get_pose_service():
     if pose_service is None:
         from flask import current_app
         api_key = current_app.config.get('OPENROUTER_API_KEY', 'test_key_12345')
-        openrouter_client = OpenRouterClient(api_key)
-        pose_service = PoseService(openrouter_client)
+        ai_client = AIClient(api_key)
+        pose_service = PoseService(ai_client)
     return pose_service
 
 

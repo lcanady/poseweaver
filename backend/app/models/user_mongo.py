@@ -6,13 +6,13 @@ from datetime import datetime
 from flask_bcrypt import Bcrypt
 from email_validator import validate_email, EmailNotValidError
 from bson import ObjectId
-from ..services.mongodb_service import get_mongodb_service
+from ..extensions import get_db
 
 bcrypt = Bcrypt()
 
 
 class User:
-    """User model for MongoDB storage."""
+    """User model for Database storage."""
     
     COLLECTION_NAME = 'users'
     
@@ -70,13 +70,20 @@ class User:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'User':
         """Create a User instance from a dictionary."""
+        # Standardize id
+        user_id = None
+        if '_id' in data:
+            user_id = str(data['_id'])
+        elif 'id' in data:
+            user_id = str(data['id'])
+
         user = cls(
             email=data['email'],
             display_name=data.get('display_name'),
             bio=data.get('bio'),
             avatar_url=data.get('avatar_url'),
             is_active=data.get('is_active', True),
-            _id=str(data.get('_id')),
+            _id=user_id,
             created_at=data.get('created_at'),
             updated_at=data.get('updated_at'),
             subscription_status=data.get('subscription_status', 'free'),
@@ -93,8 +100,7 @@ class User:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert User instance to dictionary."""
-        return {
-            '_id': str(self.id) if self.id else None,
+        data = {
             'email': self.email,
             'password_hash': self.password_hash,
             'display_name': self.display_name,
@@ -112,29 +118,36 @@ class User:
             'stripe_customer_id': self.stripe_customer_id,
             'settings': self.settings
         }
+        if self.id:
+            data['id'] = str(self.id)
+            # Legacy assumption: callers might expect _id if they are legacy code
+            data['_id'] = str(self.id)
+        return data
     
     def save(self) -> str:
-        """Save user to MongoDB."""
-        mongodb_service = get_mongodb_service()
+        """Save user to Database."""
+        db = get_db()
         
         if self.id:
             # Update existing user
             user_data = self.to_dict()
-            user_data.pop('_id')  # Remove _id from update data
+            user_data.pop('_id', None)  # Remove _id from update data
+            user_data.pop('id', None)
             user_data.pop('created_at', None)  # Don't update created_at
             
-            mongodb_service.update_one(
+            db.update_one(
                 self.COLLECTION_NAME,
-                {'_id': ObjectId(self.id)},
+                {'id': self.id},
                 user_data
             )
             return self.id
         else:
             # Create new user
             user_data = self.to_dict()
-            user_data.pop('_id', None)  # Remove None _id
+            user_data.pop('_id', None)
+            user_data.pop('id', None)
             
-            self.id = mongodb_service.insert_one(self.COLLECTION_NAME, user_data)
+            self.id = db.insert_one(self.COLLECTION_NAME, user_data)
             return self.id
     
     def delete(self) -> bool:
@@ -142,10 +155,10 @@ class User:
         if not self.id:
             return False
         
-        mongodb_service = get_mongodb_service()
-        return mongodb_service.delete_one(
+        db = get_db()
+        return db.delete_one(
             self.COLLECTION_NAME,
-            {'_id': ObjectId(self.id)}
+            {'id': self.id}
         )
     
     def check_password(self, password: str) -> bool:
@@ -375,12 +388,19 @@ class User:
     @classmethod
     def find_by_id(cls, user_id: str) -> Optional['User']:
         """Find user by ID."""
-        mongodb_service = get_mongodb_service()
-        user_data = mongodb_service.find_one(
+        db = get_db()
+        user_data = db.find_one(
             cls.COLLECTION_NAME,
-            {'_id': ObjectId(user_id)}
+            {'id': user_id}
         )
         
+        if not user_data and ObjectId.is_valid(user_id):
+            # Fallback for old IDs
+            user_data = db.find_one(
+                cls.COLLECTION_NAME,
+                {'_id': ObjectId(user_id)}
+            )
+
         if user_data:
             return cls.from_dict(user_data)
         return None
@@ -388,8 +408,8 @@ class User:
     @classmethod
     def find_by_email(cls, email: str) -> Optional['User']:
         """Find user by email."""
-        mongodb_service = get_mongodb_service()
-        user_data = mongodb_service.find_one(
+        db = get_db()
+        user_data = db.find_one(
             cls.COLLECTION_NAME,
             {'email': email}
         )
@@ -401,8 +421,8 @@ class User:
     @classmethod
     def find_by_stripe_customer_id(cls, stripe_customer_id: str) -> Optional['User']:
         """Find user by Stripe customer ID."""
-        mongodb_service = get_mongodb_service()
-        user_data = mongodb_service.find_one(
+        db = get_db()
+        user_data = db.find_one(
             cls.COLLECTION_NAME,
             {'stripe_customer_id': stripe_customer_id}
         )
@@ -447,8 +467,8 @@ class User:
     @classmethod
     def get_all_users(cls, limit: int = 100) -> list['User']:
         """Get all users (for admin purposes)."""
-        mongodb_service = get_mongodb_service()
-        users_data = mongodb_service.find_many(
+        db = get_db()
+        users_data = db.find_many(
             cls.COLLECTION_NAME,
             limit=limit,
             sort=[('created_at', -1)]
@@ -459,10 +479,10 @@ class User:
     @classmethod
     def initialize_indexes(cls) -> None:
         """Initialize database indexes for the User collection."""
-        mongodb_service = get_mongodb_service()
+        db = get_db()
         
         # Create unique index on email
-        mongodb_service.create_index(cls.COLLECTION_NAME, 'email', unique=True)
+        db.create_index(cls.COLLECTION_NAME, 'email', unique=True)
     
     def __repr__(self) -> str:
         """String representation of User."""

@@ -12,6 +12,30 @@ def create_app(config_name='development'):
     
     # Use custom JSON encoder for MongoDB ObjectId serialization
     app.json_encoder = MongoJSONEncoder
+
+    # Configure Logging
+    import logging.config
+    logging.config.dictConfig({
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'json': {
+                'format': '{"time": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s", "module": "%(module)s"}',
+                'datefmt': '%Y-%m-%dT%H:%M:%SZ'
+            }
+        },
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+                'formatter': 'json',
+                'stream': 'ext://sys.stdout'
+            }
+        },
+        'root': {
+            'level': 'INFO',
+            'handlers': ['console']
+        }
+    })
     
     # Load configuration
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
@@ -20,6 +44,25 @@ def create_app(config_name='development'):
     # JWT configuration
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 43200  # 12 hours
     app.config['JWT_REFRESH_TOKEN_EXPIRES'] = 2592000  # 30 days
+    
+    # Session Configuration
+    import redis
+    app.config['SESSION_TYPE'] = 'redis'
+    app.config['SESSION_PERMANENT'] = False
+    app.config['SESSION_USE_SIGNER'] = True
+    
+    redis_url = os.getenv('REDIS_URL')
+    if not redis_url:
+        if config_name == 'production':
+             raise ValueError("REDIS_URL environment variable is required in production")
+        # Fallback for dev/test if needed, or just warn
+        app.logger.warning("REDIS_URL not set, session might not work as expected")
+        # For dev, maybe we default to localhost if not set, or let it fail? 
+        # Requirement said fail loudly in production. 
+        # Let's set a default for dev:
+        redis_url = 'redis://localhost:6379'
+        
+    app.config['SESSION_REDIS'] = redis.from_url(redis_url)
     
     # MongoDB configuration
     app.config['MONGODB_URI'] = os.getenv(
@@ -37,6 +80,7 @@ def create_app(config_name='development'):
     # Specify allowed origins for credentials support
     allowed_origins = [
         "http://localhost:3000",  # Frontend dev server
+        "http://localhost:3001",  # Frontend dev server (alt)
         "http://127.0.0.1:3000",  # Alternative localhost
         "http://192.168.12.123:3000",  # Network access
         "https://www.poseweaver.com",  # Production frontend

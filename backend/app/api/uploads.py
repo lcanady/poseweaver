@@ -6,7 +6,8 @@ Provides endpoints for uploading and retrieving files.
 import os
 import uuid
 from flask import Blueprint, request, jsonify, current_app, send_from_directory, session
-from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
+from flask_jwt_extended import jwt_required, verify_jwt_in_request
+from app.middleware.auth_middleware import get_current_identity
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from functools import wraps
@@ -48,7 +49,7 @@ def auth_required():
             # If not in session, try JWT
             try:
                 verify_jwt_in_request(optional=True)
-                current_identity = get_jwt_identity()
+                current_identity = get_current_identity()
                 if current_identity:
                     return fn(*args, **kwargs)
             except Exception as e:
@@ -80,7 +81,7 @@ def upload_avatar():
         current_user = session.get('user')
     else:
         try:
-            current_user = get_jwt_identity()
+            current_user = get_current_identity()
         except Exception as e:
             current_app.logger.error(f"Error getting JWT identity: {str(e)}")
     

@@ -312,6 +312,28 @@ class ModelConfig:
         )
     
     @classmethod
+    def create_system_message_for_prose_generation(cls) -> str:
+        """Create system message optimized for turning roleplay poses into working prose."""
+        return (
+            "You are a master novelist and storyteller. Your task is to take a collection of roleplay "
+            "poses (actions, dialogue, thoughts recorded by different players) and transform them into "
+            "a seamless, high-quality narrative prose chapter.\n\n"
+            
+            "GOALS:\n"
+            "- Connect the individual poses with smooth transitions\n"
+            "- Flesh out the internal thoughts and sensory details only hinted at in the poses\n"
+            "- Maintain character distinctness and voice consistency\n"
+            "- Ensure the narrative flows like a professional novel\n"
+            "- Keep all plot points and dialogue from the original poses\n\n"
+            
+            "WRITING STYLE:\n"
+            "- Professional, evocative, and immersive\n"
+            "- Clear paragraph structure\n"
+            "- Consistent perspective (usually third-person omniscient or shifting carefully)\n"
+            "- High burstiness and perplexity for a natural human feel\n"
+        )
+    
+    @classmethod
     def create_system_message_for_pose_context(cls) -> str:
         """Create system message optimized for pose context analysis."""
         return (
@@ -345,6 +367,7 @@ class ModelConfig:
             "roleplay_enhancement": cls.create_system_message_for_roleplay(),
             "character_analysis": cls.create_system_message_for_character_analysis(),
             "pose_context": cls.create_system_message_for_pose_context(),
+            "prose_generation": cls.create_system_message_for_prose_generation(),
             "general_purpose": cls.create_system_message_for_roleplay()
         }
         

@@ -4,6 +4,7 @@ Setup API endpoints for first-time application initialization.
 from flask import Blueprint, request, jsonify
 from ..models.user_mongo import User
 from ..services.mongodb_service import get_mongodb_service
+from ..extensions import get_db
 import logging
 
 setup_bp = Blueprint('setup', __name__)
@@ -13,10 +14,10 @@ logger = logging.getLogger(__name__)
 def check_setup_status():
     """Check if the application needs initial setup (no admin users exist)."""
     try:
-        mongodb_service = get_mongodb_service()
+        db = get_db()
         
         # Check if any admin users exist
-        admin_count = mongodb_service.count_documents(
+        admin_count = db.count_documents(
             User.COLLECTION_NAME,
             {'is_admin': True}
         )
@@ -38,8 +39,8 @@ def create_first_admin():
     """Create the first admin user during initial setup."""
     try:
         # First, verify that no admin users exist
-        mongodb_service = get_mongodb_service()
-        admin_count = mongodb_service.count_documents(
+        db = get_db()
+        admin_count = db.count_documents(
             User.COLLECTION_NAME,
             {'is_admin': True}
         )

@@ -9,7 +9,7 @@ from typing import List, Optional, Dict, Any, Tuple
 import logging
 import re
 from ..models.scene_memory import CharacterState, Pose, SceneMemory
-from ..services.openrouter_client import OpenRouterClient, OpenRouterAPIError
+from ..services.ai_client import AIClient, OpenRouterAPIError
 from ..services.character_service import CharacterProfile
 
 logger = logging.getLogger(__name__)
@@ -67,14 +67,14 @@ class CharacterStateService:
     - State consistency validation
     """
     
-    def __init__(self, openrouter_client: Optional[OpenRouterClient] = None):
+    def __init__(self, ai_client: Optional[AIClient] = None):
         """Initialize the character state service.
         
         Args:
-            openrouter_client: Optional OpenRouter.ai client for AI-powered analysis
+            ai_client: Optional OpenRouter.ai client for AI-powered analysis
         """
         self.logger = logging.getLogger(__name__)
-        self.openrouter_client = openrouter_client
+        self.ai_client = ai_client
     
     def initialize_character_state(
         self,
@@ -232,7 +232,7 @@ class CharacterStateService:
         changes = []
         
         # Use AI analysis if available, otherwise use pattern matching
-        if self.openrouter_client:
+        if self.ai_client:
             try:
                 ai_changes = self._detect_changes_with_ai(pose)
                 changes.extend(ai_changes)
@@ -348,7 +348,7 @@ class CharacterStateService:
             Analyze this pose for character state changes.
             """
             
-            response = self.openrouter_client.generate_completion(
+            response = self.ai_client.generate_completion(
                 model="qwen3-235b",
                 messages=[
                     {"role": "system", "content": system_message},
@@ -873,7 +873,7 @@ class CharacterStateService:
         }
         
         # Analyze poses for new personality traits
-        if self.openrouter_client:
+        if self.ai_client:
             try:
                 personality_analysis = self._analyze_poses_for_personality(poses, character_profile)
                 if personality_analysis:
@@ -898,7 +898,7 @@ class CharacterStateService:
         Returns:
             Dictionary of suggested updates or None if analysis fails
         """
-        if not poses or not self.openrouter_client:
+        if not poses or not self.ai_client:
             return None
         
         # Build analysis prompt
@@ -925,7 +925,7 @@ class CharacterStateService:
         """
         
         try:
-            response = self.openrouter_client.generate_completion(
+            response = self.ai_client.generate_completion(
                 prompt=prompt,
                 model='qwen3-235b',
                 temperature=0.3,

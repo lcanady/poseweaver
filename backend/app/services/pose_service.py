@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, asdict
 import logging
 from datetime import datetime
-from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
+from app.services.ai_client import AIClient, OpenRouterAPIError
 from app.services.model_config import ModelConfig
 from app.services.character_service import CharacterProfile
 from app.services.context_service import PoseContext
@@ -49,15 +49,15 @@ class PoseEnhancement:
 class PoseService:
     """Service for generating and enhancing character poses"""
     
-    def __init__(self, openrouter_client: OpenRouterClient):
+    def __init__(self, ai_client: AIClient):
         """Initialize the pose service with a OpenRouter client."""
-        self.openrouter_client = openrouter_client
-        self.data_extraction_service = DataExtractionService(openrouter_client)
+        self.ai_client = ai_client
+        self.data_extraction_service = DataExtractionService(ai_client)
         self.mush_parser = MushParserService(self.data_extraction_service)
         # Initialize continuity services
         self.scene_management_service = SceneManagementService()
-        self.character_state_service = CharacterStateService(openrouter_client)
-        self.environment_state_service = EnvironmentStateService(openrouter_client)
+        self.character_state_service = CharacterStateService(ai_client)
+        self.environment_state_service = EnvironmentStateService(ai_client)
     
     def enhance_pose(
         self,
@@ -428,7 +428,7 @@ class PoseService:
         """
         
         # Generate completion using OpenRouter.ai
-        response = self.openrouter_client.generate_completion(
+        response = self.ai_client.generate_completion(
             model="qwen3-235b",
             messages=[
                 {"role": "system", "content": system_message},
@@ -647,7 +647,7 @@ class PoseService:
         """
         
         # Generate completion using OpenRouter.ai
-        response = self.openrouter_client.generate_completion(
+        response = self.ai_client.generate_completion(
             model="qwen3-235b",
             messages=[
                 {"role": "system", "content": system_message},
@@ -796,7 +796,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
 """
             
             # Generate the refined pose
-            refined_pose = self.openrouter_client.generate_completion(
+            refined_pose = self.ai_client.generate_completion(
                 model="qwen3-235b",
                 messages=[
                     {"role": "system", "content": system_message},
@@ -1045,7 +1045,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
                 """
                 
                 try:
-                    corrected_response = self.openrouter_client.generate_completion(
+                    corrected_response = self.ai_client.generate_completion(
                         model="qwen3-235b",
                         messages=[
                             {"role": "user", "content": fix_prompt}
@@ -1146,7 +1146,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
             """
             
             try:
-                response = self.openrouter_client.generate_completion(
+                response = self.ai_client.generate_completion(
                     model="qwen3-235b",
                     messages=[
                         {"role": "system", "content": system_message},
@@ -1746,7 +1746,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
         
         # Generate completion using OpenRouter.ai
         try:
-            response = self.openrouter_client.generate_completion(
+            response = self.ai_client.generate_completion(
                 model="qwen3-235b",
                 messages=[
                     {"role": "system", "content": system_message},
@@ -1821,5 +1821,75 @@ Please refine the pose according to the user's suggestion while maintaining qual
             return None
     
 
-    
+    def generate_story_prose(
+        self,
+        scene_id: str,
+        user_id: str,
+        additional_instructions: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Generate narrative prose from all poses in a scene.
+        
+        Args:
+            scene_id: ID of the scene
+            user_id: ID of the user
+            additional_instructions: Optional specific style or focus instructions
+            
+        Returns:
+            Dict containing the generated prose
+        """
+        # Get the scene and poses
+        scene = SceneService.get_scene(scene_id, user_id)
+        if not scene:
+            raise ValueError("Scene not found or access denied")
+            
+        poses = SceneService.get_recent_poses(scene_id, user_id, limit=100)
+        if not poses:
+            raise ValueError("No poses found in this scene to generate prose from")
+            
+        # Format poses for the prompt
+        formatted_poses = ""
+        for i, pose in enumerate(poses):
+            char_name = pose.get('character_name', 'Unknown')
+            text = pose.get('pose_text', '')
+            formatted_poses += f"[{i+1}] {char_name}: {text}\n\n"
+            
+        # Prepare system message
+        system_message = ModelConfig.get_system_message_for_use_case("prose_generation")
+        
+        # Prepare user message
+        user_message = f"""
+        Please transform the following roleplay poses into a coherent, immersive narrative chapter.
+        
+        STORY TITLE: {scene.get('name', 'Untitled')}
+        STORY DESCRIPTION: {scene.get('description', 'No description provided')}
+        
+        POSES:
+        {formatted_poses}
+        
+        {f'ADDITIONAL INSTRUCTIONS: {additional_instructions}' if additional_instructions else ''}
+        
+        Generate ONLY the prose text. No metadata, no titles, just the story.
+        """
+        
+        # Generate completion
+        response = self.ai_client.generate_completion(
+            model="qwen3-235b",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": user_message}
+            ],
+            temperature=0.7,
+            max_tokens=2000
+        )
+        
+        if isinstance(response, str):
+            prose = response.strip()
+        else:
+            prose = response.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+            
+        return {
+            'success': True,
+            'prose': prose,
+            'scene_name': scene.get('name')
+        }
  

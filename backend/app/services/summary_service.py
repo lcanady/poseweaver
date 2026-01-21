@@ -11,7 +11,7 @@ import os
 from dataclasses import dataclass
 from ..models.scene import Scene
 from ..models.character import Character
-from ..services.openrouter_client import OpenRouterClient
+from ..services.ai_client import AIClient
 
 
 @dataclass
@@ -447,7 +447,7 @@ class SummaryService:
             return f"This is a placeholder summary for scene '{context['scene_name']}'. AI integration requires a valid OPENROUTER_API_KEY."
         
         # Initialize OpenRouter client
-        openrouter_client = OpenRouterClient(api_key=api_key)
+        ai_client = AIClient(api_key=api_key)
         
         # Create system message with summary generation instructions
         system_message = SummaryService._create_system_prompt(options)
@@ -477,7 +477,7 @@ class SummaryService:
             max_tokens = options.max_length * 2
             
             # Generate the summary using OpenRouter.ai
-            summary = openrouter_client.generate_completion(
+            summary = ai_client.generate_completion(
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,

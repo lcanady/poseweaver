@@ -8,8 +8,13 @@ from app.services.pose_service import PoseService
 from app.services.character_service import CharacterProfile
 from app.services.context_service import PoseContext
 from app.services.scene_flow_service import SceneFlowService
-from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
+from app.services.ai_client import AIClient, OpenRouterAPIError
 from app.services.usage_tracking_service import require_pose_generation_limit, get_usage_info
+from app.middleware.auth_middleware import require_auth, get_current_identity, get_current_identity
+from app.utils.worker import worker
+import logging
+
+logger = logging.getLogger(__name__)
 
 pose_bp = Blueprint('pose', __name__)
 
@@ -23,11 +28,11 @@ def get_pose_service():
     global pose_service
     if pose_service is None:
         import os
-        api_key = os.getenv('OPENROUTER_API_KEY')
+        api_key = os.getenv('AI_API_KEY') or os.getenv('OPENROUTER_API_KEY')
         if not api_key:
-            raise ValueError("OPENROUTER_API_KEY environment variable is required")
-        openrouter_client = OpenRouterClient(api_key=api_key)
-        pose_service = PoseService(openrouter_client)
+            raise ValueError("AI_API_KEY environment variable is required")
+        ai_client = AIClient(api_key=api_key)
+        pose_service = PoseService(ai_client)
     return pose_service
 
 
@@ -36,15 +41,44 @@ def get_scene_flow_service():
     global scene_flow_service
     if scene_flow_service is None:
         import os
-        api_key = os.getenv('OPENROUTER_API_KEY')
+        api_key = os.getenv('AI_API_KEY') or os.getenv('OPENROUTER_API_KEY')
         if not api_key:
-            raise ValueError("OPENROUTER_API_KEY environment variable is required")
-        openrouter_client = OpenRouterClient(api_key=api_key)
-        scene_flow_service = SceneFlowService(openrouter_client)
+            raise ValueError("AI_API_KEY environment variable is required")
+        ai_client = AIClient(api_key=api_key)
+        scene_flow_service = SceneFlowService(ai_client)
     return scene_flow_service
 
 
+@pose_bp.route('/prose/<scene_id>', methods=['POST'])
+@require_auth
+def generate_prose(scene_id):
+    """Generate narrative prose from scene poses.
+    
+    Request body:
+    {
+        "instructions": "Optional custom instructions..."
+    }
+    """
+    try:
+        current_user = get_current_identity()
+        data = request.get_json(force=True, silent=True) or {}
+        instructions = data.get('instructions')
+        
+        service = get_pose_service()
+        result = service.generate_story_prose(scene_id, current_user, instructions)
+        
+        return jsonify(result)
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error generating prose: {str(e)}")
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+
+from app.extensions import limiter
+
 @pose_bp.route('/enhance', methods=['POST'])
+@limiter.limit("5 per minute")
 @require_pose_generation_limit
 def enhance_pose():
     """Enhance a basic pose into rich narrative.
@@ -130,10 +164,17 @@ def enhance_pose():
         enhancement_options = data.get('enhancement_options', {})
         
         # Enhance the pose
+        # Enhance the pose
         service = get_pose_service()
-        enhancement = service.enhance_pose(
+        
+        # Submit to background worker
+        # Using future.result() to wait for the result while running in a thread 
+        # to avoid blocking the main event loop if async mode is enabled.
+        future = worker.submit(
+            service.enhance_pose,
             original_pose, character, context, enhancement_style, enhancement_options
         )
+        enhancement = future.result()
         
         # Get usage info from request context (added by decorator)
         usage_info = getattr(request, 'usage_info', {})
@@ -170,6 +211,7 @@ def enhance_pose():
         }), 400
         
     except Exception as e:
+        logger.error(f"Internal server error in enhance_pose: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
             'error': f'Internal server error: {str(e)}'

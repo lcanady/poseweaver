@@ -4,13 +4,12 @@ Scene Management API endpoints.
 Provides CRUD operations for scene management using MongoDB.
 """
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import get_jwt_identity
 from http import HTTPStatus
 
 from app.services.scene_service import SceneService
 from app.services.character_mgmt_service import CharacterManagementService
 from app.models.scene import PoseType
-from app.middleware.auth_middleware import require_auth
+from app.middleware.auth_middleware import require_auth, get_current_identity, get_current_identity
 from app.services.search_service import SearchService
 from app.services.summary_service import SummaryService, SummaryOptions
 
@@ -45,7 +44,7 @@ def create_scene():
         400 Bad Request: If validation fails or name already exists
         401 Unauthorized: If not authenticated
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     # Validate required fields
@@ -104,7 +103,7 @@ def get_scene(scene_id):
         403 Forbidden: If not the owner of the scene
         404 Not Found: If scene doesn't exist
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     try:
         scene = SceneService.get_scene(
@@ -149,7 +148,7 @@ def update_scene(scene_id):
         403 Forbidden: If not the owner of the scene
         404 Not Found: If scene doesn't exist
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     try:
@@ -210,7 +209,7 @@ def list_scenes():
     Returns:
         200 OK: List of scenes
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
@@ -268,7 +267,7 @@ def add_pose(scene_id):
         403 Forbidden: If not the owner of the scene
         404 Not Found: If scene doesn't exist
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     # Validate required fields
@@ -339,7 +338,7 @@ def get_recent_poses(scene_id):
         403 Forbidden: If not the owner of the scene
         404 Not Found: If scene doesn't exist
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     limit = min(int(request.args.get('limit', 10)), 100)  # Max 100 for safety
     
     try:
@@ -384,7 +383,7 @@ def update_scene_context(scene_id):
         403 Forbidden: If not the owner of the scene
         404 Not Found: If scene doesn't exist
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data:
@@ -435,7 +434,7 @@ def add_participant(scene_id):
         403 Forbidden: If not the owner of the scene or character
         404 Not Found: If scene or character doesn't exist
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data or 'character_id' not in data:
@@ -480,7 +479,7 @@ def remove_participant(scene_id, character_id):
         403 Forbidden: If not the owner of the scene
         404 Not Found: If scene doesn't exist
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     try:
         # Remove the participant
@@ -518,7 +517,7 @@ def delete_scene(scene_id):
         403 Forbidden: If not the owner of the scene
         404 Not Found: If scene doesn't exist
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     try:
         success = SceneService.delete_scene(
@@ -566,7 +565,7 @@ def save_scene_with_context(scene_id):
         403 Forbidden: If not the owner of the scene
         404 Not Found: If scene doesn't exist
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data or 'scene_context' not in data:
@@ -621,7 +620,7 @@ def get_scene_history(scene_id):
         
     Requirements: 1.1, 1.2, 1.5 - Scene history storage and retrieval
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     limit = min(int(request.args.get('limit', 100)), 500)  # Max 500 for performance
@@ -712,7 +711,7 @@ def search_scenes():
         
     Requirements: 7.1, 7.2, 7.3 - Scene search functionality
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     query = request.args.get('q')
@@ -809,7 +808,7 @@ def search_poses(scene_id):
         
     Requirements: 7.1, 7.2, 7.3 - Scene search functionality
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     query = request.args.get('q')
@@ -894,7 +893,7 @@ def generate_scene_summary(scene_id):
         
     Requirements: 8.1, 8.2 - Scene summary generation
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     # Validate required fields
@@ -981,7 +980,7 @@ def generate_catchup_brief(scene_id):
         
     Requirements: 8.3 - Catch-up brief generation
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data:
@@ -1061,7 +1060,7 @@ def analyze_pose_continuity(scene_id, pose_id):
         
     Requirements: 6.1, 6.2, 6.3 - Continuity checking and alerts
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data:
@@ -1140,7 +1139,7 @@ def get_continuity_flags(scene_id):
         
     Requirements: 6.4 - Continuity flag management
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     flag_type = request.args.get('flag_type')
@@ -1228,7 +1227,7 @@ def add_pose_with_continuity(scene_id):
         
     Requirements: 1.2, 6.1, 6.2 - Pose submission with continuity analysis
     """
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     # Validate required fields

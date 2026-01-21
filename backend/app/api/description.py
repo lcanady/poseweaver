@@ -7,7 +7,7 @@ import os
 from flask import Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
 from app.services.description_service import DescriptionService
-from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
+from app.services.ai_client import AIClient, OpenRouterAPIError
 from app.services.usage_tracking_service import require_pose_generation_limit, get_usage_info
 
 description_bp = Blueprint('description', __name__)
@@ -23,8 +23,8 @@ def get_description_service():
         api_key = os.getenv('OPENROUTER_API_KEY')
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY environment variable is required")
-        openrouter_client = OpenRouterClient(api_key=api_key)
-        description_service = DescriptionService(openrouter_client)
+        ai_client = AIClient(api_key=api_key)
+        description_service = DescriptionService(ai_client)
     return description_service
 
 

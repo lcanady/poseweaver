@@ -57,6 +57,11 @@ export function UserNav() {
         <DropdownMenuItem asChild>
           <Link href="/dashboard/settings">Settings</Link>
         </DropdownMenuItem>
+        {user.is_admin && (
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/admin">Admin</Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           Log out

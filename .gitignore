@@ -57,6 +57,7 @@ venv/
 ENV/
 env/
 .env
+!.env.example
 
 # Node.js
 node_modules/
@@ -163,3 +164,10 @@ temp/
 # Local development
 .local 
 .vercel
+
+# Security
+backend/flask_session/
+
+# Firebase Credentials
+firebase-credentials.json
+backend/firebase-credentials.json

@@ -16,11 +16,13 @@ import { auth } from '@/lib/firebase/client'
 
 // Extended User type to include custom fields if needed, 
 // strictly mapped from Firebase for now.
+// Extended User type including admin status
 export interface User {
   uid: string
   email: string | null
   displayName: string | null
   photoURL: string | null
+  is_admin?: boolean
 }
 
 interface AuthContextType {
@@ -44,14 +46,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAuthenticated = !!user
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL
-        })
+        // user is signed in, fetch additional details from backend
+        try {
+          const token = await firebaseUser.getIdToken()
+          // We need to fetch the full user profile to get is_admin status
+          // Note: using direct fetch here instead of through API utils to avoid circular deps
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/auth/me`, {
+             headers: {
+               'Authorization': `Bearer ${token}`
+             }
+          })
+          
+          if (response.ok) {
+             const data = await response.json()
+             if (data.success && data.user) {
+                setUser({
+                  uid: firebaseUser.uid,
+                  email: firebaseUser.email,
+                  displayName: firebaseUser.displayName,
+                  photoURL: firebaseUser.photoURL,
+                  is_admin: data.user.is_admin
+                })
+             } else {
+               // Fallback if backend fetch fails but firebase is ok
+               setUser({
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+                is_admin: false
+              })
+             }
+          } else {
+             setUser({
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+                is_admin: false
+              })
+          }
+        } catch (err) {
+           console.error("Error fetching user profile:", err)
+           // Fallback
+           setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL,
+              is_admin: false
+            })
+        }
       } else {
         setUser(null)
       }

@@ -27,7 +27,8 @@ import {
   Palette,
   BarChart3,
   UserPlus,
-  Lock
+  Lock,
+  Search
 } from "lucide-react"
 
 interface DashboardStats {
@@ -74,7 +75,7 @@ export default function DashboardPage() {
           headers['Authorization'] = `Bearer ${token}`
         }
 
-        // Note: Scenes functionality has been removed from the product
+
 
         // Fetch characters data
         try {
@@ -108,7 +109,7 @@ export default function DashboardPage() {
               `${getApiUrl()}/api/purchase/usage-status?user_id=${user.uid}`,
               {
                 method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 credentials: 'include'
               }
             )
@@ -155,28 +156,28 @@ export default function DashboardPage() {
       badge: "New"
     },
     {
-      title: "Scene Generator",
-      description: "Create immersive roleplay scenes and environments with AI assistance",
-      href: "#",
+      title: "Stories",
+      description: "Create and manage immersive roleplay scenes and environments with AI assistance",
+      href: "/dashboard/stories",
       icon: <Sparkles className="h-5 w-5" />,
-      status: "coming-soon",
-      badge: "Soon"
+      status: "premium",
+      badge: "Popular"
     },
     {
-      title: "Style Mimic",
-      description: "AI learns your writing style and applies it to enhanced poses for authentic voice",
-      href: "#",
-      icon: <Palette className="h-5 w-5" />,
-      status: "coming-soon",
-      badge: "Pro Only"
-    },
-    {
-      title: "Writing Analytics",
+      title: "Plot Tracker",
       description: "Track your writing evolution, style metrics, and character usage patterns",
-      href: "#",
+      href: "/dashboard/plot-tracker",
       icon: <BarChart3 className="h-5 w-5" />,
-      status: "coming-soon",
+      status: "premium",
       badge: "Pro Only"
+    },
+    {
+      title: "Search & Summary",
+      description: "AI-powered search across all your stories and characters with intelligent summaries",
+      href: "/dashboard/search",
+      icon: <Search className="h-5 w-5" />,
+      status: "premium",
+      badge: "New"
     },
     {
       title: "Scene Collaboration",

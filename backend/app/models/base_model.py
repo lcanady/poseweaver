@@ -1,26 +1,29 @@
 """
-Base model class for MongoDB models.
+Base model class for Database models.
 """
 from typing import Dict, Any, Optional, TypeVar, Generic, Type
 from bson import ObjectId
 from datetime import datetime
-from ..services.mongodb_service import get_mongodb_service
+from ..extensions import get_db
 
 T = TypeVar('T', bound='BaseModel')
 
 class BaseModel:
-    """Base model with common MongoDB operations."""
+    """Base model with common Database operations."""
     
     COLLECTION_NAME: str = ''  # Must be overridden by subclasses
     
     def __init__(self, **kwargs):
         self.id = kwargs.get('_id')
+        if not self.id:
+            self.id = kwargs.get('id')
+            
         self.created_at = kwargs.get('created_at', datetime.utcnow())
         self.updated_at = kwargs.get('updated_at', datetime.utcnow())
     
     def save(self) -> str:
-        """Save the model to MongoDB."""
-        mongodb = get_mongodb_service()
+        """Save the model to Database."""
+        db = get_db()
         
         # Update timestamps
         now = datetime.utcnow()
@@ -35,31 +38,34 @@ class BaseModel:
         if self.id:
             # Update existing document
             data.pop('_id', None)  # Remove _id for update
+            data.pop('id', None)   # Remove id for update
             data.pop('created_at', None)  # Don't update created_at
             
             # Ensure the updated_at field is explicitly included in the update
             data['updated_at'] = now.isoformat()
             
-            mongodb.update_one(
+            # Use id for filter
+            db.update_one(
                 self.COLLECTION_NAME,
-                {'_id': ObjectId(self.id)},
+                {'id': self.id},
                 data
             )
             return self.id
         else:
             # Insert new document
-            self.id = mongodb.insert_one(self.COLLECTION_NAME, data)
+            self.id = db.insert_one(self.COLLECTION_NAME, data)
             return self.id
     
     def delete(self) -> bool:
-        """Delete the model from MongoDB."""
+        """Delete the model from Database."""
         if not self.id:
             return False
             
-        mongodb = get_mongodb_service()
-        return mongodb.delete_one(
+        db = get_db()
+        # Try both _id and id for compatibility
+        return db.delete_one(
             self.COLLECTION_NAME,
-            {'_id': ObjectId(self.id)}
+            {'id': self.id}
         )
     
     @classmethod
@@ -68,30 +74,28 @@ class BaseModel:
         if not id:
             return None
             
-        mongodb = get_mongodb_service()
-        data = mongodb.find_one(
+        db = get_db()
+        data = db.find_one(
             cls.COLLECTION_NAME,
-            {'_id': ObjectId(id)}
+            {'id': id}
         )
         
+        # Fallback for MongoDB ObjectId lookup if string lookup fails?
+        # The service layer should handle this if possible or we assume id is string
+        if not data and ObjectId.is_valid(id):
+             data = db.find_one(
+                cls.COLLECTION_NAME,
+                {'_id': ObjectId(id)}
+            )
+
         return cls.from_dict(data) if data else None
     
     @classmethod
     def find_all(cls: Type[T], query: Optional[Dict] = None, limit: int = 100, 
                 skip: int = 0, sort: Optional[list] = None) -> list[T]:
-        """Find all models matching the query.
-        
-        Args:
-            query: MongoDB query filter
-            limit: Maximum number of results to return
-            skip: Number of documents to skip (for pagination)
-            sort: List of (key, direction) pairs for sorting
-            
-        Returns:
-            List of model instances matching the query
-        """
-        mongodb = get_mongodb_service()
-        results = mongodb.find_many(
+        """Find all models matching the query."""
+        db = get_db()
+        results = db.find_many(
             cls.COLLECTION_NAME,
             filter_dict=query or {},
             limit=limit,
@@ -101,19 +105,14 @@ class BaseModel:
         return [cls.from_dict(data) for data in results if data]
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert model to dictionary for MongoDB."""
+        """Convert model to dictionary."""
         data = self.__dict__.copy()
-        data.pop('id', None)
         
-        # Keep _id as is when saving to MongoDB internally
-        if hasattr(self, '_id') and not self.id:
-            data['_id'] = self._id
-        elif self.id:
-            # For API responses, use string ID to ensure JSON serialization works
-            if '_id' in data:
-                data['_id'] = str(data['_id'])
-            else:
-                data['_id'] = str(self.id)
+        # Ensure id is included if present
+        if self.id:
+            data['id'] = str(self.id)
+            # Legacy fields - DB implementations might stripe them if needed
+            # For API responses, having id is good.
         
         # Convert datetime objects to ISO format strings
         for key, value in data.items():
@@ -133,10 +132,10 @@ class BaseModel:
         if not data:
             return None
             
-        # Convert _id to id
+        # Standardize id
         if '_id' in data:
             data['id'] = str(data['_id'])
-            data.pop('_id')
+            # We don't necessarily pop _id, just ensure id exists
             
         return cls(**data)
     

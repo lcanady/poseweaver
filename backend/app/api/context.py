@@ -5,7 +5,7 @@ Provides endpoints for pose context analysis and response suggestions.
 """
 from flask import Blueprint, request, jsonify
 from app.services.context_service import ContextService
-from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
+from app.services.ai_client import AIClient, OpenRouterAPIError
 
 # Create blueprint
 context_bp = Blueprint('context', __name__)
@@ -53,8 +53,8 @@ def get_context_service():
         api_key = os.getenv('OPENROUTER_API_KEY')
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY environment variable is required")
-        openrouter_client = OpenRouterClient(api_key=api_key)
-        context_service = ContextService(openrouter_client)
+        ai_client = AIClient(api_key=api_key)
+        context_service = ContextService(ai_client)
     return context_service
 
 

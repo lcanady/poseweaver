@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 from bson import ObjectId
 from .base_model import BaseModel
-from ..services.mongodb_service import get_mongodb_service
+from ..extensions import get_db
 
 class Character(BaseModel):
     """Character model for roleplay characters."""
@@ -24,7 +24,7 @@ class Character(BaseModel):
     ):
         super().__init__(**kwargs)
         self.name = name
-        self.user_id = user_id
+        self.user_id = str(user_id) if user_id else None
         self.description = description
         self.profile_image = profile_image
         self.tags = tags or []
@@ -97,8 +97,9 @@ class Character(BaseModel):
             return None
             
         # Convert ObjectId to string for user_id
-        if 'user_id' in data and data['user_id'] and isinstance(data['user_id'], ObjectId):
-            data['user_id'] = str(data['user_id'])
+        if 'user_id' in data and data['user_id']:
+             if isinstance(data['user_id'], ObjectId):
+                 data['user_id'] = str(data['user_id'])
             
         return cls(**data)
     
@@ -113,33 +114,13 @@ class Character(BaseModel):
         Returns:
             List of Character instances belonging to the user
         """
-        # Since MongoDB could have stored user_id as either string or ObjectId,
-        # we need to check both possibilities
-        try:
-            user_id_obj = ObjectId(user_id)
-            # Create a query that matches either the string or ObjectId version
-            query = {'$or': [
-                {'user_id': user_id_obj},  # Match ObjectId version
-                {'user_id': str(user_id)}  # Match string version
-            ]}
-        except:
-            # If conversion fails, just use the string version
-            query = {'user_id': user_id}
+        # Simplified query assuming user_id normalization
+        query = {'user_id': str(user_id)}
             
         if not include_inactive:
             query['is_active'] = True
             
-        # Debug log the query to help diagnose issues
-        from flask import current_app
-        current_app.logger.debug(f"Character.find_by_user query: {query}")
-        
-        # Get results
-        result = cls.find_all(query=query, sort=[('name', 1)])
-        
-        # Debug log the result count
-        current_app.logger.debug(f"Character.find_by_user found {len(result)} characters")
-        
-        return result
+        return cls.find_all(query=query, sort=[('name', 1)])
         
     @classmethod
     def find_by_name(cls, name: str, user_id: Optional[str] = None) -> List['Character']:
@@ -154,39 +135,46 @@ class Character(BaseModel):
         """
         query = {}
         if name:
-            # Escape special regex characters in name
-            import re
-            escaped_name = re.escape(name)
-            query['name'] = {'$regex': f'^{escaped_name}$', '$options': 'i'}  # Case-insensitive exact match
+             # Basic exact match for cross-db compatibility first
+             # Regex is Mongo specific. Firestore requires specific index or client side filtering often
+             # or 'where name == value'. For case insensitive, best to store normalized name.
+             # For now, we will assume exact match or let the generic repository handle it.
+             # If using our MongoService, it supports regex. FirebaseService... not so much yet.
+             # We will pass the regex if it's Mongo, but ideally we abstract this.
+             # For migration safety, let's just pass exact name for now or handle locally?
+             # Existing logic uses regex:
+             # import re
+             # escaped_name = re.escape(name)
+             # query['name'] = {'$regex': f'^{escaped_name}$', '$options': 'i'}
+             # This will crash FirebaseService potentially or be ignored.
+             
+             # Attempt to use 'name' eq 'name' for simplicity in transition
+             # or keep regex but aware it won't work in Firebase without full text search engine (Algolia etc)
+             query['name'] = name 
             
         if user_id:
-            # Convert user_id to ObjectId for query if it's a valid ObjectId
-            try:
-                user_id_obj = ObjectId(user_id)
-            except:
-                user_id_obj = user_id
-            query['user_id'] = user_id_obj
+            query['user_id'] = str(user_id)
             
         return cls.find_all(query=query)
     
     @classmethod
     def initialize_indexes(cls) -> None:
         """Initialize database indexes for characters."""
-        mongodb = get_mongodb_service()
+        db = get_db()
         
         # Create indexes
-        mongodb.create_index(cls.COLLECTION_NAME, 'user_id')
-        mongodb.create_index(
+        db.create_index(cls.COLLECTION_NAME, 'user_id')
+        db.create_index(
             cls.COLLECTION_NAME, 
             [('user_id', 1), ('name', 1)], 
             unique=True
         )
-        mongodb.create_index(
+        db.create_index(
             cls.COLLECTION_NAME,
             'name',
             unique=False
         )
-        mongodb.create_index(
+        db.create_index(
             cls.COLLECTION_NAME,
             'tags',
             unique=False

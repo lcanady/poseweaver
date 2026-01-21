@@ -118,6 +118,10 @@ class UsageTrackingService:
     @staticmethod
     def use_generation(user) -> bool:
         """Use one pose generation for the user."""
+        # Admin users have unlimited access and don't consume generations
+        if hasattr(user, 'is_admin') and user.is_admin:
+            return True
+
         # Handle demo user
         if hasattr(user, '__dict__') and not hasattr(user, 'use_pose_generation'):
             # Demo user always allows generation

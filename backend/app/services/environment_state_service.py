@@ -10,7 +10,7 @@ from typing import List, Optional, Dict, Any, Tuple
 import logging
 import json
 from ..models.scene_memory import EnvironmentState, Pose
-from .openrouter_client import OpenRouterClient, OpenRouterAPIError
+from .ai_client import AIClient, OpenRouterAPIError
 
 logger = logging.getLogger(__name__)
 
@@ -62,15 +62,15 @@ class EnvironmentStateService:
     - Location and setting management within scenes
     """
     
-    def __init__(self, openrouter_client: Optional[OpenRouterClient] = None):
+    def __init__(self, ai_client: Optional[AIClient] = None):
         """
         Initialize the environment state service.
         
         Args:
-            openrouter_client: Optional OpenRouter.ai client for AI analysis
+            ai_client: Optional OpenRouter.ai client for AI analysis
         """
         self.logger = logging.getLogger(__name__)
-        self.openrouter_client = openrouter_client
+        self.ai_client = ai_client
     
     def initialize_environment_state(
         self,
@@ -128,7 +128,7 @@ class EnvironmentStateService:
         """
         self.logger.debug(f"Extracting environmental details from pose {pose.id}")
         
-        if not self.openrouter_client:
+        if not self.ai_client:
             self.logger.warning("No OpenRouter client available, using basic extraction")
             return self._extract_basic_environmental_details(pose)
         
@@ -155,7 +155,7 @@ class EnvironmentStateService:
             user_content = f"Pose by {pose.character_name}:\n{pose.content}"
             
             # Call OpenRouter.ai for analysis
-            response = self.openrouter_client.generate_completion(
+            response = self.ai_client.generate_completion(
                 prompt=user_content,
                 system_message=system_prompt,
                 model="qwen3-235b",
@@ -391,7 +391,7 @@ class EnvironmentStateService:
         """
         self.logger.debug(f"Checking environmental consistency for pose {pose.id}")
         
-        if not self.openrouter_client:
+        if not self.ai_client:
             self.logger.warning("No OpenRouter client available, using basic consistency check")
             return self._check_basic_environmental_consistency(pose, current_environment)
         
@@ -441,7 +441,7 @@ New Pose by {pose.character_name}:
 Check for environmental consistency."""
             
             # Call OpenRouter.ai for analysis
-            response = self.openrouter_client.generate_completion(
+            response = self.ai_client.generate_completion(
                 prompt=user_content,
                 system_message=system_prompt,
                 model="qwen3-235b",

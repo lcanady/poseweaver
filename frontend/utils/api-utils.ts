@@ -18,7 +18,7 @@ export function getApiUrl(): string {
     // Check if we're on localhost for development
     const hostname = window.location.hostname;
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      const apiUrl = 'http://localhost:3000'; // Updated to point to Next.js API routes
+      const apiUrl = 'http://localhost:5001'; // Point directly to Flask backend
       console.log('[getApiUrl] Development mode - using:', apiUrl);
       return apiUrl;
     }
@@ -31,8 +31,8 @@ export function getApiUrl(): string {
   }
 
   // Fallback for server-side rendering in development
-  console.log('[getApiUrl] Using server-side fallback: http://localhost:3000');
-  return 'http://localhost:3000';
+  console.log('[getApiUrl] Using server-side fallback: http://localhost:5001');
+  return 'http://localhost:5001';
 }
 
 /**

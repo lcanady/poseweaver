@@ -51,7 +51,7 @@ export default function BillingPage() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [usageInfo, setUsageInfo] = useState<any>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
 
   // Get current subscription status from usage info
   const currentSubscription = usageInfo?.subscription_status || 'free';
@@ -92,12 +92,14 @@ export default function BillingPage() {
     if (!user?.uid) return;
 
     try {
+      const token = await getToken();
       const response = await fetch(
         `${getApiUrl()}/api/purchase/usage-status?user_id=${user.uid}`,
         {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           credentials: 'include'
         }
@@ -120,12 +122,14 @@ export default function BillingPage() {
   const handleSubscriptionUpgrade = async (tier: 'basic' | 'pro') => {
     setIsPurchasing(true);
     try {
+      const token = await getToken();
       const response = await fetch(
         `${getApiUrl()}/api/purchase/create-checkout-session`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
             type: 'subscription',
@@ -159,12 +163,14 @@ export default function BillingPage() {
   const handleRechargePackPurchase = async (generationCount: number) => {
     setIsPurchasing(true);
     try {
+      const token = await getToken();
       const response = await fetch(
         `${getApiUrl()}/api/purchase/create-checkout-session`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
             type: 'recharge',
@@ -207,12 +213,14 @@ export default function BillingPage() {
 
     setIsPurchasing(true);
     try {
+      const token = await getToken();
       const response = await fetch(
         `${getApiUrl()}/api/purchase/customer-portal`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
             user_id: user.uid,

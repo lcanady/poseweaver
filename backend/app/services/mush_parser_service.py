@@ -81,13 +81,13 @@ class MushParserService:
         # Use the data extraction service to parse the text with LLM
         if not hasattr(self, 'data_extraction_service') or not self.data_extraction_service:
             from app.services.data_extraction_service import DataExtractionService
-            from app.services.openrouter_client import OpenRouterClient
+            from app.services.ai_client import AIClient
             from flask import current_app
             
             # Get the OpenRouter API key from Flask app config
             api_key = current_app.config.get('OPENROUTER_API_KEY', 'test_key_12345')
-            openrouter_client = OpenRouterClient(api_key)
-            self.data_extraction_service = DataExtractionService(openrouter_client)
+            ai_client = AIClient(api_key)
+            self.data_extraction_service = DataExtractionService(ai_client)
             
         # Prepare the prompt for the LLM
         prompt = f"""

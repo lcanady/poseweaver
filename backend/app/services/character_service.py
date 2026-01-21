@@ -8,7 +8,7 @@ import json
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, asdict
 from flask import current_app
-from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
+from app.services.ai_client import AIClient, OpenRouterAPIError
 
 
 @dataclass
@@ -30,13 +30,13 @@ class CharacterProfile:
 class CharacterService:
     """Service for processing character brain dumps into structured profiles."""
     
-    def __init__(self, openrouter_client: OpenRouterClient):
+    def __init__(self, ai_client: AIClient):
         """Initialize the character service.
         
         Args:
-            openrouter_client: OpenRouter.ai client for AI processing
+            ai_client: OpenRouter.ai client for AI processing
         """
-        self.openrouter_client = openrouter_client
+        self.ai_client = ai_client
     
     def process_brain_dump(
         self, 
@@ -103,7 +103,7 @@ class CharacterService:
         """
         
         # Generate completion using OpenRouter.ai
-        response = self.openrouter_client.generate_completion(
+        response = self.ai_client.generate_completion(
             model="qwen3-235b",
             messages=[
                 {"role": "system", "content": system_message},

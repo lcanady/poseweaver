@@ -101,8 +101,14 @@ export default function DescriptionWriterPage() {
     if (!currentUserId) return
 
     try {
+      const token = await getToken()
       const response = await fetch(
-        `${getApiUrl()}/api/purchase/usage-status?user_id=${currentUserId}`
+        `${getApiUrl()}/api/purchase/usage-status?user_id=${currentUserId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
       )
 
       if (response.ok) {

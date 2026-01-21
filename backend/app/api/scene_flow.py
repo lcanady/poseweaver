@@ -6,21 +6,20 @@ interacting with scene flows that track the conversation-like flow of poses
 in roleplay scenes.
 """
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import get_jwt_identity
 import os
 
 from app.services.scene_flow_service import SceneFlowService
-from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
+from app.services.ai_client import AIClient, OpenRouterAPIError
 from app.models.scene_flow import PoseType
-from app.middleware.auth_middleware import require_auth
+from app.middleware.auth_middleware import require_auth, get_current_identity
 
 # Create blueprint
 scene_flow_bp = Blueprint('scene_flow', __name__, url_prefix='/api/scene-flow')
 
 # Initialize service with proper API key from environment
 openrouter_api_key = os.getenv('OPENROUTER_API_KEY', '')
-openrouter_client = OpenRouterClient(openrouter_api_key)
-scene_flow_service = SceneFlowService(openrouter_client)
+ai_client = AIClient(openrouter_api_key)
+scene_flow_service = SceneFlowService(ai_client)
 
 
 @scene_flow_bp.route('/scenes', methods=['POST'])
@@ -196,7 +195,7 @@ def bulk_import_poses(scene_id: str):
         JSON response with imported poses count and data
     """
     # Get current user for authentication
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     try:
         data = request.get_json()

@@ -167,14 +167,14 @@ export default function PoseEnhancerPage() {
 
     try {
       const selectedCharacter = characters.find(char => char.id === selectedCharacterId);
-      const accessToken = localStorage.getItem('access_token');
+      const token = await getToken();
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
       };
 
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
 
       // Prepare character data
@@ -344,14 +344,14 @@ export default function PoseEnhancerPage() {
 
     try {
       const currentCharacter = characters.find(char => char.id === selectedCharacterId);
-      const accessToken = localStorage.getItem('access_token');
+      const token = await getToken();
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
       };
 
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
 
       // Prepare character data for backend
@@ -385,7 +385,6 @@ export default function PoseEnhancerPage() {
         narrative_tone: 'neutral'
       };
 
-      const token = await getToken();
       const authHeaders: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
 
       const response = await apiRequest('/api/pose/refine', {
@@ -476,8 +475,14 @@ export default function PoseEnhancerPage() {
     if (!currentUserId) return;
 
     try {
+      const token = await getToken();
       const response = await apiRequest(
-        `/api/purchase/usage-status?user_id=${currentUserId}`
+        `/api/purchase/usage-status?user_id=${currentUserId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
       );
 
       if (response.ok) {

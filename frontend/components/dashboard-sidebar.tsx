@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users, Settings, Feather, LayoutGrid, CreditCard, Sparkles, Eye, Shield } from "lucide-react"
+import { Users, Settings, Feather, LayoutGrid, CreditCard, Sparkles, Eye, Shield, BookOpen, GitGraph, Search } from "lucide-react"
 import { UserNav } from "./user-nav"
 import { NotificationCenter } from "@/components/notifications"
 import { cn } from "@/lib/utils"
@@ -21,18 +21,19 @@ export function DashboardSidebar() {
 
   const navItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
+    { href: "/dashboard/stories", label: "Stories", icon: BookOpen },
     { href: "/dashboard/characters", label: "Characters", icon: Users },
     { href: "/dashboard/pose-enhancer", label: "Pose Enhancer", icon: Sparkles },
     { href: "/dashboard/description-writer", label: "Description Writer", icon: Eye },
+    { href: "/dashboard/plot-tracker", label: "Plot Tracker", icon: GitGraph },
+    { href: "/dashboard/search", label: "Search & Summary", icon: Search },
   ]
 
   // Add admin navigation for admin users
   // TODO: Implement admin check with Firebase Custom Claims or Firestore User Profile
-  /*
   if (user?.is_admin) {
     navItems.push({ href: "/dashboard/admin", label: "Admin Panel", icon: Shield });
   }
-  */
 
   const bottomNavItems: NavItem[] = [
     // Settings and Billing moved to user dropdown menu

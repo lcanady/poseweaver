@@ -4,14 +4,14 @@ Character Management API endpoints.
 Provides CRUD operations for character management using MongoDB.
 """
 from flask import Blueprint, request, jsonify, session, current_app
-from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+from flask_jwt_extended import verify_jwt_in_request
 from bson import ObjectId
 from http import HTTPStatus
 
 from app.services.character_mgmt_service import CharacterManagementService
 from app.models.character import Character
 from app.models.user_mongo import User
-from app.middleware.auth_middleware import require_auth
+from app.middleware.auth_middleware import require_auth, get_current_identity
 
 # Create blueprint
 character_mgmt_bp = Blueprint('character_mgmt', __name__)
@@ -23,6 +23,10 @@ def get_user_id_from_session_or_jwt():
     Returns:
         str: User ID if found, None otherwise
     """
+    # Check if user was set by require_auth middleware
+    if hasattr(request, 'current_user') and request.current_user:
+        return str(request.current_user.id)
+
     # First check if user is authenticated via session
     user_id = session.get('user_id')
     
@@ -30,7 +34,7 @@ def get_user_id_from_session_or_jwt():
     if not user_id:
         try:
             verify_jwt_in_request(optional=True)
-            current_user = get_jwt_identity()
+            current_user = get_current_identity()
             if current_user:
                 # Extract user_id from identity (handle both string and dict formats)
                 user_id = current_user if isinstance(current_user, str) else current_user.get('id')

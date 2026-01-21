@@ -5,7 +5,6 @@ Provides comprehensive endpoints for character state management, plot thread tra
 relationship management, and character consistency checking.
 """
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import get_jwt_identity
 from http import HTTPStatus
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
@@ -14,8 +13,8 @@ from app.services.character_state_service import CharacterStateService
 from app.services.plot_thread_service import PlotThreadService
 
 from app.services.scene_service import SceneService
-from app.services.openrouter_client import OpenRouterClient
-from app.middleware.auth_middleware import require_auth
+from app.services.ai_client import AIClient
+from app.middleware.auth_middleware import require_auth, get_current_identity
 from app.models.scene_memory import PlotThread, PlotStatus, CharacterState
 from app.models.scene import PoseType
 
@@ -25,15 +24,15 @@ character_plot_bp = Blueprint('character_plot_tracking', __name__)
 # Initialize services with lazy initialization
 
 
-def get_openrouter_client():
+def get_ai_client():
     """Get OpenRouter client with proper API key handling."""
     import os
     api_key = os.getenv('OPENROUTER_API_KEY', 'test-key')
-    return OpenRouterClient(api_key=api_key)
+    return AIClient(api_key=api_key)
 
 
 # Initialize services
-openrouter_client = None
+ai_client = None
 character_state_service = None
 plot_thread_service = None
 
@@ -41,11 +40,11 @@ plot_thread_service = None
 
 def init_services():
     """Initialize services lazily."""
-    global openrouter_client, character_state_service, plot_thread_service
-    if openrouter_client is None:
-        openrouter_client = get_openrouter_client()
-        character_state_service = CharacterStateService(openrouter_client)
-        plot_thread_service = PlotThreadService(openrouter_client)
+    global ai_client, character_state_service, plot_thread_service
+    if ai_client is None:
+        ai_client = get_ai_client()
+        character_state_service = CharacterStateService(ai_client)
+        plot_thread_service = PlotThreadService(ai_client)
 
 
 
@@ -77,7 +76,7 @@ def get_plot_threads(scene_id):
     Requirements: 4.1, 4.2 - Plot thread identification and tracking
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     status = request.args.get('status')
@@ -220,7 +219,7 @@ def get_plot_thread(scene_id, thread_id):
     Requirements: 4.1, 4.2 - Plot thread retrieval and context
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     include_related = request.args.get('include_related', 'true').lower() == 'true'
@@ -296,7 +295,7 @@ def update_plot_thread(scene_id, thread_id):
     Requirements: 4.4 - Plot thread status tracking and updates
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data:
@@ -408,7 +407,7 @@ def analyze_plot_thread(scene_id, thread_id):
     Requirements: 4.2, 4.3 - Plot thread analysis and linking
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data:
@@ -483,7 +482,7 @@ def get_plot_reminders(scene_id):
     Requirements: 4.3 - Remind users of pending story elements
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     days_threshold = int(request.args.get('days_threshold', 7))
@@ -562,7 +561,7 @@ def get_plot_thread_summary(scene_id):
     Requirements: 4.4 - Plot thread overview and status tracking
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     try:
         # Verify scene exists and user has access
@@ -614,7 +613,7 @@ def check_character_consistency(scene_id, character_name):
     Requirements: 6.2 - Character behavior consistency checking
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data or 'pose_text' not in data:
@@ -687,7 +686,7 @@ def get_character_consistency_history(scene_id, character_name):
     Requirements: 6.2 - Character consistency tracking over time
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     limit = min(int(request.args.get('limit', 20)), 100)
@@ -745,7 +744,7 @@ def get_character_relationships(scene_id):
     Requirements: 5.1, 5.2 - Relationship tracking and updates
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     character_name = request.args.get('character_name')
@@ -812,7 +811,7 @@ def get_character_relationship(scene_id, character1, character2):
     Requirements: 5.1, 5.4 - Relationship details and context
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     include_history = request.args.get('include_history', 'true').lower() == 'true'
@@ -877,7 +876,7 @@ def analyze_character_relationship(scene_id, character1, character2):
     Requirements: 5.3, 5.4 - Relationship analysis and context
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data:
@@ -949,7 +948,7 @@ def detect_relationship_inconsistencies(scene_id):
     Requirements: 5.3 - Flag inconsistencies in relationship portrayals
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     data = request.get_json()
     
     if not data:
@@ -1025,7 +1024,7 @@ def get_character_profile(scene_id, character_name):
     Requirements: 2.3, 2.4, 2.5 - Character profile and development tracking
     """
     init_services()
-    current_user = get_jwt_identity()
+    current_user = get_current_identity()
     
     # Get query parameters
     include_relationships = request.args.get('include_relationships', 'true').lower() == 'true'
@@ -1084,7 +1083,7 @@ def health_check():
             'character_state_service': 'healthy',
             'plot_thread_service': 'healthy',
             'continuity_service': 'healthy',
-            'openrouter_client': 'healthy' if openrouter_client else 'unavailable'
+            'ai_client': 'healthy' if ai_client else 'unavailable'
         }
         
         # Check database connectivity

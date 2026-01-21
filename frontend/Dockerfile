@@ -7,8 +7,17 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copy package files
+# Copy package files
 COPY package.json package-lock.json* ./
 RUN npm ci --legacy-peer-deps
+
+# Development image
+FROM base AS dev
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm install --legacy-peer-deps
+COPY . .
+CMD ["npm", "run", "dev"]
 
 # Rebuild the source code only when needed
 FROM base AS builder

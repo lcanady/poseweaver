@@ -15,7 +15,7 @@ from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 from datetime import datetime
 
-from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
+from app.services.ai_client import AIClient, OpenRouterAPIError
 from app.services.model_config import ModelConfig
 
 
@@ -34,9 +34,9 @@ class DescriptionResult:
 class DescriptionService:
     """Service for generating detailed physical descriptions from images."""
     
-    def __init__(self, openrouter_client: OpenRouterClient):
+    def __init__(self, ai_client: AIClient):
         """Initialize the description service with a OpenRouter client."""
-        self.openrouter_client = openrouter_client
+        self.ai_client = ai_client
         
     def generate_description(
         self,
@@ -105,7 +105,7 @@ class DescriptionService:
             logger = logging.getLogger(__name__)
             logger.info(f"Generating description with model={model}")
             
-            response = self.openrouter_client.generate_completion(
+            response = self.ai_client.generate_completion(
                 messages=[
                     {"role": "system", "content": system_message},
                     user_message

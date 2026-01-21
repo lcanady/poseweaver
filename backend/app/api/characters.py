@@ -5,8 +5,8 @@ Provides endpoints for character brain dump processing and management.
 """
 from flask import Blueprint, request, jsonify
 from app.services.character_service import CharacterService, CharacterProfile
-from app.services.openrouter_client import OpenRouterClient, OpenRouterAPIError
-from app.middleware.auth_middleware import require_auth
+from app.services.ai_client import AIClient, OpenRouterAPIError
+from app.middleware.auth_middleware import require_auth, get_current_identity
 
 # Create blueprint
 characters_bp = Blueprint('characters', __name__)
@@ -25,8 +25,8 @@ def get_character_service():
             api_key = os.getenv('OPENROUTER_API_KEY')
             if not api_key:
                 raise ValueError("OPENROUTER_API_KEY environment variable is required")
-            openrouter_client = OpenRouterClient(api_key=api_key)
-            character_service = CharacterService(openrouter_client)
+            ai_client = AIClient(api_key=api_key)
+            character_service = CharacterService(ai_client)
         except Exception as e:
             # If service creation fails, raise a more specific error
             raise ValueError(
@@ -204,10 +204,9 @@ def get_characters():
     try:
         from app.models.character import Character
         from flask import request, current_app
-        from flask_jwt_extended import get_jwt_identity
         
         # Get user ID from JWT
-        current_user = get_jwt_identity()
+        current_user = get_current_identity()
         user_id = None
         
         if current_user:

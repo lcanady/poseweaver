@@ -192,6 +192,9 @@ class Scene(BaseModel):
             for p in kwargs.get('participants', [])
         }
         
+        # New field for optimizing queries (especially Firestore)
+        self.participant_ids = kwargs.get('participant_ids', list(self.participants.keys()))
+        
         context_data = kwargs.get('context', {})
         if 'active_characters' not in context_data:
             context_data['active_characters'] = [p.character_id for p in self.participants.values()]
@@ -271,7 +274,7 @@ class Scene(BaseModel):
         return [pose.to_dict() for pose in self.poses[-count:]]
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for MongoDB."""
+        """Convert to dictionary for Database."""
         data = super().to_dict()
         data.update({
             'name': self.name,
@@ -281,6 +284,7 @@ class Scene(BaseModel):
             'max_poses': self.max_poses,
             'poses': [pose.to_dict() for pose in self.poses],
             'participants': [p.to_dict() for p in self.participants.values()],
+            'participant_ids': list(self.participants.keys()),
             'context': self.context.to_dict(),
             'compressed_history': self.compressed_history
         })
@@ -304,18 +308,20 @@ class Scene(BaseModel):
     @classmethod
     def initialize_indexes(cls) -> None:
         """Initialize database indexes for scenes."""
-        from ..services.mongodb_service import get_mongodb_service
-        mongodb = get_mongodb_service()
+        from ..extensions import get_db
+        db = get_db()
         
         # Create indexes
-        mongodb.create_index(cls.COLLECTION_NAME, 'created_by')
-        mongodb.create_index(cls.COLLECTION_NAME, 'is_active')
-        mongodb.create_index(
+        db.create_index(cls.COLLECTION_NAME, 'created_by')
+        db.create_index(cls.COLLECTION_NAME, 'is_active')
+        db.create_index(
             cls.COLLECTION_NAME,
             [('created_by', 1), ('name', 1)],
             unique=True
         )
-        mongodb.create_index(
+        db.create_index(
             cls.COLLECTION_NAME,
             'participants.character_id'
         )
+        # Index for new participant_ids field (useful for array-contains queries in Firestore)
+        db.create_index(cls.COLLECTION_NAME, 'participant_ids')

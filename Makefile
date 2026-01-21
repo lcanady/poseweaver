@@ -17,7 +17,7 @@ help:
 start:
 	docker-compose up -d
 	@echo "Development environment started!"
-	@echo "Frontend: http://localhost:3000"
+	@echo "Frontend: http://localhost:3001"
 	@echo "Backend: http://localhost:5001"
 
 # Stop development environment
