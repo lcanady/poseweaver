@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users, Settings, Feather, LayoutGrid, CreditCard, Sparkles, Eye, Shield, BookOpen, GitGraph, Search } from "lucide-react"
+import { Users, Settings, Feather, LayoutGrid, CreditCard, Sparkles, Eye, Shield, BookOpen, GitGraph, Search, UserPlus } from "lucide-react"
 import { UserNav } from "./user-nav"
 import { NotificationCenter } from "@/components/notifications"
 import { cn } from "@/lib/utils"
@@ -23,6 +23,7 @@ export function DashboardSidebar() {
     { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
     { href: "/dashboard/stories", label: "Stories", icon: BookOpen },
     { href: "/dashboard/characters", label: "Characters", icon: Users },
+    { href: "/dashboard/scenes", label: "Scene Collaboration", icon: UserPlus },
     { href: "/dashboard/pose-enhancer", label: "Pose Enhancer", icon: Sparkles },
     { href: "/dashboard/description-writer", label: "Description Writer", icon: Eye },
     { href: "/dashboard/plot-tracker", label: "Plot Tracker", icon: GitGraph },

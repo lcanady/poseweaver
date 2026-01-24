@@ -36,7 +36,11 @@ def create_scene():
             "time_of_day": "Night",
             "location_details": ["Dense foliage", "Misty air"],
             "relationship_dynamics": {"char1_id:char2_id": "Allies"}
-        }
+        },
+        "initial_history_log": [  // Optional
+            {"event_description": "First event"},
+            {"event_description": "Second event"}
+        ]
     }
     
     Returns:
@@ -72,7 +76,8 @@ def create_scene():
             description=data.get('description', ''),
             max_poses=int(data.get('max_poses', 100)),
             initial_participants=participant_ids,
-            initial_context=data.get('initial_context')
+            initial_context=data.get('initial_context'),
+            initial_history_log=data.get('initial_history_log')
         )
         
         return jsonify({
@@ -923,6 +928,16 @@ def generate_scene_summary(scene_id):
             'message': 'character_id is required when summary_type is "character"'
         }), HTTPStatus.BAD_REQUEST
     
+    # Check credits
+    user = request.current_user
+    SUMMARY_COST = 10
+    if not user.is_admin and not user.use_credits(SUMMARY_COST):
+        return jsonify({
+            'success': False,
+            'message': f'Insufficient credits. Generating a summary costs {SUMMARY_COST} credits.',
+            'error_code': 'INSUFFICIENT_CREDITS'
+        }), HTTPStatus.PAYMENT_REQUIRED
+    
     try:
         # Create summary options
         options = SummaryOptions(
@@ -1002,6 +1017,16 @@ def generate_catchup_brief(scene_id):
                 'success': False,
                 'message': 'Invalid since_timestamp format. Use ISO format like "2024-01-01T00:00:00Z"'
             }), HTTPStatus.BAD_REQUEST
+    
+    # Check credits
+    user = request.current_user
+    CATCHUP_COST = 5
+    if not user.is_admin and not user.use_credits(CATCHUP_COST):
+        return jsonify({
+            'success': False,
+            'message': f'Insufficient credits. Generating a catchup brief costs {CATCHUP_COST} credits.',
+            'error_code': 'INSUFFICIENT_CREDITS'
+        }), HTTPStatus.PAYMENT_REQUIRED
     
     try:
         # Create summary options

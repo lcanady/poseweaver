@@ -43,7 +43,7 @@ class AIClient:
         prompt: str = None,
         model: str = None,
         temperature: float = 0.7,
-        max_tokens: int = 32000,
+        max_tokens: int = 4000,
         system_message: Optional[str] = None,
         messages: Optional[List[Dict[str, str]]] = None,
         response_format: Optional[Dict[str, Any]] = None

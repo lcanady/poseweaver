@@ -13,6 +13,8 @@ import { Loader2, Crown, AlertTriangle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { AvatarUpload } from "@/components/avatar-upload";
 import { getApiUrl } from '@/utils/api-utils';
+import { AiCharacterCreator } from '@/components/ai-character-creator';
+import { Sparkles } from "lucide-react";
 
 export default function CreateCharacterPage() {
   const router = useRouter();
@@ -28,6 +30,7 @@ export default function CreateCharacterPage() {
     brainDump: '',
     profileImage: '',
   });
+  const [isAiMode, setIsAiMode] = useState(false);
 
   // Function to fetch with token refresh capabilities (reusable)
   // Helper function for authenticated requests
@@ -224,6 +227,20 @@ export default function CreateCharacterPage() {
     }
   };
 
+  const handleAiFinalize = (aiData: any) => {
+    setFormData(prev => ({
+      ...prev,
+      name: aiData.name || prev.name,
+      description: aiData.description || prev.description,
+      brainDump: `Name: ${aiData.name}\n\nBackground: ${aiData.background}\n\nPersonality: ${aiData.personality}\n\nAppearance: ${aiData.appearance}\n\nTraits: ${aiData.traits?.join(', ')}\n\nSpeaking Style: ${aiData.speaking_style}`,
+    }));
+    setIsAiMode(false);
+    toast({
+      title: "AI Character Extracted",
+      description: "We've populated the form with the AI's suggestions. Please review and save.",
+    });
+  };
+
   return (
     <div className="flex-1 p-4 md:p-8">
       <div className="mx-auto grid w-full max-w-4xl gap-8">
@@ -234,7 +251,37 @@ export default function CreateCharacterPage() {
           </p>
         </div>
 
-        {/* Character Limit Error Hero */}
+        <div className="flex justify-center">
+          {!isAiMode ? (
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="border-primary/50 text-primary hover:bg-primary/5 gap-2"
+              onClick={() => setIsAiMode(true)}
+              disabled={isFormDisabled || isLoading}
+            >
+              <Sparkles className="h-4 w-4" />
+              Create with AI Workshop
+            </Button>
+          ) : (
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={() => setIsAiMode(false)}
+            >
+              Back to Manual Form
+            </Button>
+          )}
+        </div>
+
+        {isAiMode ? (
+          <AiCharacterCreator 
+            onFinalize={handleAiFinalize} 
+            onCancel={() => setIsAiMode(false)} 
+          />
+        ) : (
+          <>
+            {/* Character Limit Error Hero */}
         {characterLimitError && (
           <Card className="border-red-200 bg-gradient-to-r from-red-50 to-orange-50">
             <CardHeader>
@@ -344,6 +391,8 @@ export default function CreateCharacterPage() {
             </Button>
           </div>
         </form>
+        </>
+        )}
       </div>
     </div>
   );

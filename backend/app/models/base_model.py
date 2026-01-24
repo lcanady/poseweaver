@@ -3,7 +3,7 @@ Base model class for Database models.
 """
 from typing import Dict, Any, Optional, TypeVar, Generic, Type
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, UTC
 from ..extensions import get_db
 
 T = TypeVar('T', bound='BaseModel')
@@ -18,15 +18,15 @@ class BaseModel:
         if not self.id:
             self.id = kwargs.get('id')
             
-        self.created_at = kwargs.get('created_at', datetime.utcnow())
-        self.updated_at = kwargs.get('updated_at', datetime.utcnow())
+        self.created_at = kwargs.get('created_at', datetime.now(UTC))
+        self.updated_at = kwargs.get('updated_at', datetime.now(UTC))
     
     def save(self) -> str:
         """Save the model to Database."""
         db = get_db()
         
         # Update timestamps
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         if not self.id:
             self.created_at = now
         # Always update the updated_at timestamp on save

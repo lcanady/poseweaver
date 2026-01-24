@@ -104,7 +104,6 @@ class CharacterService:
         
         # Generate completion using OpenRouter.ai
         response = self.ai_client.generate_completion(
-            model="qwen3-235b",
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": user_message}

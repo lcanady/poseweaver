@@ -109,7 +109,7 @@ def get_scene(scene_id: str):
 
 @scene_flow_bp.route('/scenes/<scene_id>/poses', methods=['POST'])
 def add_pose_to_scene(scene_id: str):
-    """Add a new pose to a scene.
+    """Add a new pose to a scene, or execute a command.
     
     Args:
         scene_id: ID of the scene to add pose to
@@ -117,12 +117,13 @@ def add_pose_to_scene(scene_id: str):
     Expected JSON body:
     {
         "character_name": "Character name",
-        "pose_text": "Pose text",
-        "pose_type": "action|dialogue|narrative|internal|mixed" (optional)
+        "pose_text": "Pose text or /command",
+        "pose_type": "action|dialogue|narrative|internal|mixed" (optional),
+        "user_id": "User ID" (optional, for command execution)
     }
     
     Returns:
-        JSON response with created pose data
+        JSON response with created pose data or command result
     """
     try:
         data = request.get_json()
@@ -133,12 +134,51 @@ def add_pose_to_scene(scene_id: str):
         character_name = data.get('character_name')
         pose_text = data.get('pose_text')
         pose_type_str = data.get('pose_type')
+        user_id = data.get('user_id', 'unknown')  # For command execution context
         
         if not character_name or not pose_text:
             return jsonify({
                 'error': 'Both character_name and pose_text are required'
             }), 400
         
+        # COMMAND DETECTION: Check if this is a command
+        from app.services.command_service import CommandService
+        command_service = CommandService()
+        
+        if command_service.is_command(pose_text):
+            # Execute command instead of creating a pose
+            result = command_service.execute_command(
+                text=pose_text,
+                user_id=user_id,
+                scene_id=scene_id,
+                character_name=character_name
+            )
+            
+            # Broadcast system messages via WebSocket
+            # We need to get the WebSocket service from app context
+            from flask import current_app
+            socketio = current_app.extensions.get('socketio')
+            if socketio and result.get('success'):
+                from app.services.websocket_service import WebSocketService
+                # Broadcast each system message
+                for message in result.get('system_messages', []):
+                    socketio.emit('system_message', {
+                        'type': 'system_message',
+                        'message': message,
+                        'scene_id': scene_id,
+                        'command': result.get('command'),
+                        'character_name': character_name
+                    }, room=scene_id)
+            
+            return jsonify({
+                'success': True,
+                'is_command': True,
+                'command': result.get('command'),
+                'system_messages': result.get('system_messages', []),
+                'scene_id': scene_id
+            }), 200
+        
+        # NOT A COMMAND - proceed with normal pose creation
         # Convert pose type string to enum if provided
         pose_type = None
         if pose_type_str:
@@ -159,6 +199,7 @@ def add_pose_to_scene(scene_id: str):
         
         return jsonify({
             'success': True,
+            'is_command': False,
             'pose': pose.to_dict(),
             'scene': scene.to_dict() if scene else None
         }), 201

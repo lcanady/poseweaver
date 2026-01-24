@@ -76,6 +76,17 @@ class SceneFlowService:
         if scene_id not in self.active_scenes:
             raise ValueError(f"Scene {scene_id} not found")
         
+        # COMMAND DETECTION: Check if this is a command instead of a pose
+        from app.services.command_service import CommandService
+        command_service = CommandService()
+        
+        if command_service.is_command(pose_text):
+            # This is a command, not a pose - don't create a pose record
+            # Commands are handled separately and generate system messages
+            # Return None to indicate no pose was created
+            # The API layer should handle command execution and system message broadcasting
+            raise ValueError(f"Command detected: '{pose_text}'. Commands should be executed via CommandService, not saved as poses.")
+        
         scene = self.active_scenes[scene_id]
         
         # Auto-detect pose type if not provided
@@ -339,7 +350,7 @@ class SceneFlowService:
         
         try:
             response = self.ai_client.generate_completion(
-                model="qwen3-235b",
+                model="qwen/qwen-plus",
                 messages=[
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message}

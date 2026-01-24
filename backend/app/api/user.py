@@ -135,6 +135,7 @@ def export_user_data():
             'usage_stats': {
                 'pose_generations_used': current_user.pose_generations_used,
                 'extra_pose_generations': current_user.extra_pose_generations,
+                'credits': current_user.credits,
                 'subscription_status': current_user.subscription_status
             }
         }
@@ -283,6 +284,7 @@ def get_user_profile():
             'bio': current_user.bio,
             'avatar_url': current_user.avatar_url,
             'subscription_status': current_user.get_effective_subscription_status(),
+            'credits': current_user.credits,
             'is_admin': current_user.is_admin,
             'created_at': current_user.created_at.isoformat() if current_user.created_at else None,
             'settings': current_user.get_settings()

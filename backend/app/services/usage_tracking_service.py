@@ -112,6 +112,7 @@ class UsageTrackingService:
             'monthly_limit': limit,
             'current_usage': user.pose_generations_used,
             'extra_generations': user.extra_pose_generations,
+            'credits': user.get_credits(),
             'subscription_status': user.get_effective_subscription_status()
         }
     
@@ -241,6 +242,7 @@ def get_usage_info(f):
                     'monthly_limit': usage_status.get('monthly_limit', 0),
                     'current_usage': usage_status.get('current_usage', 0),
                     'extra_generations': usage_status.get('extra_generations', 0),
+                    'credits': usage_status.get('credits', 0),
                     'subscription_status': usage_status.get('subscription_status', 'free')
                 }
                 response.data = jsonify(response_data).data

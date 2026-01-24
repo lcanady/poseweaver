@@ -227,6 +227,41 @@ class WebSocketService {
       }
     }, delay);
   }
+
+  /**
+   * Emit an event to the WebSocket server
+   */
+  emit(event: string, data?: any): void {
+    if (this.socket) {
+      this.socket.emit(event, data);
+    } else {
+      console.warn(`Cannot emit '${event}': WebSocket not connected`);
+    }
+  }
+
+  /**
+   * Listen for an event from the WebSocket server
+   */
+  on(event: string, callback: (data: any) => void): void {
+    if (this.socket) {
+      this.socket.on(event, callback);
+    } else {
+      console.warn(`Cannot listen for '${event}': WebSocket not connected`);
+    }
+  }
+
+  /**
+   * Remove an event listener
+   */
+  off(event: string, callback?: (data: any) => void): void {
+    if (this.socket) {
+      if (callback) {
+        this.socket.off(event, callback);
+      } else {
+        this.socket.off(event);
+      }
+    }
+  }
 }
 
 // Export singleton instance

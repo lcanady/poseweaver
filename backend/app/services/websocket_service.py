@@ -6,6 +6,7 @@ Handles long-running operations like description generation without HTTP timeout
 import base64
 import traceback
 from typing import Dict, Any, Optional
+from datetime import datetime, UTC
 from flask import request, session
 from flask_socketio import SocketIO, emit, disconnect
 from flask_jwt_extended import decode_token, JWTManager
@@ -82,6 +83,175 @@ class WebSocketService:
             except Exception as e:
                 logger.error(f"WebSocket disconnect error: {str(e)}")
         
+        @self.socketio.on('join_scene')
+        def handle_join_scene(data):
+            """Handle user joining a scene room."""
+            try:
+                user_id = self._get_user_from_session()
+                if not user_id:
+                    emit('error', {'message': 'Authentication required'})
+                    return
+                
+                scene_id = data.get('scene_id')
+                character_id = data.get('character_id')
+                
+                if not scene_id or not character_id:
+                    emit('error', {'message': 'scene_id and character_id required'})
+                    return
+                
+                # Validate character ownership
+                from app.services.character_mgmt_service import CharacterManagementService
+                character = CharacterManagementService.get_character(character_id, user_id)
+                
+                if not character:
+                    emit('error', {'message': 'Character not found or access denied'})
+                    return
+                
+                # Verify scene exists
+                from app.services.scene_service import SceneService
+                scene = SceneService.get_scene(scene_id, user_id)
+                
+                if not scene:
+                    emit('error', {'message': 'Scene not found or access denied'})
+                    return
+                
+                # Join the scene room
+                from flask_socketio import join_room
+                join_room(scene_id)
+                
+                logger.info(f"User {user_id} ({character.name}) joined scene {scene_id}")
+                
+                # Notify others in the room
+                emit('user_joined', {
+                    'user_id': user_id,
+                    'character_id': character_id,
+                    'character_name': character.name,
+                    'character_avatar': character.profile_image,
+                    'timestamp': datetime.now(UTC).isoformat()
+                }, room=scene_id, skip_sid=request.sid)
+                
+                # Confirm to the joining user
+                emit('scene_joined', {
+                    'scene_id': scene_id,
+                    'character': {
+                        'id': character_id,
+                        'name': character.name,
+                        'avatar': character.profile_image
+                    },
+                    'message': f'Joined scene as {character.name}'
+                })
+                
+            except Exception as e:
+                logger.error(f"Error joining scene: {str(e)}")
+                emit('error', {'message': 'Failed to join scene'})
+        
+        @self.socketio.on('leave_scene')
+        def handle_leave_scene(data):
+            """Handle user leaving a scene room."""
+            try:
+                user_id = self._get_user_from_session()
+                scene_id = data.get('scene_id')
+                character_name = data.get('character_name', 'Unknown')
+                
+                if scene_id:
+                    from flask_socketio import leave_room
+                    leave_room(scene_id)
+                    
+                    logger.info(f"User {user_id} ({character_name}) left scene {scene_id}")
+                    
+                    # Notify others
+                    emit('user_left', {
+                        'user_id': user_id,
+                        'character_name': character_name,
+                        'timestamp': datetime.now(UTC).isoformat()
+                    }, room=scene_id)
+                    
+            except Exception as e:
+                logger.error(f"Error leaving scene: {str(e)}")
+        
+        @self.socketio.on('send_pose')
+        def handle_send_pose(data):
+            """Handle pose sent by user in a scene."""
+            try:
+                user_id = self._get_user_from_session()
+                if not user_id:
+                    emit('error', {'message': 'Authentication required'})
+                    return
+                
+                scene_id = data.get('scene_id')
+                character_id = data.get('character_id')
+                pose_text = data.get('pose_text')
+                
+                if not all([scene_id, character_id, pose_text]):
+                    emit('error', {'message': 'scene_id, character_id, and pose_text required'})
+                    return
+                
+                # Validate character ownership
+                from app.services.character_mgmt_service import CharacterManagementService
+                character = CharacterManagementService.get_character(character_id, user_id)
+                
+                if not character:
+                    emit('error', {'message': 'Character not found or access denied'})
+                    return
+                
+                # Check if this is a command
+                from app.services.command_service import CommandService
+                command_service = CommandService()
+                
+                if command_service.is_command(pose_text):
+                    # Execute command
+                    result = command_service.execute_command(
+                        text=pose_text,
+                        user_id=user_id,
+                        scene_id=scene_id,
+                        character_name=character.name
+                    )
+                    
+                    # Broadcast system messages to the room
+                    if result.get('success'):
+                        for message in result.get('system_messages', []):
+                            emit('system_message', {
+                                'type': 'system_message',
+                                'message': message,
+                                'scene_id': scene_id,
+                                'command': result.get('command'),
+                                'character_name': character.name,
+                                'timestamp': datetime.now(UTC).isoformat()
+                            }, room=scene_id)
+                else:
+                    # Save pose to database
+                    from app.services.scene_service import SceneService
+                    from app.models.scene import PoseType
+                    
+                    try:
+                        result = SceneService.add_pose(
+                            scene_id=scene_id,
+                            character_id=character_id,
+                            character_name=character.name,
+                            pose_text=pose_text,
+                            pose_type=PoseType.MIXED
+                        )
+                        
+                        if result:
+                            scene, pose = result
+                            logger.info(f"Saved pose to scene {scene_id}: {pose.id}")
+                    except Exception as e:
+                        logger.error(f"Failed to save pose to database: {str(e)}")
+                    
+                    # Broadcast normal pose to the room
+                    emit('new_pose', {
+                        'character_id': character_id,
+                        'character_name': character.name,
+                        'character_avatar': character.profile_image,
+                        'pose_text': pose_text,
+                        'user_id': user_id,
+                        'timestamp': datetime.now(UTC).isoformat()
+                    }, room=scene_id)
+                
+            except Exception as e:
+                logger.error(f"Error sending pose: {str(e)}")
+                emit('error', {'message': 'Failed to send pose'})
+        
         @self.socketio.on('generate_description')
         def handle_generate_description(data):
             """Handle description generation request via WebSocket."""
@@ -143,6 +313,37 @@ class WebSocketService:
                 emit('description_error', {
                     'error': 'An unexpected error occurred during description generation'
                 })
+    
+    def broadcast_system_message(self, scene_id: str, message: str, metadata: Optional[Dict[str, Any]] = None):
+        """
+        Broadcast a system message to all clients in a scene.
+        
+        System messages are displayed differently from normal poses 
+        (grey text, bold, no avatar).
+        
+        Args:
+            scene_id: ID of the scene to broadcast to
+            message: The system message text
+            metadata: Optional additional metadata
+        """
+        try:
+            message_data = {
+                'type': 'system_message',
+                'message': message,
+                'scene_id': scene_id,
+                'timestamp': datetime.now(UTC).isoformat()
+            }
+            
+            # Add any additional metadata
+            if metadata:
+                message_data.update(metadata)
+            
+            # Broadcast to all clients in the scene's room
+            logger.info(f"Broadcasting system message to scene {scene_id}: {message}")
+            self.socketio.emit('system_message', message_data, room=scene_id)
+            
+        except Exception as e:
+            logger.error(f"Error broadcasting system message: {str(e)}")
     
     def _authenticate_token(self, token: str) -> Optional[str]:
         """Authenticate JWT token and return user_id."""

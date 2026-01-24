@@ -15,7 +15,7 @@ interface PricingData {
     basic: {
       name: string;
       price: number;
-      generations_included: number;
+      credits_included: number;
       features: string[];
       price_id: string;
       product_id: string;
@@ -23,24 +23,24 @@ interface PricingData {
     pro: {
       name: string;
       price: number;
-      generations_included: number;
+      credits_included: number;
       features: string[];
       price_id: string;
       product_id: string;
     };
   };
-  extra_generations: {
+  extra_credits: {
     packages: Array<{
-      generation_count: number;
+      credit_count: number;
       price: number;
-      price_per_generation: number;
+      price_per_credit: number;
       price_id: string;
       product_id: string;
       savings?: string;
     }>;
   };
   free_tier: {
-    generations_included: number;
+    credits_included: number;
     features: string[];
   };
 }
@@ -160,7 +160,7 @@ export default function BillingPage() {
     }
   };
 
-  const handleRechargePackPurchase = async (generationCount: number) => {
+  const handleRechargePackPurchase = async (creditCount: number) => {
     setIsPurchasing(true);
     try {
       const token = await getToken();
@@ -174,7 +174,7 @@ export default function BillingPage() {
           },
           body: JSON.stringify({
             type: 'recharge',
-            generation_count: generationCount,
+            generation_count: creditCount,
             user_id: user?.uid || user?.uid
           })
         }
@@ -303,10 +303,9 @@ export default function BillingPage() {
                 {currentSubscription !== 'free' && ' Your plan renews on the 1st of next month.'}
                 {usageInfo && (
                   <div className="mt-2 text-sm">
-                    <strong>Usage this month:</strong> {usageInfo.current_usage || 0} / {usageInfo.monthly_limit === -1 ? 'Unlimited' : usageInfo.monthly_limit || 0} generations
-                    {usageInfo.extra_generations > 0 && (
-                      <span className="ml-2 text-green-600">+ {usageInfo.extra_generations} extra</span>
-                    )}
+                    <strong>Current Balance:</strong> {usageInfo.credits || 0} credits
+                    <br />
+                    <strong>This month&apos;s free usage:</strong> {usageInfo.current_usage || 0} / {usageInfo.monthly_limit === -1 ? 'Unlimited' : usageInfo.monthly_limit || 0} generations
                   </div>
                 )}
               </CardDescription>
@@ -444,20 +443,20 @@ export default function BillingPage() {
           {/* Recharge Packs Section */}
           <Card>
             <CardHeader>
-              <CardTitle>Recharge Packs</CardTitle>
+              <CardTitle>Credit Packs</CardTitle>
               <CardDescription>
-                Need more generations? Purchase additional pose generations that don't expire monthly.
+                Need more credits? Purchase additional credits that can be used for pose enhancements, character creation, and more.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {(pricingData?.extra_generations?.packages || []).map((pack, index) => (
+                {(pricingData?.extra_credits?.packages || []).map((pack, index) => (
                   <div key={index} className="rounded-lg border p-4 flex flex-col min-h-[200px]">
                     <div className="flex flex-col flex-1 text-center justify-between">
                       <div className="space-y-2">
                         <div>
-                          <div className="text-2xl font-bold">{pack?.generation_count || 0}</div>
-                          <div className="text-sm text-muted-foreground">generations</div>
+                          <div className="text-2xl font-bold">{pack?.credit_count || 0}</div>
+                          <div className="text-sm text-muted-foreground">credits</div>
                         </div>
                         <div className="text-lg font-semibold">${pack?.price?.toFixed(2) || '0.00'}</div>
                         {pack?.savings && pack.savings !== '0%' && (
@@ -468,7 +467,7 @@ export default function BillingPage() {
                         <Button
                           className="w-full"
                           size="sm"
-                          onClick={() => handleRechargePackPurchase(pack?.generation_count || 0)}
+                          onClick={() => handleRechargePackPurchase(pack?.credit_count || 0)}
                           disabled={isPurchasing}
                         >
                           {isPurchasing ? (

@@ -107,7 +107,7 @@ export class PoseService {
 
     try {
       const completion = await this.openai.chat.completions.create({
-        model: 'google/gemini-2.0-flash-001', // Default model, make configurable later
+        model: 'cognitivecomputations/dolphin-mistral-24b-venice-edition:free', // Default model
         messages: [
             { role: 'system', content: systemMessage },
             { role: 'user', content: userMessage }

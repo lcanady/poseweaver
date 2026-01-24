@@ -81,6 +81,18 @@ def process_brain_dump():
                 'error': 'brain_dump is required and cannot be empty'
             }), 400
         
+        # Check credits - processing a character brain dump costs credits
+        user = request.current_user
+        CHARACTER_PROCESS_COST = 5
+        
+        # Admin users might have unlimited or we can just check
+        if not user.is_admin and not user.use_credits(CHARACTER_PROCESS_COST):
+            return jsonify({
+                'success': False,
+                'error': f'Insufficient credits. Processing a character brain dump costs {CHARACTER_PROCESS_COST} credits.',
+                'error_code': 'INSUFFICIENT_CREDITS'
+            }), 402
+        
         # Handle existing character data if provided
         existing_character = None
         if 'existing_character' in data and data['existing_character']:
@@ -105,16 +117,22 @@ def process_brain_dump():
         }), 200
         
     except OpenRouterAPIError as e:
+        from flask import current_app
+        current_app.logger.error(f"OpenRouter API error in process_brain_dump: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'AI processing failed: {str(e)}'
+            'error': f'AI Service Error: {str(e)}. Please check your OPENROUTER_API_KEY configuration.'
         }), 503
     except ValueError as e:
+        from flask import current_app
+        current_app.logger.error(f"Validation error in process_brain_dump: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 400
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(f"Unexpected error in process_brain_dump: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
             'error': f'Internal server error: {str(e)}'

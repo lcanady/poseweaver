@@ -27,31 +27,46 @@ STRIPE_PRICES = {
     'recharge_500': 'price_1Ro3z3PiG9G5Z3VQMo3LjKz6'         # $34.99
 }
 
+# Plugin Products (for one-time plugin purchases)
+# These will be created when plugins are added to the marketplace
+PLUGIN_PRODUCTS = {
+    # Example structure:
+    # 'dice_roller_plugin': 'prod_PluginDiceRoller',
+    # Add plugin products dynamically or via setup script
+}
+
+PLUGIN_PRICES = {
+    # Example structure:
+    # 'dice_roller_plugin': 'price_PluginDiceRoller',
+    # Maps to one-time purchase prices
+}
+
+
 # Recharge pack mappings
 RECHARGE_PACKAGES = {
-    50: {
-        'price_id': STRIPE_PRICES['recharge_50'],
+    250: {
+        'price_id': STRIPE_PRICES['recharge_50'],  # Mapping old price ID to new higher count
         'product_id': STRIPE_PRODUCTS['recharge_50'],
         'amount': 499,  # $4.99 in cents
-        'generations': 50
+        'credits': 250
     },
-    100: {
+    750: {
         'price_id': STRIPE_PRICES['recharge_100'],
         'product_id': STRIPE_PRODUCTS['recharge_100'],
         'amount': 899,  # $8.99 in cents
-        'generations': 100
+        'credits': 750
     },
-    250: {
+    2000: {
         'price_id': STRIPE_PRICES['recharge_250'],
         'product_id': STRIPE_PRODUCTS['recharge_250'],
         'amount': 1999,  # $19.99 in cents
-        'generations': 250
+        'credits': 2000
     },
-    500: {
+    5000: {
         'price_id': STRIPE_PRICES['recharge_500'],
         'product_id': STRIPE_PRODUCTS['recharge_500'],
         'amount': 3499,  # $34.99 in cents
-        'generations': 500
+        'credits': 5000
     }
 }
 
@@ -61,29 +76,29 @@ SUBSCRIPTION_PLANS = {
         'price_id': STRIPE_PRICES['basic_subscription'],
         'product_id': STRIPE_PRODUCTS['basic_subscription'],
         'amount': 999,  # $9.99 in cents
-        'generations': 200,
-        'character_limit': 10,
+        'credits': 1000,
+        'character_limit': 20,
         'name': 'Basic'
     },
     'pro': {
         'price_id': STRIPE_PRICES['pro_subscription'],
         'product_id': STRIPE_PRODUCTS['pro_subscription'],
         'amount': 1999,  # $19.99 in cents
-        'generations': 500,
+        'credits': 5000,
         'character_limit': -1,  # Unlimited
         'name': 'Pro'
     }
 }
 
 
-def get_recharge_package(generation_count: int) -> Dict[str, Any]:
-    """Get recharge package info for a specific generation count."""
-    return RECHARGE_PACKAGES.get(generation_count)
+def get_recharge_package(credit_count: int) -> Dict[str, Any]:
+    """Get recharge package info for a specific credit count."""
+    return RECHARGE_PACKAGES.get(credit_count)
 
 
 def get_recharge_package_by_price_id(price_id: str) -> Dict[str, Any]:
     """Get recharge package info for a specific Stripe price ID."""
-    for generation_count, package in RECHARGE_PACKAGES.items():
+    for credit_count, package in RECHARGE_PACKAGES.items():
         if package['price_id'] == price_id:
             return package
     return None
@@ -211,3 +226,107 @@ def retrieve_checkout_session(session_id: str) -> Any:
     """Retrieve a Checkout Session from Stripe."""
     _ensure_stripe_initialized()
     return stripe.checkout.Session.retrieve(session_id)
+
+
+def get_plugin_purchase_info(plugin_manifest) -> Dict[str, Any]:
+    """
+    Get purchase info for a plugin.
+    
+    Args:
+        plugin_manifest: PluginManifest instance with stripe_price_id and price
+    
+    Returns:
+        Dictionary with price_id, product_id, and amount
+    """
+    if not plugin_manifest.stripe_price_id:
+        # Plugin doesn't have Stripe integration set up yet
+        return None
+    
+    return {
+        'price_id': plugin_manifest.stripe_price_id,
+        'product_id': plugin_manifest.stripe_product_id,
+        'amount': plugin_manifest.price,
+    }
+
+
+def get_plugin_by_price_id(price_id: str):
+    """
+    Get plugin info by Stripe price ID (for webhook handling).
+    
+    This should query the PluginManifest collection.
+    Returns the plugin or None if not found.
+    
+    Args:
+        price_id: Stripe price ID
+    
+    Returns:
+        PluginManifest instance or None
+    """
+    from ..models.marketplace import PluginManifest
+    from ..extensions import get_db
+    
+    db = get_db()
+    plugin_data = db.find_one(
+        PluginManifest.COLLECTION_NAME,
+        {'stripe_price_id': price_id}
+    )
+    
+    if plugin_data:
+        return PluginManifest.from_dict(plugin_data)
+    return None
+
+
+def create_plugin_checkout_session(
+    plugin_manifest,
+    user_id: str,
+    success_url: str,
+    cancel_url: str,
+    customer_email: Optional[str] = None
+) -> Any:
+    """
+    Create a Stripe Checkout Session for a one-time plugin purchase.
+    
+    Args:
+        plugin_manifest: PluginManifest instance
+        user_id: User ID making the purchase
+        success_url: URL to redirect on successful purchase
+        cancel_url: URL to redirect on cancelled purchase
+        customer_email: Optional customer email
+    
+    Returns:
+        Stripe checkout session
+    """
+    try:
+        _ensure_stripe_initialized()
+        
+        if not plugin_manifest.stripe_price_id:
+            raise ValueError(f"Plugin '{plugin_manifest.name}' does not have Stripe integration configured")
+        
+        metadata = {
+            'user_id': user_id,
+            'plugin_id': plugin_manifest.id,
+            'purchase_type': 'plugin'
+        }
+        
+        session_data = {
+            'payment_method_types': ['card'],
+            'line_items': [{
+                'price': plugin_manifest.stripe_price_id,
+                'quantity': 1,
+            }],
+            'mode': 'payment',  # One-time payment for plugins
+            'success_url': success_url,
+            'cancel_url': cancel_url,
+            'metadata': metadata
+        }
+        
+        if customer_email:
+            session_data['customer_email'] = customer_email
+        
+        return stripe.checkout.Session.create(**session_data)
+        
+    except ValueError as e:
+        raise ValueError(f"Plugin purchase configuration error: {str(e)}")
+    except Exception as e:
+        raise Exception(f"Failed to create plugin checkout session: {str(e)}")
+

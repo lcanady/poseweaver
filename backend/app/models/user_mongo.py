@@ -21,7 +21,7 @@ class User:
                  created_at: datetime = None, updated_at: datetime = None, subscription_status: str = 'free',
                  is_admin: bool = False, subscription_expires_at: datetime = None,
                  pose_generations_used: int = 0, pose_generations_reset_date: datetime = None,
-                 extra_pose_generations: int = 0, stripe_customer_id: str = None, settings: Dict[str, Any] = None):
+                 extra_pose_generations: int = 0, credits: int = 0, stripe_customer_id: str = None, settings: Dict[str, Any] = None):
         """Initialize a User instance."""
         self.id = _id
         self.email = email
@@ -37,6 +37,7 @@ class User:
         self.pose_generations_used = pose_generations_used
         self.pose_generations_reset_date = pose_generations_reset_date
         self.extra_pose_generations = extra_pose_generations
+        self.credits = credits
         self.stripe_customer_id = stripe_customer_id
         
         # User settings with defaults
@@ -92,6 +93,7 @@ class User:
             pose_generations_used=data.get('pose_generations_used', 0),
             pose_generations_reset_date=data.get('pose_generations_reset_date'),
             extra_pose_generations=data.get('extra_pose_generations', 0),
+            credits=data.get('credits', 0),
             stripe_customer_id=data.get('stripe_customer_id'),
             settings=data.get('settings')
         )
@@ -115,6 +117,7 @@ class User:
             'pose_generations_used': self.pose_generations_used,
             'pose_generations_reset_date': self.pose_generations_reset_date,
             'extra_pose_generations': self.extra_pose_generations,
+            'credits': self.credits,
             'stripe_customer_id': self.stripe_customer_id,
             'settings': self.settings
         }
@@ -195,9 +198,9 @@ class User:
         elif effective_status == 'pro':
             return -1  # Unlimited for pro tier users
         elif effective_status == 'basic':
-            return 10  # 10 characters for basic tier users
+            return 20  # 20 characters for basic tier users
         else:  # free, expired, or any other status
-            return 3
+            return 5
     
     def can_create_character(self, current_character_count: int) -> bool:
         """Check if user can create another character."""
@@ -218,14 +221,31 @@ class User:
         if effective_status == 'admin':
             return -1  # Unlimited for admins
         elif effective_status == 'premium':  # Legacy premium users
-            return 500  # Legacy premium limit
+            return 5000  # Legacy premium limit
         elif effective_status == 'pro':
-            return 500  # Pro tier limit
+            return 5000  # Pro tier gets 5000 generations per month
         elif effective_status == 'basic':
-            return 200  # Basic tier limit
+            return 1000  # Basic tier gets 1000 generations per month
         else:  # free, expired, or any other status
-            return 20  # Free tier limit
+            return 100  # Free tier gets 100 free generations per month
     
+    def get_credits(self) -> int:
+        """Get the user's current credit balance."""
+        return self.credits
+    
+    def add_credits(self, amount: int) -> None:
+        """Add credits to the user's balance."""
+        self.credits += amount
+        self.save()
+    
+    def use_credits(self, amount: int) -> bool:
+        """Use credits from the user's balance. Returns True if successful."""
+        if self.credits >= amount:
+            self.credits -= amount
+            self.save()
+            return True
+        return False
+
     def get_available_pose_generations(self) -> int:
         """Get the number of pose generations available this month."""
         # Reset monthly usage if needed
@@ -244,11 +264,20 @@ class User:
     
     def can_generate_pose(self) -> bool:
         """Check if user can generate another pose."""
+        # Use credit system first
+        if self.credits > 0:
+            return True
+            
+        # Fallback to monthly limits for legacy users
         available = self.get_available_pose_generations()
         return available == -1 or available > 0
     
     def use_pose_generation(self) -> bool:
         """Use one pose generation and update the counter. Returns True if successful."""
+        # Try to use credits first
+        if self.use_credits(1):
+            return True
+            
         if not self.can_generate_pose():
             return False
         
@@ -261,9 +290,8 @@ class User:
         return True
     
     def add_extra_pose_generations(self, count: int) -> None:
-        """Add extra pose generations (for purchases)."""
-        self.extra_pose_generations += count
-        self.save()
+        """Add extra pose generations (for purchases). Maps to unified credit system."""
+        self.add_credits(count)
     
     def needs_upgrade_for_poses(self) -> bool:
         """Check if user needs to upgrade for more pose generations."""

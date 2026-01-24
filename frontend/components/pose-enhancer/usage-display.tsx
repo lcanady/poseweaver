@@ -11,6 +11,7 @@ interface UsageInfo {
   monthly_limit: number;
   current_usage: number;
   extra_generations: number;
+  credits: number;
   subscription_status: string;
 }
 
@@ -33,7 +34,7 @@ export function UsageDisplay({
       <Card className={`${className}`}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium">Pose Generations</CardTitle>
+            <CardTitle className="text-sm font-medium">Credits</CardTitle>
             <Badge variant="secondary">
               Loading...
             </Badge>
@@ -67,6 +68,7 @@ export function UsageDisplay({
     monthly_limit,
     current_usage,
     extra_generations,
+    credits,
     subscription_status
   } = usageInfo;
 
@@ -97,7 +99,7 @@ export function UsageDisplay({
     <Card className={`${className}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">Pose Generations</CardTitle>
+          <CardTitle className="text-sm font-medium">Credits</CardTitle>
           <Badge 
             variant={isOutOfGenerations ? "destructive" : isLowOnGenerations ? "secondary" : "default"}
             className={`${getStatusColor()} text-white`}
@@ -112,20 +114,23 @@ export function UsageDisplay({
           {isUnlimited ? (
             <div className="flex items-center gap-2">
               <Crown className="h-4 w-4 text-purple-500" />
-              <span className="text-sm font-medium">Unlimited generations</span>
+              <span className="text-sm font-medium">Unlimited credits</span>
             </div>
           ) : (
             <>
               <div className="flex justify-between text-sm">
-                <span>Used this month</span>
-                <span className="font-medium">
-                  {current_usage} / {monthly_limit}
-                  {extra_generations > 0 && ` (+${extra_generations})`}
+                <span>Credit Balance</span>
+                <span className="font-bold text-lg text-primary">
+                  {credits}
                 </span>
+              </div>
+              <div className="pt-2 text-xs text-muted-foreground flex justify-between">
+                <span>This month&apos;s usage: {current_usage}</span>
+                <span>Limit: {monthly_limit}</span>
               </div>
               <Progress value={usagePercentage} className="h-2" />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{available_generations} remaining</span>
+                <span>Total available: {available_generations + credits}</span>
                 <span>{subscription_status === 'premium' ? 'Premium' : 'Free'}</span>
               </div>
             </>
@@ -133,11 +138,11 @@ export function UsageDisplay({
         </div>
 
         {/* Extra Generations Display */}
-        {extra_generations > 0 && (
+        {credits > 0 && (
           <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-md">
             <Zap className="h-4 w-4 text-blue-500" />
             <span className="text-sm text-blue-700">
-              {extra_generations} extra generations available
+              {credits} credits available
             </span>
           </div>
         )}
@@ -149,7 +154,7 @@ export function UsageDisplay({
               <div className="flex items-center gap-2 p-2 bg-amber-50 rounded-md">
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
                 <span className="text-sm text-amber-700">
-                  Monthly limit reached. Upgrade for more generations.
+                  Monthly limit reached. Upgrade for more monthly credits.
                 </span>
               </div>
               {onUpgrade && (
@@ -170,7 +175,7 @@ export function UsageDisplay({
               <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-md">
                 <Zap className="h-4 w-4 text-blue-500" />
                 <span className="text-sm text-blue-700">
-                  Monthly limit reached. Purchase additional generations.
+                  Monthly limit reached. Purchase additional credits.
                 </span>
               </div>
               {onPurchaseExtra && (
@@ -181,7 +186,7 @@ export function UsageDisplay({
                   variant="outline"
                 >
                   <Zap className="h-4 w-4 mr-2" />
-                  Buy More Generations
+                  Buy More Credits
                 </Button>
               )}
             </div>
@@ -192,7 +197,7 @@ export function UsageDisplay({
               <div className="flex items-center gap-2 p-2 bg-amber-50 rounded-md">
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
                 <span className="text-sm text-amber-700">
-                  Running low on generations this month.
+                  Running low on credits this month.
                 </span>
               </div>
               <div className="flex gap-2">

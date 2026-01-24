@@ -429,7 +429,6 @@ class PoseService:
         
         # Generate completion using OpenRouter.ai
         response = self.ai_client.generate_completion(
-            model="qwen3-235b",
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": user_message}
@@ -648,7 +647,6 @@ class PoseService:
         
         # Generate completion using OpenRouter.ai
         response = self.ai_client.generate_completion(
-            model="qwen3-235b",
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": user_message}
@@ -797,7 +795,6 @@ Please refine the pose according to the user's suggestion while maintaining qual
             
             # Generate the refined pose
             refined_pose = self.ai_client.generate_completion(
-                model="qwen3-235b",
                 messages=[
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message}
@@ -1046,7 +1043,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
                 
                 try:
                     corrected_response = self.ai_client.generate_completion(
-                        model="qwen3-235b",
+                        model="qwen/qwen-plus",
                         messages=[
                             {"role": "user", "content": fix_prompt}
                         ],
@@ -1147,7 +1144,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
             
             try:
                 response = self.ai_client.generate_completion(
-                    model="qwen3-235b",
+                    model="qwen/qwen-plus",
                     messages=[
                         {"role": "system", "content": system_message},
                         {"role": "user", "content": regeneration_prompt}
@@ -1747,7 +1744,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
         # Generate completion using OpenRouter.ai
         try:
             response = self.ai_client.generate_completion(
-                model="qwen3-235b",
+                model="qwen/qwen-plus",
                 messages=[
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message}
@@ -1873,7 +1870,7 @@ Please refine the pose according to the user's suggestion while maintaining qual
         
         # Generate completion
         response = self.ai_client.generate_completion(
-            model="qwen3-235b",
+            model="qwen/qwen-plus",
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": user_message}

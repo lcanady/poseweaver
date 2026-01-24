@@ -258,7 +258,7 @@ class ContextService:
         
         # Generate completion using OpenRouter.ai
         response = self.ai_client.generate_completion(
-            model="qwen3-235b",
+            model="qwen/qwen-plus",
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": user_message}
@@ -426,4 +426,70 @@ class ContextService:
                     "pose_text": preview_text
                 }
         
-        return results 
+        return results
+
+    def generate_narrative_log_entry(
+        self,
+        before_context: Dict[str, Any],
+        after_context: Dict[str, Any],
+        character_name: Optional[str] = None
+    ) -> str:
+        """Generate a narrative milestone entry based on context changes.
+        
+        Args:
+            before_context: Context data before the change
+            after_context: Context data after the change
+            character_name: Optional name of the character who initiated the change
+            
+        Returns:
+            str: A narrative description of the event
+        """
+        # Prepare system message for narrative logging
+        system_message = "You are a narrative chronicler for a roleplay scene. Your task is to summarize changes in scene context into a concise, engaging narrative milestone."
+        
+        # Prepare user message with context comparison
+        user_message = f"""
+        Analyze the following changes in scene context and summarize them into a single, concise narrative sentence (max 25 words).
+        
+        BEFORE CONTEXT:
+        - Setting: {before_context.get('setting', 'Unknown')}
+        - Mood: {before_context.get('mood', before_context.get('narrative_tone', 'Unknown'))}
+        - Active Characters: {', '.join(before_context.get('active_characters', []))}
+        - Recent Events: {', '.join(before_context.get('recent_events', []))}
+        
+        AFTER CONTEXT:
+        - Setting: {after_context.get('setting', 'Unknown')}
+        - Mood: {after_context.get('mood', after_context.get('narrative_tone', 'Unknown'))}
+        - Active Characters: {', '.join(after_context.get('active_characters', []))}
+        - Recent Events: {', '.join(after_context.get('recent_events', []))}
+        
+        Initiated by: {character_name or 'the environment'}
+        
+        Narrative milestone:
+        """
+        
+        try:
+            # Generate completion using OpenRouter.ai
+            response = self.ai_client.generate_completion(
+                model="qwen/qwen-plus",
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": user_message}
+                ],
+                temperature=0.7,
+                max_tokens=100
+            )
+            
+            # Extract and clean response
+            if isinstance(response, str):
+                narrative = response.strip()
+                # Remove any surrounding quotes or markdown
+                narrative = narrative.replace('"', '').replace("'", "").replace("*", "")
+                return narrative
+            else:
+                return "The scene context shifted, marking a new chapter in the story."
+                
+        except Exception as e:
+            print(f"Error generating narrative log: {str(e)}")
+            return "A significant change occurred in the scene's atmosphere and details."
+ 

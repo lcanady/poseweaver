@@ -45,6 +45,12 @@ export function UserNav() {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{user.displayName || "User"}</p>
             <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+            {user.credits !== undefined && (
+              <p className="text-xs font-semibold text-blue-500 pt-1 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                {user.credits} Credits
+              </p>
+            )}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

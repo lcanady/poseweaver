@@ -182,9 +182,9 @@ export default function DashboardPage() {
     {
       title: "Scene Collaboration",
       description: "Real-time co-writing tools and shared character libraries for group roleplay",
-      href: "#",
+      href: "/dashboard/scene-collab?scene=new",
       icon: <UserPlus className="h-5 w-5" />,
-      status: "coming-soon",
+      status: "premium",
       badge: "Pro Only"
     }
   ]

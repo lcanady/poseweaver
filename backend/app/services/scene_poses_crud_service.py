@@ -14,6 +14,7 @@ from ..models.scene_memory import (
     SceneMemory, Pose, PoseType
 )
 from .scene_management_service import SceneManagementService, PoseData
+from ..core.plugin_engine import PluginEngine
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ class ScenePosesCrudService:
         scene_id: str,
         character_name: str,
         content: str,
+        user_id: str,
         pose_type: PoseType = PoseType.MIXED,
         is_ooc: bool = False,
         analysis_data: Optional[Dict[str, Any]] = None
@@ -64,6 +66,7 @@ class ScenePosesCrudService:
             scene_id: ID of the scene to add the pose to
             character_name: Name of the character making the pose
             content: Text content of the pose
+            user_id: ID of the user creating the pose (for plugin context)
             pose_type: Type of pose (action, dialogue, etc.)
             is_ooc: Whether the pose is out-of-character
             analysis_data: Optional metadata for the pose
@@ -90,6 +93,47 @@ class ScenePosesCrudService:
             timestamp=datetime.utcnow(),
             analysis_data=analysis_data or {}
         )
+        
+        # Trigger plugin engine hooks
+        try:
+            engine = PluginEngine()
+            engine.load_context(user_id=user_id, scene_id=scene_id)
+            
+            # Prepare payload for plugins
+            pose_payload = {
+                'character_name': pose_data.character_name,
+                'content': pose_data.content,
+                'pose_type': pose_data.pose_type.value if hasattr(pose_data.pose_type, 'value') else str(pose_data.pose_type),
+                'is_ooc': pose_data.is_ooc,
+                'timestamp': pose_data.timestamp,
+                'analysis_data': pose_data.analysis_data
+            }
+            
+            # Trigger ON_POSE_CREATE event
+            modified_payload = engine.trigger_event('ON_POSE_CREATE', pose_payload, {'scene_id': scene_id, 'user_id': user_id})
+            
+            # Handle plugin blocking
+            if modified_payload == "BLOCK":
+                raise ValueError("Pose creation blocked by plugin")
+            
+            # Update pose data with modifications from plugins
+            if modified_payload and isinstance(modified_payload, dict):
+                pose_data.content = modified_payload.get('content', pose_data.content)
+                if 'pose_type' in modified_payload:
+                    pose_data.pose_type = PoseType(modified_payload['pose_type'])
+                if 'is_ooc' in modified_payload:
+                    pose_data.is_ooc = modified_payload['is_ooc']
+                if 'analysis_data' in modified_payload:
+                    pose_data.analysis_data = modified_payload['analysis_data']
+            
+            self.logger.info(f"Plugins processed successfully for pose by {character_name}")
+            
+        except ValueError as ve:
+            # Re-raise blocking errors
+            raise ve
+        except Exception as e:
+            # Log plugin errors but don't fail the pose creation
+            self.logger.error(f"Error running plugins for pose: {e}", exc_info=True)
         
         # Generate temporary ID for the pose
         import uuid

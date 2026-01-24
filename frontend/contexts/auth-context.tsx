@@ -23,6 +23,7 @@ export interface User {
   displayName: string | null
   photoURL: string | null
   is_admin?: boolean
+  credits?: number
 }
 
 interface AuthContextType {
@@ -67,7 +68,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   email: firebaseUser.email,
                   displayName: firebaseUser.displayName,
                   photoURL: firebaseUser.photoURL,
-                  is_admin: data.user.is_admin
+                  is_admin: data.user.is_admin,
+                  credits: data.user.credits
                 })
              } else {
                // Fallback if backend fetch fails but firebase is ok
@@ -142,7 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           uid: result.user.uid,
           email: result.user.email,
           displayName: displayName,
-          photoURL: result.user.photoURL
+          photoURL: result.user.photoURL,
+          credits: 0
         })
       }
       router.push('/dashboard')

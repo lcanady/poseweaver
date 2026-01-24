@@ -2,9 +2,10 @@
 Scene management service for MongoDB operations.
 """
 from typing import List, Optional, Dict, Any, Tuple
-from datetime import datetime
-from ..models.scene import Scene, ScenePose, SceneParticipant, PoseType
+from datetime import datetime, UTC
+from ..models.scene import Scene, ScenePose, SceneParticipant, PoseType, SceneHistoryLogEntry
 from ..models.character import Character
+import os
 
 
 class SceneService:
@@ -17,7 +18,8 @@ class SceneService:
         description: str = "",
         max_poses: int = 100,
         initial_participants: Optional[List[str]] = None,
-        initial_context: Optional[Dict[str, Any]] = None
+        initial_context: Optional[Dict[str, Any]] = None,
+        initial_history_log: Optional[List[Dict[str, Any]]] = None
     ) -> Scene:
         """Create a new scene.
         
@@ -28,6 +30,7 @@ class SceneService:
             max_poses: Maximum number of poses to keep in memory
             initial_participants: Optional list of character IDs to add as participants
             initial_context: Optional initial context data
+            initial_history_log: Optional initial history log entries
             
         Returns:
             The created Scene instance
@@ -65,7 +68,8 @@ class SceneService:
             description=description,
             max_poses=max_poses,
             participants=participants_data,
-            context=initial_context or {}
+            context=initial_context or {},
+            history_log=initial_history_log or []
         )
         
         # If poses are in the initial context, add them to the main poses array
@@ -289,10 +293,30 @@ class SceneService:
         if not scene or scene.created_by != user_id:
             return None
             
+        # Capture context before update for narrative logging
+        before_context = scene.context.to_dict()
+            
         # Update context fields
         for key, value in updates.items():
             if hasattr(scene.context, key):
                 setattr(scene.context, key, value)
+        
+        # Generate and add narrative log entry
+        try:
+            from .context_service import ContextService
+            from .ai_client import AIClient
+            api_key = os.getenv('OPENROUTER_API_KEY')
+            if api_key:
+                ai_client = AIClient(api_key=api_key)
+                context_service = ContextService(ai_client)
+                after_context = scene.context.to_dict()
+                narrative = context_service.generate_narrative_log_entry(
+                    before_context, after_context
+                )
+                scene.add_history_log_entry(SceneHistoryLogEntry(event_description=narrative))
+        except Exception as e:
+            # Don't let logging failure break the main update
+            print(f"Narrative logging failed: {str(e)}")
         
         scene.save()
         return scene
@@ -459,6 +483,9 @@ class SceneService:
         if not scene or scene.created_by != user_id:
             return None
             
+        # Capture context before update for narrative logging
+        before_context = scene.context.to_dict()
+            
         # Update scene context with provided data
         # For each key in scene_context, update corresponding field in context
         for key, value in scene_context.items():
@@ -486,6 +513,24 @@ class SceneService:
                         scene.add_pose(pose)
             
         # Ensure updated_at is properly set to current time before saving
-        scene.updated_at = datetime.utcnow()
+        scene.updated_at = datetime.now(UTC)
+        
+        # Generate and add narrative log entry
+        try:
+            from .context_service import ContextService
+            from .ai_client import AIClient
+            api_key = os.getenv('OPENROUTER_API_KEY')
+            if api_key:
+                ai_client = AIClient(api_key=api_key)
+                context_service = ContextService(ai_client)
+                after_context = scene.context.to_dict()
+                narrative = context_service.generate_narrative_log_entry(
+                    before_context, after_context
+                )
+                scene.add_history_log_entry(SceneHistoryLogEntry(event_description=narrative))
+        except Exception as e:
+            # Don't let logging failure break the main update
+            print(f"Narrative logging failed: {str(e)}")
+            
         scene.save()
         return scene

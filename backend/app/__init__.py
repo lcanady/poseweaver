@@ -122,6 +122,7 @@ def create_app(config_name='development'):
     from app.api.scenes import scenes_bp
     from app.api.character_mgmt import character_mgmt_bp
     from app.api.uploads import uploads_bp, ensure_upload_dir
+    from app.api.ai_chat import ai_chat_bp
 
     from app.api.character_plot_tracking import character_plot_bp
     from app.api.search_summary import search_summary_bp
@@ -131,6 +132,7 @@ def create_app(config_name='development'):
     from app.api.setup import setup_bp
     from app.api.user import user_bp
     from app.api.notifications import notifications_bp
+    from app.api.marketplace import marketplace_bp
     
     app.register_blueprint(characters_bp, url_prefix='/api/characters')
     app.register_blueprint(context_bp, url_prefix='/api/context')
@@ -142,6 +144,7 @@ def create_app(config_name='development'):
     app.register_blueprint(scenes_bp, url_prefix='/api/scenes')
     app.register_blueprint(character_mgmt_bp, url_prefix='/api/characters/mgmt')
     app.register_blueprint(uploads_bp, url_prefix='/api/uploads')
+    app.register_blueprint(ai_chat_bp, url_prefix='/api/characters/ai-chat')
 
     app.register_blueprint(character_plot_bp, url_prefix='/api/character-plot')
     app.register_blueprint(search_summary_bp, url_prefix='/api/search-summary')
@@ -151,6 +154,7 @@ def create_app(config_name='development'):
     app.register_blueprint(setup_bp, url_prefix='/api/setup')
     app.register_blueprint(user_bp, url_prefix='/api/user')
     app.register_blueprint(notifications_bp, url_prefix='/api')
+    app.register_blueprint(marketplace_bp, url_prefix='/api/marketplace')
     
     # Ensure upload directories exist at startup
     ensure_upload_dir()

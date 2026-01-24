@@ -349,7 +349,7 @@ class CharacterStateService:
             """
             
             response = self.ai_client.generate_completion(
-                model="qwen3-235b",
+                model="qwen/qwen-plus",
                 messages=[
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message}
@@ -927,7 +927,7 @@ class CharacterStateService:
         try:
             response = self.ai_client.generate_completion(
                 prompt=prompt,
-                model='qwen3-235b',
+                model='qwen/qwen-plus',
                 temperature=0.3,
                 max_tokens=4000
             )

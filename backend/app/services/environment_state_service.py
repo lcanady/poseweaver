@@ -158,7 +158,7 @@ class EnvironmentStateService:
             response = self.ai_client.generate_completion(
                 prompt=user_content,
                 system_message=system_prompt,
-                model="qwen3-235b",
+                model="qwen/qwen-plus",
                 temperature=0.3,  # Lower temperature for more consistent extraction
                 max_tokens=800
             )
@@ -444,7 +444,7 @@ Check for environmental consistency."""
             response = self.ai_client.generate_completion(
                 prompt=user_content,
                 system_message=system_prompt,
-                model="qwen3-235b",
+                model="qwen/qwen-plus",
                 temperature=0.2,  # Very low temperature for consistent analysis
                 max_tokens=4000
             )

@@ -2,7 +2,7 @@
 Scene model for roleplay scenes.
 """
 from typing import Dict, List, Optional, Any, Union
-from datetime import datetime
+from datetime import datetime, UTC
 from enum import Enum
 from bson import ObjectId
 from .base_model import BaseModel
@@ -160,6 +160,50 @@ class SceneContext:
         return cls(**data)
 
 
+
+class SceneHistoryLogEntry:
+    """A narrative milestone entry in the scene history log."""
+    
+    def __init__(
+        self,
+        event_description: str,
+        character_name: Optional[str] = None,
+        timestamp: Optional[datetime] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        **kwargs
+    ):
+        self.event_description = event_description
+        self.character_name = character_name
+        self.timestamp = timestamp or datetime.now(UTC)
+        self.metadata = metadata or {}
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for MongoDB."""
+        return {
+            'event_description': self.event_description,
+            'character_name': self.character_name,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
+            'metadata': self.metadata
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'SceneHistoryLogEntry':
+        """Create from dictionary."""
+        if not data:
+            return None
+            
+        if 'timestamp' in data and isinstance(data['timestamp'], str):
+            try:
+                dt = datetime.fromisoformat(data['timestamp'].replace('Z', '+00:00'))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=UTC)
+                data['timestamp'] = dt
+            except ValueError:
+                data['timestamp'] = datetime.now(UTC)
+                
+        return cls(**data)
+
+
 class Scene(BaseModel):
     """Scene model for roleplay scenes."""
     
@@ -181,6 +225,12 @@ class Scene(BaseModel):
         self.is_active = is_active
         self.max_poses = max_poses
         
+        # Permission and invitation fields
+        self.permissions = kwargs.get('permissions', {created_by: 'owner'})
+        self.visibility = kwargs.get('visibility', 'private')  # 'private', 'invite-only', 'public'
+        self.invite_code = kwargs.get('invite_code')
+        self.invite_code_expires = kwargs.get('invite_code_expires')
+        
         # Initialize collections
         self.poses: List[ScenePose] = [
             ScenePose.from_dict(pose) 
@@ -200,6 +250,12 @@ class Scene(BaseModel):
             context_data['active_characters'] = [p.character_id for p in self.participants.values()]
         self.context = SceneContext.from_dict(context_data)
         self.compressed_history = kwargs.get('compressed_history', "")
+        
+        # Initialize history log
+        self.history_log: List[SceneHistoryLogEntry] = [
+            SceneHistoryLogEntry.from_dict(entry)
+            for entry in kwargs.get('history_log', [])
+        ]
     
     def add_pose(self, pose: ScenePose) -> None:
         """Add a new pose to the scene."""
@@ -217,7 +273,7 @@ class Scene(BaseModel):
         participant = self.participants[pose.character_id]
         participant.last_pose_id = pose.id
         participant.pose_count += 1
-        participant.last_seen = datetime.utcnow()
+        participant.last_seen = datetime.now(UTC)
         
         # Update context
         self._update_context(pose)
@@ -225,6 +281,10 @@ class Scene(BaseModel):
         # Compress history if needed
         if len(self.poses) > self.max_poses * 1.5:  # 1.5x buffer
             self._compress_history()
+            
+    def add_history_log_entry(self, entry: SceneHistoryLogEntry) -> None:
+        """Add a new narrative entry to the history log."""
+        self.history_log.append(entry)
     
     def _update_context(self, pose: ScenePose) -> None:
         """Update scene context based on new pose."""
@@ -282,11 +342,16 @@ class Scene(BaseModel):
             'created_by': str(self.created_by) if self.created_by else None,
             'is_active': self.is_active,
             'max_poses': self.max_poses,
+            'permissions': self.permissions,
+            'visibility': self.visibility,
+            'invite_code': self.invite_code,
+            'invite_code_expires': self.invite_code_expires,
             'poses': [pose.to_dict() for pose in self.poses],
             'participants': [p.to_dict() for p in self.participants.values()],
             'participant_ids': list(self.participants.keys()),
             'context': self.context.to_dict(),
-            'compressed_history': self.compressed_history
+            'compressed_history': self.compressed_history,
+            'history_log': [entry.to_dict() for entry in self.history_log]
         })
         return data
     

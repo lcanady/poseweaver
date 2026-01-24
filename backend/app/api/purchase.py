@@ -74,26 +74,26 @@ def create_checkout_session_endpoint():
         
         if purchase_type == 'recharge':
             # Handle recharge pack purchase
-            generation_count = data.get('generation_count')
-            if not generation_count:
+            credit_count = data.get('credit_count') or data.get('generation_count')
+            if not credit_count:
                 return jsonify({
                     'success': False,
-                    'error': 'generation_count is required for recharge packs'
+                    'error': 'credit_count is required for recharge packs'
                 }), 400
             
-            # Check if user can purchase extra generations
-            if not user.can_purchase_extra_generations():
+            # Check if user can purchase extra credits
+            if not user.can_purchase_extra_generations(): # Keep method name for now or update it
                 return jsonify({
                     'success': False,
-                    'error': 'Only premium subscribers can purchase additional generations',
+                    'error': 'Only premium subscribers can purchase additional credits',
                     'error_code': 'PREMIUM_REQUIRED'
                 }), 403
             
-            recharge_package = get_recharge_package(generation_count)
+            recharge_package = get_recharge_package(credit_count)
             if not recharge_package:
                 return jsonify({
                     'success': False,
-                    'error': f'Invalid generation count: {generation_count}. Available: 50, 100, 250, 500'
+                    'error': f'Invalid credit count: {credit_count}.'
                 }), 400
             
             # Create checkout session for recharge pack
@@ -104,7 +104,7 @@ def create_checkout_session_endpoint():
                 metadata={
                     'user_id': user_id,
                     'type': 'recharge',
-                    'generation_count': str(generation_count)
+                    'credit_count': str(credit_count)
                 }
             )
             
@@ -730,13 +730,13 @@ def handle_successful_payment(session):
             # Find the recharge package by price_id
             package = get_recharge_package_by_price_id(price_id)
             if package:
-                generations_to_add = package['generations'] * quantity
-                user.add_extra_pose_generations(generations_to_add)
-                total_generations_added += generations_to_add
-                print(f"Added {generations_to_add} generations to user {user.email}")
+                credits_to_add = package['credits'] * quantity
+                user.add_extra_pose_generations(credits_to_add)
+                total_generations_added += credits_to_add
+                print(f"Added {credits_to_add} credits to user {user.email}")
         
         if total_generations_added > 0:
-            print(f"Successfully added {total_generations_added} total generations to user {user.email}")
+            print(f"Successfully added {total_generations_added} total credits to user {user.email}")
         
     except Exception as e:
         print(f"Error handling successful payment: {e}")
@@ -783,17 +783,17 @@ def get_pricing():
                 savings = '30%'
             
             recharge_packages.append({
-                'generation_count': count,
+                'credit_count': count,
                 'price': package['amount'] / 100,  # Convert cents to dollars
-                'price_per_generation': round(price_per_gen, 2),
+                'price_per_credit': round(price_per_gen, 2),
                 'price_id': package['price_id'],
                 'product_id': package['product_id'],
                 'savings': savings,
                 'best_value': count == 500
             })
         
-        # Sort by generation count
-        recharge_packages.sort(key=lambda x: x['generation_count'])
+        # Sort by credit count
+        recharge_packages.sort(key=lambda x: x['credit_count'])
         
         # Build subscription plans with Stripe IDs
         subscriptions = {}
@@ -801,15 +801,16 @@ def get_pricing():
             subscriptions[plan_key] = {
                 'name': plan_data['name'],
                 'price': plan_data['amount'] / 100,  # Convert cents to dollars
-                'generations_included': plan_data['generations'],
+                'credits_included': plan_data['credits'],
                 'character_limit': plan_data['character_limit'],
                 'price_id': plan_data['price_id'],
                 'product_id': plan_data['product_id'],
                 'features': [
-                    f"{plan_data['generations']} pose generations per month",
+                    f"{plan_data['credits']} credits per month",
                     'Unlimited character profiles' if plan_data['character_limit'] == -1 else f"Up to {plan_data['character_limit']} character profiles",
                     'All enhancement styles',
-                    'Purchase additional generations when needed'
+                    'Priority AI processing',
+                    'Purchase additional credits when needed'
                 ],
                 'popular': plan_key == 'pro'
             }
@@ -820,16 +821,16 @@ def get_pricing():
         
         return jsonify({
             'success': True,
-            'extra_generations': {
+            'extra_credits': {
                 'packages': recharge_packages
             },
             'subscriptions': subscriptions,
             'free_tier': {
-                'generations_included': 20,
-                'character_limit': 3,
+                'credits_included': 100,
+                'character_limit': 5,
                 'features': [
-                    '20 pose generations per month',
-                    'Up to 3 character profiles',
+                    '100 free credits per month',
+                    'Up to 5 character profiles',
                     'Basic enhancement options'
                 ]
             }
@@ -880,6 +881,7 @@ def get_usage_status():
                 'monthly_limit': usage_status.get('monthly_limit', 0),
                 'current_usage': usage_status.get('current_usage', 0),
                 'extra_generations': usage_status.get('extra_generations', 0),
+                'credits': user.get_credits(),
                 'subscription_status': 'admin' if user.is_admin else usage_status.get('subscription_status', 'free'),
                 'can_upgrade': False if user.is_admin else user.needs_upgrade_for_poses(),
                 'can_purchase_extra': user.can_purchase_extra_generations(),

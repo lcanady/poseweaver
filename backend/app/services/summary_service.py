@@ -481,7 +481,7 @@ class SummaryService:
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                model="qwen3-235b"  # OpenRouter Large model for high-quality summaries
+                model="qwen/qwen-plus"  # OpenRouter Large model for high-quality summaries
             )
             
             return summary.strip()

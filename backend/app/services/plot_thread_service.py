@@ -75,7 +75,7 @@ class PlotThreadService:
         
         # Configuration for plot analysis
         self.config = {
-            'model': 'qwen3-235b',
+            'model': 'qwen/qwen-plus',
             'temperature': 0.4,  # Balanced creativity and consistency
             'max_tokens': 2000,
             'importance_threshold': 0.3,  # Minimum importance to create thread
